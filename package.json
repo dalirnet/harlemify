@@ -1,0 +1,51 @@
+{
+    "name": "harlemify",
+    "version": "0.0.1",
+    "description": "API state management for Nuxt powered by Harlem",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/dalirnet/harlemify.git"
+    },
+    "license": "MIT",
+    "author": "Amir Reza Dalir",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/types.d.ts",
+            "import": "./dist/module.mjs",
+            "require": "./dist/module.cjs"
+        }
+    },
+    "main": "./dist/module.cjs",
+    "module": "./dist/module.mjs",
+    "types": "./dist/types.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "postinstall": "nuxi prepare playground",
+        "build": "nuxt-module-build build",
+        "dev": "nuxi dev playground",
+        "lint": "eslint . --fix",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@nuxt/kit": "^3.14.0",
+        "@harlem/core": "^3.0.0",
+        "@harlem/plugin-ssr": "^3.0.0",
+        "defu": "^6.0.0",
+        "zod": "^4.0.0"
+    },
+    "devDependencies": {
+        "@nuxt/devtools": "^1.6.0",
+        "@nuxt/eslint-config": "^0.6.0",
+        "@nuxt/module-builder": "^0.8.0",
+        "@nuxt/schema": "^3.14.0",
+        "@nuxt/test-utils": "^3.14.0",
+        "@types/node": "^22.0.0",
+        "eslint": "^9.0.0",
+        "nuxt": "^3.14.0",
+        "typescript": "^5.6.0",
+        "vitest": "^2.0.0"
+    }
+}

@@ -1,0 +1,17 @@
+# Source
+src
+playground
+test
+
+# Config
+.github
+.nuxt
+.output
+coverage
+
+# Dev files
+*.log
+.gitignore
+.eslintrc
+tsconfig.json
+vitest.config.ts
