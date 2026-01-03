@@ -1,0 +1,39 @@
+import { z } from "zod";
+
+import type { ApiAction } from "../types/api";
+import type { StoreSchemaMeta } from "../types/store";
+
+export function getMeta(field: any): StoreSchemaMeta | undefined {
+    return (field as z.ZodType).meta() as any;
+}
+
+export function resolveSchema<
+    T extends z.ZodRawShape,
+    S extends z.infer<z.ZodObject<T>>,
+>(schema: z.ZodObject<T>, action?: ApiAction, input?: Partial<S>) {
+    const output = {
+        indicator: "id" as keyof S,
+        values: {} as Partial<S>,
+        schema: {} as S,
+    };
+
+    for (const key of Object.keys(schema.shape)) {
+        const meta = getMeta(schema.shape[key]);
+
+        if (meta?.indicator) {
+            output.indicator = key as any;
+        }
+
+        if (!action || !meta?.actions) {
+            continue;
+        }
+
+        if (meta?.actions.includes(action)) {
+            if (input && key in input) {
+                (output.values as any)[key] = (input as any)[key];
+            }
+        }
+    }
+
+    return output;
+}
