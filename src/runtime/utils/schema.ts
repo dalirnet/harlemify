@@ -17,15 +17,15 @@ export function resolveSchema<
 >(schema: z.ZodObject<T>, action?: ApiAction, input?: Partial<S>) {
     const output = {
         indicator: "id" as keyof S,
+        keys: {} as Record<keyof S, true>,
         values: {} as Partial<S>,
-        schema: {} as S,
     };
 
     for (const key of Object.keys(schema.shape)) {
         const meta = getMeta(schema.shape[key]);
 
         if (meta?.indicator) {
-            output.indicator = key as any;
+            output.indicator = key as keyof S;
         }
 
         if (!action || !meta?.actions) {
@@ -33,6 +33,8 @@ export function resolveSchema<
         }
 
         if (meta?.actions.includes(action)) {
+            output.keys[key as keyof S] = true;
+
             if (input && key in input) {
                 (output.values as any)[key] = (input as any)[key];
             }

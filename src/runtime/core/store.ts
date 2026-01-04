@@ -42,9 +42,9 @@ export function createStore<T extends z.ZodRawShape>(
         ...options?.api,
     });
 
-    const { schema: schemaType, indicator } = resolveSchema(schema);
+    const { indicator } = resolveSchema(schema);
 
-    type Schema = typeof schemaType;
+    type Schema = z.infer<z.ZodObject<T>>;
     type SchemaIndicator = { [indicator]: keyof Schema };
 
     const store = createHarlemStore(
@@ -260,11 +260,12 @@ export function createStore<T extends z.ZodRawShape>(
         unit: Schema,
         options?: ApiActionOptions<ApiAction.POST> & { validate?: boolean },
     ) {
-        if (options?.validate) {
-            schema.parse(unit);
-        }
-
         const endpoint = getEndpoint(endpoints, Endpoint.POST_UNIT);
+        const resolvedSchema = resolveSchema(schema, endpoint.action, unit);
+
+        if (options?.validate) {
+            schema.pick<any>(resolvedSchema.keys).parse(unit);
+        }
 
         patchEndpointMemoryTo(Endpoint.POST_UNIT, {
             status: EndpointStatus.PENDING,
@@ -275,15 +276,9 @@ export function createStore<T extends z.ZodRawShape>(
                 [indicator]: unit[indicator],
             });
 
-            const { values: body } = resolveSchema(
-                schema,
-                endpoint.action,
-                unit,
-            );
-
             const response = await api.post<Schema>(resolvedUrl, {
                 ...options,
-                body: options?.body ?? body,
+                body: options?.body ?? resolvedSchema.values,
             });
 
             setMemorizedUnit(response);
@@ -306,13 +301,17 @@ export function createStore<T extends z.ZodRawShape>(
         units: Schema[],
         options?: ApiActionOptions<ApiAction.POST> & { validate?: boolean },
     ) {
-        if (options?.validate) {
-            for (const unit of units) {
-                schema.parse(unit);
-            }
-        }
-
         const endpoint = getEndpoint(endpoints, Endpoint.POST_UNITS);
+
+        const body = units.map((unit) => {
+            const resolvedSchema = resolveSchema(schema, endpoint.action, unit);
+
+            if (options?.validate) {
+                schema.pick<any>(resolvedSchema.keys).parse(unit);
+            }
+
+            return resolvedSchema.values;
+        });
 
         patchEndpointMemoryTo(Endpoint.POST_UNITS, {
             status: EndpointStatus.PENDING,
@@ -320,12 +319,6 @@ export function createStore<T extends z.ZodRawShape>(
 
         try {
             const resolvedUrl = resolveEndpointUrl(endpoint.url);
-
-            const body = units.map((unit) => {
-                const { values } = resolveSchema(schema, endpoint.action, unit);
-
-                return values;
-            });
 
             const response = await api.post<Schema[]>(resolvedUrl, {
                 ...options,
@@ -355,11 +348,12 @@ export function createStore<T extends z.ZodRawShape>(
         unit: Schema,
         options?: ApiActionOptions<ApiAction.PUT> & { validate?: boolean },
     ) {
-        if (options?.validate) {
-            schema.parse(unit);
-        }
-
         const endpoint = getEndpoint(endpoints, Endpoint.PUT_UNIT);
+        const resolvedSchema = resolveSchema(schema, endpoint.action, unit);
+
+        if (options?.validate) {
+            schema.pick<any>(resolvedSchema.keys).parse(unit);
+        }
 
         patchEndpointMemoryTo(Endpoint.PUT_UNIT, {
             status: EndpointStatus.PENDING,
@@ -370,15 +364,9 @@ export function createStore<T extends z.ZodRawShape>(
                 [indicator]: unit[indicator],
             });
 
-            const { values: body } = resolveSchema(
-                schema,
-                endpoint.action,
-                unit,
-            );
-
             const response = await api.put<Schema>(resolvedUrl, {
                 ...options,
-                body: options?.body ?? body,
+                body: options?.body ?? resolvedSchema.values,
             });
 
             setMemorizedUnit(response);
@@ -401,13 +389,17 @@ export function createStore<T extends z.ZodRawShape>(
         units: Schema[],
         options?: ApiActionOptions<ApiAction.PUT> & { validate?: boolean },
     ) {
-        if (options?.validate) {
-            for (const unit of units) {
-                schema.parse(unit);
-            }
-        }
-
         const endpoint = getEndpoint(endpoints, Endpoint.PUT_UNITS);
+
+        const body = units.map((unit) => {
+            const resolvedSchema = resolveSchema(schema, endpoint.action, unit);
+
+            if (options?.validate) {
+                schema.pick<any>(resolvedSchema.keys).parse(unit);
+            }
+
+            return resolvedSchema.values;
+        });
 
         patchEndpointMemoryTo(Endpoint.PUT_UNITS, {
             status: EndpointStatus.PENDING,
@@ -415,12 +407,6 @@ export function createStore<T extends z.ZodRawShape>(
 
         try {
             const resolvedUrl = resolveEndpointUrl(endpoint.url);
-
-            const body = units.map((unit) => {
-                const { values } = resolveSchema(schema, endpoint.action, unit);
-
-                return values;
-            });
 
             const response = await api.put<Schema[]>(resolvedUrl, {
                 ...options,
@@ -447,11 +433,12 @@ export function createStore<T extends z.ZodRawShape>(
         unit: SchemaIndicator & Partial<Schema>,
         options?: ApiActionOptions<ApiAction.PATCH> & { validate?: boolean },
     ) {
-        if (options?.validate) {
-            schema.partial().parse(unit);
-        }
-
         const endpoint = getEndpoint(endpoints, Endpoint.PATCH_UNIT);
+        const resolvedSchema = resolveSchema(schema, endpoint.action, unit);
+
+        if (options?.validate) {
+            schema.pick<any>(resolvedSchema.keys).partial().parse(unit);
+        }
 
         patchEndpointMemoryTo(Endpoint.PATCH_UNIT, {
             status: EndpointStatus.PENDING,
@@ -462,17 +449,11 @@ export function createStore<T extends z.ZodRawShape>(
                 [indicator]: unit[indicator],
             });
 
-            const { values: body } = resolveSchema(
-                schema,
-                endpoint.action,
-                unit,
-            );
-
             const response = await api.patch<SchemaIndicator & Partial<Schema>>(
                 resolvedUrl,
                 {
                     ...options,
-                    body: options?.body ?? body,
+                    body: options?.body ?? resolvedSchema.values,
                 },
             );
 
@@ -496,13 +477,17 @@ export function createStore<T extends z.ZodRawShape>(
         units: (SchemaIndicator & Partial<Schema>)[],
         options?: ApiActionOptions<ApiAction.PATCH> & { validate?: boolean },
     ) {
-        if (options?.validate) {
-            for (const unit of units) {
-                schema.partial().parse(unit);
-            }
-        }
-
         const endpoint = getEndpoint(endpoints, Endpoint.PATCH_UNITS);
+
+        const body = units.map((unit) => {
+            const resolvedSchema = resolveSchema(schema, endpoint.action, unit);
+
+            if (options?.validate) {
+                schema.pick<any>(resolvedSchema.keys).partial().parse(unit);
+            }
+
+            return resolvedSchema.values;
+        });
 
         patchEndpointMemoryTo(Endpoint.PATCH_UNITS, {
             status: EndpointStatus.PENDING,
@@ -510,12 +495,6 @@ export function createStore<T extends z.ZodRawShape>(
 
         try {
             const resolvedUrl = resolveEndpointUrl(endpoint.url);
-
-            const body = units.map((unit) => {
-                const { values } = resolveSchema(schema, endpoint.action, unit);
-
-                return values;
-            });
 
             const response = await api.patch<
                 (SchemaIndicator & Partial<Schema>)[]
