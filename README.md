@@ -222,24 +222,24 @@ if (endpointsStatus.getUnitsIsSuccess.value) {
 
 ### Validation
 
-Enable Zod validation before sending data to the API by passing `validate: true` in the action options:
+Enable Zod validation before sending data to the API by passing `validate: true` in the action options. Validation only checks fields that are included in the action's `meta.actions`:
 
 ```typescript
 const { postUnit, putUnit, patchUnit } = userStore;
 
-// Validate unit before POST
+// Validate unit before POST (validates: name, email)
 await postUnit(
     { id: 1, name: "John", email: "john@example.com" },
     { validate: true },
 );
 
-// Validate unit before PUT
+// Validate unit before PUT (validates: name)
 await putUnit(
     { id: 1, name: "John", email: "john@example.com" },
     { validate: true },
 );
 
-// Validate partial unit before PATCH (uses schema.partial())
+// Validate partial unit before PATCH (validates: name, uses schema.partial())
 await patchUnit({ id: 1, name: "John Doe" }, { validate: true });
 ```
 
