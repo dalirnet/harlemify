@@ -34,8 +34,12 @@ export default defineNuxtConfig({
 import { z, createStore, Endpoint, ApiAction } from "harlemify";
 
 const UserSchema = z.object({
-    id: z.number().meta({ indicator: true }),
-    name: z.string().meta({ actions: [ApiAction.POST, ApiAction.PUT] }),
+    id: z.number().meta({
+        indicator: true,
+    }),
+    name: z.string().meta({
+        actions: [ApiAction.POST, ApiAction.PUT],
+    }),
 });
 
 export const userStore = createStore("user", UserSchema, {
