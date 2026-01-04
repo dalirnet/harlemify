@@ -4,7 +4,7 @@
 
 ```typescript
 // stores/product.ts
-import { z, createStore, Endpoint, ApiAction } from "harlemify";
+import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
 
 const ProductSchema = z.object({
     id: z.number().meta({
@@ -153,7 +153,7 @@ try {
 
 ```typescript
 import { ref } from "vue";
-import { z, createStore, Endpoint, ApiAction } from "harlemify";
+import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
 
 const token = ref<string | null>(null);
 
@@ -204,7 +204,7 @@ export function logout() {
 ## Standalone API Client
 
 ```typescript
-import { createApi } from "harlemify";
+import { createApi } from "@diphyx/harlemify";
 
 const api = createApi({
     url: "https://api.example.com",
@@ -329,7 +329,7 @@ setMemorizedUnits([]);
 ## Per-Store API Configuration
 
 ```typescript
-import { z, createStore, Endpoint, ApiAction } from "harlemify";
+import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
 
 const ExternalSchema = z.object({
     id: z.string().meta({

@@ -14,7 +14,7 @@ API state management for Nuxt powered by [Harlem](https://harlemjs.com/)
 ## Installation
 
 ```bash
-npm install harlemify
+npm install @diphyx/harlemify
 ```
 
 ## Quick Start
@@ -22,7 +22,7 @@ npm install harlemify
 ```typescript
 // nuxt.config.ts
 export default defineNuxtConfig({
-    modules: ["harlemify"],
+    modules: ["@diphyx/harlemify"],
     harlemify: {
         api: {
             url: "https://api.example.com",
@@ -33,7 +33,7 @@ export default defineNuxtConfig({
 
 ```typescript
 // stores/user.ts
-import { z, createStore, Endpoint, ApiAction } from "harlemify";
+import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
 
 const UserSchema = z.object({
     id: z.number().meta({

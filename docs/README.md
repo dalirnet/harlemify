@@ -15,13 +15,13 @@ Harlemify simplifies building data-driven Nuxt applications by combining Zod sch
 ## Quick Start
 
 ```bash
-npm install harlemify
+npm install @diphyx/harlemify
 ```
 
 ```typescript
 // nuxt.config.ts
 export default defineNuxtConfig({
-    modules: ["harlemify"],
+    modules: ["@diphyx/harlemify"],
     harlemify: {
         api: {
             url: "https://api.example.com",

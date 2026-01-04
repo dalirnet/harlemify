@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-npm install harlemify
+npm install @diphyx/harlemify
 ```
 
 ## Setup
@@ -13,7 +13,7 @@ Add harlemify to your Nuxt config:
 ```typescript
 // nuxt.config.ts
 export default defineNuxtConfig({
-    modules: ["harlemify"],
+    modules: ["@diphyx/harlemify"],
     harlemify: {
         api: {
             url: "https://api.example.com",
@@ -31,7 +31,7 @@ Create a Zod schema with field metadata:
 
 ```typescript
 // stores/user.ts
-import { z, createStore, Endpoint, ApiAction } from "harlemify";
+import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
 
 const UserSchema = z.object({
     id: z.number().meta({

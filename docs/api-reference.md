@@ -6,7 +6,7 @@ Configure harlemify in your `nuxt.config.ts`:
 
 ```typescript
 export default defineNuxtConfig({
-    modules: ["harlemify"],
+    modules: ["@diphyx/harlemify"],
     harlemify: {
         api: {
             url: "https://api.example.com",
