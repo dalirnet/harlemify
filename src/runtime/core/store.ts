@@ -6,31 +6,30 @@ import {
     type BaseState,
 } from "@harlem/core";
 
-import {
-    ApiAction,
-    type ApiActionOptions,
-    type ApiOptions,
-} from "../types/api";
-import {
-    StoreEndpoint,
-    StoreEndpointStatus,
-    type StoreEndpointDefinition,
-    type StoreEndpointMemory,
-} from "../types/store";
-
-import { createApi } from "./api";
 import { resolveSchema } from "../utils/schema";
+
 import {
     makeEndpointStatusKey,
     getEndpoint,
     resolveEndpointUrl,
     makeEndpointsStatus,
+    Endpoint,
+    EndpointStatus,
+    type EndpointDefinition,
+    type EndpointMemory,
 } from "../utils/endpoint";
+
+import {
+    createApi,
+    ApiAction,
+    type ApiActionOptions,
+    type ApiOptions,
+} from "./api";
 
 export function createStore<T extends z.ZodRawShape>(
     name: string,
     schema: z.ZodObject<T>,
-    endpoints?: Partial<Record<StoreEndpoint, StoreEndpointDefinition>>,
+    endpoints?: Partial<Record<Endpoint, EndpointDefinition>>,
     options?: {
         api?: ApiOptions;
         extensions?: Extension<BaseState>[];
@@ -51,93 +50,97 @@ export function createStore<T extends z.ZodRawShape>(
     const store = createHarlemStore(
         name,
         {
-            cache: {
-                record: null as Schema | null,
-                records: [] as Schema[],
+            memory: {
+                unit: null as Schema | null,
+                units: [] as Schema[],
             },
-            endpoints: {} as Record<StoreEndpoint, StoreEndpointMemory>,
+            endpoints: {} as Record<Endpoint, EndpointMemory>,
         },
         {
             extensions: options?.extensions ?? [],
         },
     );
 
-    const cachedRecord = store.getter("cachedRecord", (state) => {
-        return state.cache.record;
+    const memorizedUnit = store.getter("memorizedUnit", (state) => {
+        return state.memory.unit;
     });
 
-    const cachedRecords = store.getter("cachedRecords", (state) => {
-        return state.cache.records;
+    const memorizedUnits = store.getter("memorizedUnits", (state) => {
+        return state.memory.units;
     });
 
-    function hasCachedRecords(
-        ...records: (SchemaIndicator & Partial<Schema>)[]
+    function hasMemorizedUnits(
+        ...units: (SchemaIndicator & Partial<Schema>)[]
     ) {
         const output = {} as Record<keyof Schema, boolean>;
 
-        for (const record of records) {
-            const exists = cachedRecords.value.some((cachedRecord: any) => {
-                return cachedRecord[indicator] === record[indicator];
+        for (const unit of units) {
+            const exists = memorizedUnits.value.some((memorizedUnit: any) => {
+                return memorizedUnit[indicator] === unit[indicator];
             });
 
-            output[record[indicator]] = exists;
+            output[unit[indicator]] = exists;
         }
 
         return output;
     }
 
-    const putCachedRecord = store.mutation(
-        "putCachedRecord",
-        (state, record: Schema) => {
-            state.cache.record = record;
+    const setMemorizedUnit = store.mutation(
+        "setMemorizedUnit",
+        (state, unit: Schema | null = null) => {
+            state.memory.unit = unit;
         },
     );
 
-    const putCachedRecords = store.mutation(
-        "putCachedRecords",
-        (state, records: Schema[]) => {
-            state.cache.records = records;
+    const setMemorizedUnits = store.mutation(
+        "setMemorizedUnits",
+        (state, units: Schema[] = []) => {
+            state.memory.units = units;
         },
     );
 
-    const patchCachedRecord = store.mutation(
-        "patchCachedRecord",
-        (state, record: SchemaIndicator & Partial<Schema>) => {
-            state.cache.record = defu<any, any>(record, state.cache.record);
+    const editMemorizedUnit = store.mutation(
+        "editMemorizedUnit",
+        (state, unit: SchemaIndicator & Partial<Schema>) => {
+            if (state.memory.unit?.[indicator] === unit[indicator]) {
+                state.memory.unit = defu<any, any>(unit, state.memory.unit);
+            }
         },
     );
 
-    const patchCachedRecords = store.mutation(
-        "patchCachedRecords",
-        (state, ...records: (SchemaIndicator & Partial<Schema>)[]) => {
-            for (const record of records) {
-                const index = state.cache.records.findIndex((cachedRecord) => {
-                    return cachedRecord[indicator] === record[indicator];
+    const editMemorizedUnits = store.mutation(
+        "editMemorizedUnits",
+        (state, units: (SchemaIndicator & Partial<Schema>)[]) => {
+            for (const unit of units) {
+                const index = state.memory.units.findIndex((memorizedUnit) => {
+                    return memorizedUnit[indicator] === unit[indicator];
                 });
 
                 if (index !== -1) {
-                    state.cache.records[index] = defu<any, any>(
-                        record,
-                        state.cache.records[index],
+                    state.memory.units[index] = defu<any, any>(
+                        unit,
+                        state.memory.units[index],
                     );
                 }
             }
         },
     );
 
-    const pushCachedRecords = store.mutation(
-        "pushCachedRecords",
-        (state, ...records: Schema[]) => {
-            state.cache.records.push(...records);
+    const dropMemorizedUnit = store.mutation(
+        "dropMemorizedUnit",
+        (state, unit: SchemaIndicator & Partial<Schema>) => {
+            if (state.memory.unit?.[indicator] === unit[indicator]) {
+                state.memory.unit = null;
+            }
         },
     );
 
-    const pullCachedRecords = store.mutation(
-        "pullCachedRecords",
-        (state, ...records: (SchemaIndicator & Partial<Schema>)[]) => {
-            state.cache.records = state.cache.records.filter((cachedRecord) => {
-                for (const record of records) {
-                    if (cachedRecord[indicator] === record[indicator]) {
+    const dropMemorizedUnits = store.mutation(
+        "dropMemorizedUnits",
+        (state, units: (SchemaIndicator & Partial<Schema>)[]) => {
+            state.memory.units = state.memory.units.filter((memorizedUnit) => {
+                for (const unit of units) {
+                    if (memorizedUnit[indicator] === unit[indicator]) {
                         return false;
                     }
                 }
@@ -146,14 +149,6 @@ export function createStore<T extends z.ZodRawShape>(
             });
         },
     );
-
-    const purgeCachedRecord = store.mutation("purgeCachedRecord", (state) => {
-        state.cache.record = null;
-    });
-
-    const purgeCachedRecords = store.mutation("purgeCachedRecords", (state) => {
-        state.cache.records = [];
-    });
 
     const endpointsStatus = makeEndpointsStatus(store.getter);
 
@@ -165,8 +160,8 @@ export function createStore<T extends z.ZodRawShape>(
                 key,
                 memory,
             }: {
-                key: StoreEndpoint;
-                memory: StoreEndpointMemory;
+                key: Endpoint;
+                memory: EndpointMemory;
             },
         ) => {
             state.endpoints[key] = memory;
@@ -176,18 +171,15 @@ export function createStore<T extends z.ZodRawShape>(
     const purgeEndpointMemory = store.mutation(
         "purgeEndpointMemory",
         (state) => {
-            state.endpoints = {} as Record<StoreEndpoint, StoreEndpointMemory>;
+            state.endpoints = {} as Record<Endpoint, EndpointMemory>;
         },
     );
 
-    function patchEndpointMemoryTo(
-        key: StoreEndpoint,
-        memory: StoreEndpointMemory,
-    ) {
-        if (memory.status === StoreEndpointStatus.PENDING) {
+    function patchEndpointMemoryTo(key: Endpoint, memory: EndpointMemory) {
+        if (memory.status === EndpointStatus.PENDING) {
             const statusKey = makeEndpointStatusKey(
                 key,
-                StoreEndpointStatus.PENDING,
+                EndpointStatus.PENDING,
             );
 
             if (endpointsStatus[statusKey].value) {
@@ -201,46 +193,46 @@ export function createStore<T extends z.ZodRawShape>(
         });
     }
 
-    async function getRecord(
-        record: SchemaIndicator & Partial<Schema>,
+    async function getUnit(
+        unit: SchemaIndicator & Partial<Schema>,
         options?: Omit<ApiActionOptions<ApiAction.GET>, "body">,
     ) {
-        const endpoint = getEndpoint(endpoints, StoreEndpoint.GET_RECORD);
+        const endpoint = getEndpoint(endpoints, Endpoint.GET_UNIT);
 
-        patchEndpointMemoryTo(StoreEndpoint.GET_RECORD, {
-            status: StoreEndpointStatus.PENDING,
+        patchEndpointMemoryTo(Endpoint.GET_UNIT, {
+            status: EndpointStatus.PENDING,
         });
 
         try {
             const resolvedUrl = resolveEndpointUrl(endpoint.url, {
-                [indicator]: record[indicator],
+                [indicator]: unit[indicator],
             });
 
             const response = await api.get<Schema>(resolvedUrl, options);
 
-            putCachedRecord(response);
+            setMemorizedUnit(response);
 
-            patchEndpointMemoryTo(StoreEndpoint.GET_RECORD, {
-                status: StoreEndpointStatus.SUCCESS,
+            patchEndpointMemoryTo(Endpoint.GET_UNIT, {
+                status: EndpointStatus.SUCCESS,
             });
 
             return response;
         } catch (error) {
-            patchEndpointMemoryTo(StoreEndpoint.GET_RECORD, {
-                status: StoreEndpointStatus.FAILED,
+            patchEndpointMemoryTo(Endpoint.GET_UNIT, {
+                status: EndpointStatus.FAILED,
             });
 
             throw error;
         }
     }
 
-    async function getRecords(
+    async function getUnits(
         options?: Omit<ApiActionOptions<ApiAction.GET>, "body">,
     ) {
-        const endpoint = getEndpoint(endpoints, StoreEndpoint.GET_RECORDS);
+        const endpoint = getEndpoint(endpoints, Endpoint.GET_UNITS);
 
-        patchEndpointMemoryTo(StoreEndpoint.GET_RECORDS, {
-            status: StoreEndpointStatus.PENDING,
+        patchEndpointMemoryTo(Endpoint.GET_UNITS, {
+            status: EndpointStatus.PENDING,
         });
 
         try {
@@ -248,166 +240,370 @@ export function createStore<T extends z.ZodRawShape>(
 
             const response = await api.get<Schema[]>(resolvedUrl, options);
 
-            putCachedRecords(response);
+            setMemorizedUnits(response);
 
-            patchEndpointMemoryTo(StoreEndpoint.GET_RECORDS, {
-                status: StoreEndpointStatus.SUCCESS,
+            patchEndpointMemoryTo(Endpoint.GET_UNITS, {
+                status: EndpointStatus.SUCCESS,
             });
 
             return response;
         } catch (error) {
-            patchEndpointMemoryTo(StoreEndpoint.GET_RECORDS, {
-                status: StoreEndpointStatus.FAILED,
+            patchEndpointMemoryTo(Endpoint.GET_UNITS, {
+                status: EndpointStatus.FAILED,
             });
 
             throw error;
         }
     }
 
-    async function postRecord(
-        record: Schema,
-        options?: ApiActionOptions<ApiAction.POST>,
+    async function postUnit(
+        unit: Schema,
+        options?: ApiActionOptions<ApiAction.POST> & { validate?: boolean },
     ) {
-        const endpoint = getEndpoint(endpoints, StoreEndpoint.POST_RECORD);
+        if (options?.validate) {
+            schema.parse(unit);
+        }
 
-        patchEndpointMemoryTo(StoreEndpoint.POST_RECORD, {
-            status: StoreEndpointStatus.PENDING,
+        const endpoint = getEndpoint(endpoints, Endpoint.POST_UNIT);
+
+        patchEndpointMemoryTo(Endpoint.POST_UNIT, {
+            status: EndpointStatus.PENDING,
         });
 
         try {
             const resolvedUrl = resolveEndpointUrl(endpoint.url, {
-                [indicator]: record[indicator],
+                [indicator]: unit[indicator],
             });
 
-            const { values } = resolveSchema(schema, endpoint.action, record);
+            const { values: body } = resolveSchema(
+                schema,
+                endpoint.action,
+                unit,
+            );
 
             const response = await api.post<Schema>(resolvedUrl, {
                 ...options,
-                body: options?.body ?? values,
+                body: options?.body ?? body,
             });
 
-            putCachedRecord(response);
+            setMemorizedUnit(response);
 
-            patchEndpointMemoryTo(StoreEndpoint.POST_RECORD, {
-                status: StoreEndpointStatus.SUCCESS,
+            patchEndpointMemoryTo(Endpoint.POST_UNIT, {
+                status: EndpointStatus.SUCCESS,
             });
 
             return response;
         } catch (error) {
-            patchEndpointMemoryTo(StoreEndpoint.POST_RECORD, {
-                status: StoreEndpointStatus.FAILED,
+            patchEndpointMemoryTo(Endpoint.POST_UNIT, {
+                status: EndpointStatus.FAILED,
             });
 
             throw error;
         }
     }
 
-    async function putRecord(
-        record: Schema,
-        options?: ApiActionOptions<ApiAction.PUT>,
+    async function postUnits(
+        units: Schema[],
+        options?: ApiActionOptions<ApiAction.POST> & { validate?: boolean },
     ) {
-        const endpoint = getEndpoint(endpoints, StoreEndpoint.PUT_RECORD);
+        if (options?.validate) {
+            for (const unit of units) {
+                schema.parse(unit);
+            }
+        }
 
-        patchEndpointMemoryTo(StoreEndpoint.PUT_RECORD, {
-            status: StoreEndpointStatus.PENDING,
+        const endpoint = getEndpoint(endpoints, Endpoint.POST_UNITS);
+
+        patchEndpointMemoryTo(Endpoint.POST_UNITS, {
+            status: EndpointStatus.PENDING,
+        });
+
+        try {
+            const resolvedUrl = resolveEndpointUrl(endpoint.url);
+
+            const body = units.map((unit) => {
+                const { values } = resolveSchema(schema, endpoint.action, unit);
+
+                return values;
+            });
+
+            const response = await api.post<Schema[]>(resolvedUrl, {
+                ...options,
+                body: options?.body ?? body,
+            });
+
+            setMemorizedUnits([
+                ...(memorizedUnits.value as unknown as Schema[]),
+                ...response,
+            ]);
+
+            patchEndpointMemoryTo(Endpoint.POST_UNITS, {
+                status: EndpointStatus.SUCCESS,
+            });
+
+            return response;
+        } catch (error) {
+            patchEndpointMemoryTo(Endpoint.POST_UNITS, {
+                status: EndpointStatus.FAILED,
+            });
+
+            throw error;
+        }
+    }
+
+    async function putUnit(
+        unit: Schema,
+        options?: ApiActionOptions<ApiAction.PUT> & { validate?: boolean },
+    ) {
+        if (options?.validate) {
+            schema.parse(unit);
+        }
+
+        const endpoint = getEndpoint(endpoints, Endpoint.PUT_UNIT);
+
+        patchEndpointMemoryTo(Endpoint.PUT_UNIT, {
+            status: EndpointStatus.PENDING,
         });
 
         try {
             const resolvedUrl = resolveEndpointUrl(endpoint.url, {
-                [indicator]: record[indicator],
+                [indicator]: unit[indicator],
             });
 
-            const { values } = resolveSchema(schema, endpoint.action, record);
+            const { values: body } = resolveSchema(
+                schema,
+                endpoint.action,
+                unit,
+            );
 
             const response = await api.put<Schema>(resolvedUrl, {
                 ...options,
-                body: options?.body ?? values,
+                body: options?.body ?? body,
             });
 
-            putCachedRecord(response);
+            setMemorizedUnit(response);
 
-            patchEndpointMemoryTo(StoreEndpoint.PUT_RECORD, {
-                status: StoreEndpointStatus.SUCCESS,
+            patchEndpointMemoryTo(Endpoint.PUT_UNIT, {
+                status: EndpointStatus.SUCCESS,
             });
 
             return response;
         } catch (error) {
-            patchEndpointMemoryTo(StoreEndpoint.PUT_RECORD, {
-                status: StoreEndpointStatus.FAILED,
+            patchEndpointMemoryTo(Endpoint.PUT_UNIT, {
+                status: EndpointStatus.FAILED,
             });
 
             throw error;
         }
     }
 
-    async function patchRecord(
-        record: SchemaIndicator & Partial<Schema>,
-        options?: ApiActionOptions<ApiAction.PATCH>,
+    async function putUnits(
+        units: Schema[],
+        options?: ApiActionOptions<ApiAction.PUT> & { validate?: boolean },
     ) {
-        const endpoint = getEndpoint(endpoints, StoreEndpoint.PATCH_RECORD);
+        if (options?.validate) {
+            for (const unit of units) {
+                schema.parse(unit);
+            }
+        }
 
-        patchEndpointMemoryTo(StoreEndpoint.PATCH_RECORD, {
-            status: StoreEndpointStatus.PENDING,
+        const endpoint = getEndpoint(endpoints, Endpoint.PUT_UNITS);
+
+        patchEndpointMemoryTo(Endpoint.PUT_UNITS, {
+            status: EndpointStatus.PENDING,
+        });
+
+        try {
+            const resolvedUrl = resolveEndpointUrl(endpoint.url);
+
+            const body = units.map((unit) => {
+                const { values } = resolveSchema(schema, endpoint.action, unit);
+
+                return values;
+            });
+
+            const response = await api.put<Schema[]>(resolvedUrl, {
+                ...options,
+                body: options?.body ?? body,
+            });
+
+            setMemorizedUnits(response);
+
+            patchEndpointMemoryTo(Endpoint.PUT_UNITS, {
+                status: EndpointStatus.SUCCESS,
+            });
+
+            return response;
+        } catch (error) {
+            patchEndpointMemoryTo(Endpoint.PUT_UNITS, {
+                status: EndpointStatus.FAILED,
+            });
+
+            throw error;
+        }
+    }
+
+    async function patchUnit(
+        unit: SchemaIndicator & Partial<Schema>,
+        options?: ApiActionOptions<ApiAction.PATCH> & { validate?: boolean },
+    ) {
+        if (options?.validate) {
+            schema.partial().parse(unit);
+        }
+
+        const endpoint = getEndpoint(endpoints, Endpoint.PATCH_UNIT);
+
+        patchEndpointMemoryTo(Endpoint.PATCH_UNIT, {
+            status: EndpointStatus.PENDING,
         });
 
         try {
             const resolvedUrl = resolveEndpointUrl(endpoint.url, {
-                [indicator]: record[indicator],
+                [indicator]: unit[indicator],
             });
 
-            const { values } = resolveSchema(schema, endpoint.action, record);
+            const { values: body } = resolveSchema(
+                schema,
+                endpoint.action,
+                unit,
+            );
 
             const response = await api.patch<SchemaIndicator & Partial<Schema>>(
                 resolvedUrl,
                 {
                     ...options,
-                    body: options?.body ?? values,
+                    body: options?.body ?? body,
                 },
             );
 
-            patchCachedRecords(response);
+            editMemorizedUnit(response);
 
-            patchEndpointMemoryTo(StoreEndpoint.PATCH_RECORD, {
-                status: StoreEndpointStatus.SUCCESS,
+            patchEndpointMemoryTo(Endpoint.PATCH_UNIT, {
+                status: EndpointStatus.SUCCESS,
             });
 
             return response;
         } catch (error) {
-            patchEndpointMemoryTo(StoreEndpoint.PATCH_RECORD, {
-                status: StoreEndpointStatus.FAILED,
+            patchEndpointMemoryTo(Endpoint.PATCH_UNIT, {
+                status: EndpointStatus.FAILED,
             });
 
             throw error;
         }
     }
 
-    async function deleteRecord(
-        record: SchemaIndicator & Partial<Schema>,
+    async function patchUnits(
+        units: (SchemaIndicator & Partial<Schema>)[],
+        options?: ApiActionOptions<ApiAction.PATCH> & { validate?: boolean },
+    ) {
+        if (options?.validate) {
+            for (const unit of units) {
+                schema.partial().parse(unit);
+            }
+        }
+
+        const endpoint = getEndpoint(endpoints, Endpoint.PATCH_UNITS);
+
+        patchEndpointMemoryTo(Endpoint.PATCH_UNITS, {
+            status: EndpointStatus.PENDING,
+        });
+
+        try {
+            const resolvedUrl = resolveEndpointUrl(endpoint.url);
+
+            const body = units.map((unit) => {
+                const { values } = resolveSchema(schema, endpoint.action, unit);
+
+                return values;
+            });
+
+            const response = await api.patch<
+                (SchemaIndicator & Partial<Schema>)[]
+            >(resolvedUrl, {
+                ...options,
+                body: options?.body ?? body,
+            });
+
+            editMemorizedUnits(response);
+
+            patchEndpointMemoryTo(Endpoint.PATCH_UNITS, {
+                status: EndpointStatus.SUCCESS,
+            });
+
+            return response;
+        } catch (error) {
+            patchEndpointMemoryTo(Endpoint.PATCH_UNITS, {
+                status: EndpointStatus.FAILED,
+            });
+
+            throw error;
+        }
+    }
+
+    async function deleteUnit(
+        unit: SchemaIndicator & Partial<Schema>,
         options?: Omit<ApiActionOptions<ApiAction.DELETE>, "body">,
     ) {
-        const endpoint = getEndpoint(endpoints, StoreEndpoint.DELETE_RECORD);
+        const endpoint = getEndpoint(endpoints, Endpoint.DELETE_UNIT);
 
-        patchEndpointMemoryTo(StoreEndpoint.DELETE_RECORD, {
-            status: StoreEndpointStatus.PENDING,
+        patchEndpointMemoryTo(Endpoint.DELETE_UNIT, {
+            status: EndpointStatus.PENDING,
         });
 
         try {
             const resolvedUrl = resolveEndpointUrl(endpoint.url, {
-                [indicator]: record[indicator],
+                [indicator]: unit[indicator],
             });
 
-            await api.del<typeof record>(resolvedUrl, options);
+            await api.del<SchemaIndicator & Partial<Schema>>(
+                resolvedUrl,
+                options,
+            );
 
-            pullCachedRecords(record);
+            dropMemorizedUnit(unit);
 
-            patchEndpointMemoryTo(StoreEndpoint.DELETE_RECORD, {
-                status: StoreEndpointStatus.SUCCESS,
+            patchEndpointMemoryTo(Endpoint.DELETE_UNIT, {
+                status: EndpointStatus.SUCCESS,
             });
 
             return true;
         } catch (error) {
-            patchEndpointMemoryTo(StoreEndpoint.DELETE_RECORD, {
-                status: StoreEndpointStatus.FAILED,
+            patchEndpointMemoryTo(Endpoint.DELETE_UNIT, {
+                status: EndpointStatus.FAILED,
+            });
+
+            throw error;
+        }
+    }
+
+    async function deleteUnits(
+        units: (SchemaIndicator & Partial<Schema>)[],
+        options?: Omit<ApiActionOptions<ApiAction.DELETE>, "body">,
+    ) {
+        const endpoint = getEndpoint(endpoints, Endpoint.DELETE_UNITS);
+
+        patchEndpointMemoryTo(Endpoint.DELETE_UNITS, {
+            status: EndpointStatus.PENDING,
+        });
+
+        try {
+            const resolvedUrl = resolveEndpointUrl(endpoint.url);
+
+            await api.del<(SchemaIndicator & Partial<Schema>)[]>(
+                resolvedUrl,
+                options,
+            );
+
+            dropMemorizedUnits(units);
+
+            patchEndpointMemoryTo(Endpoint.DELETE_UNITS, {
+                status: EndpointStatus.SUCCESS,
+            });
+
+            return true;
+        } catch (error) {
+            patchEndpointMemoryTo(Endpoint.DELETE_UNITS, {
+                status: EndpointStatus.FAILED,
             });
 
             throw error;
@@ -415,26 +611,29 @@ export function createStore<T extends z.ZodRawShape>(
     }
 
     return {
+        api,
         store,
-        cachedRecord,
-        cachedRecords,
-        hasCachedRecords,
+        memorizedUnit,
+        memorizedUnits,
+        hasMemorizedUnits,
         endpointsStatus,
-        putCachedRecord,
-        putCachedRecords,
-        patchCachedRecord,
-        patchCachedRecords,
-        pushCachedRecords,
-        pullCachedRecords,
-        purgeCachedRecord,
-        purgeCachedRecords,
+        setMemorizedUnit,
+        setMemorizedUnits,
+        editMemorizedUnit,
+        editMemorizedUnits,
+        dropMemorizedUnit,
+        dropMemorizedUnits,
         patchEndpointMemory,
         purgeEndpointMemory,
-        getRecord,
-        getRecords,
-        postRecord,
-        putRecord,
-        patchRecord,
-        deleteRecord,
+        getUnit,
+        getUnits,
+        postUnit,
+        postUnits,
+        putUnit,
+        putUnits,
+        patchUnit,
+        patchUnits,
+        deleteUnit,
+        deleteUnits,
     };
 }
