@@ -148,8 +148,9 @@ await patchUnit(
         id: 1,
         name: "John Doe",
     },
-    { 
-    validate: true },
+    {
+        validate: true,
+    },
 );
 ```
 

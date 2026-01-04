@@ -117,8 +117,15 @@ const { postUnit, patchUnit } = productStore;
 // Validate before creating
 try {
     await postUnit(
-        { id: 0, name: "", price: -10, description: "Test" },
-        { validate: true },
+        {
+            id: 0,
+            name: "",
+            price: -10,
+            description: "Test",
+        },
+        {
+            validate: true,
+        },
     );
 } catch (error) {
     // ZodError: name must be non-empty, price must be positive
@@ -127,7 +134,15 @@ try {
 
 // Validate before patching
 try {
-    await patchUnit({ id: 1, price: -5 }, { validate: true });
+    await patchUnit(
+        {
+            id: 1,
+            price: -5,
+        },
+        {
+            validate: true,
+        },
+    );
 } catch (error) {
     // ZodError: price must be positive
     console.error(error);
@@ -143,8 +158,12 @@ import { z, createStore, Endpoint, ApiAction } from "harlemify";
 const token = ref<string | null>(null);
 
 const UserSchema = z.object({
-    id: z.number().meta({ indicator: true }),
-    name: z.string().meta({ actions: [ApiAction.PUT] }),
+    id: z.number().meta({
+        indicator: true,
+    }),
+    name: z.string().meta({
+        actions: [ApiAction.PUT],
+    }),
 });
 
 export const userStore = createStore(
@@ -163,8 +182,9 @@ export const userStore = createStore(
     {
         api: {
             headers: {
-                Authorization: () =>
-                    token.value ? `Bearer ${token.value}` : "",
+                Authorization() {
+                    return token.value ? `Bearer ${token.value}` : "";
+                },
             },
         },
     },
@@ -196,22 +216,32 @@ const api = createApi({
 
 // GET request with query params
 const users = await api.get("/users", {
-    query: { page: 1, limit: 10 },
+    query: {
+        page: 1,
+        limit: 10,
+    },
 });
 
 // POST request with body
 const newUser = await api.post("/users", {
-    body: { name: "John", email: "john@example.com" },
+    body: {
+        name: "John",
+        email: "john@example.com",
+    },
 });
 
 // PUT request
 await api.put("/users/1", {
-    body: { name: "John Doe" },
+    body: {
+        name: "John Doe",
+    },
 });
 
 // PATCH request
 await api.patch("/users/1", {
-    body: { name: "Johnny" },
+    body: {
+        name: "Johnny",
+    },
 });
 
 // DELETE request
@@ -236,32 +266,61 @@ const {
 } = userStore;
 
 // Set a single unit directly
-setMemorizedUnit({ id: 1, name: "John" });
+setMemorizedUnit({
+    id: 1,
+    name: "John",
+});
 
 // Clear single unit
 setMemorizedUnit(null);
 
 // Set multiple units
 setMemorizedUnits([
-    { id: 1, name: "John" },
-    { id: 2, name: "Jane" },
+    {
+        id: 1,
+        name: "John",
+    },
+    {
+        id: 2,
+        name: "Jane",
+    },
 ]);
 
 // Edit a single unit (merges with existing)
-editMemorizedUnit({ id: 1, name: "John Doe" });
+editMemorizedUnit({
+    id: 1,
+    name: "John Doe",
+});
 
 // Edit multiple units
 editMemorizedUnits([
-    { id: 1, name: "John Doe" },
-    { id: 2, name: "Jane Doe" },
+    {
+        id: 1,
+        name: "John Doe",
+    },
+    {
+        id: 2,
+        name: "Jane Doe",
+    },
 ]);
 
 // Check if units exist in memory
-const exists = hasMemorizedUnits({ id: 1 }, { id: 2 });
+const exists = hasMemorizedUnits(
+    {
+        id: 1,
+    },
+    {
+        id: 2,
+    },
+);
 // { 1: true, 2: true }
 
 // Drop specific units
-dropMemorizedUnits([{ id: 1 }]);
+dropMemorizedUnits([
+    {
+        id: 1,
+    },
+]);
 
 // Clear all units
 setMemorizedUnits([]);
@@ -273,7 +332,9 @@ setMemorizedUnits([]);
 import { z, createStore, Endpoint, ApiAction } from "harlemify";
 
 const ExternalSchema = z.object({
-    id: z.string().meta({ indicator: true }),
+    id: z.string().meta({
+        indicator: true,
+    }),
     data: z.unknown(),
 });
 
