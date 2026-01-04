@@ -1,9 +1,13 @@
 import { z } from "zod";
 
-import type { ApiAction } from "../types/api";
-import type { StoreSchemaMeta } from "../types/store";
+import type { ApiAction } from "../core/api";
 
-export function getMeta(field: any): StoreSchemaMeta | undefined {
+export interface SchemaMeta {
+    indicator?: boolean;
+    actions?: ApiAction[];
+}
+
+export function getMeta(field: any): SchemaMeta | undefined {
     return (field as z.ZodType).meta() as any;
 }
 

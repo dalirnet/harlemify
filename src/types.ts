@@ -1,9 +1,9 @@
 import "zod";
-import type { StoreSchemaMeta } from "./runtime";
+import type { SchemaMeta } from "./runtime";
 import type { ModuleOptions } from "./module";
 
 declare module "zod" {
-    interface GlobalMeta extends StoreSchemaMeta {}
+    interface GlobalMeta extends SchemaMeta {}
 }
 
 declare module "@nuxt/schema" {

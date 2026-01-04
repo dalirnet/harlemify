@@ -28,8 +28,6 @@ export default defineNuxtModule<ModuleOptions>({
 
         addPlugin(resolve("./runtime", "plugin"));
         addImportsDir(resolve("./runtime", "core"));
-        addImportsDir(resolve("./runtime", "types"));
-        addImportsDir(resolve("./runtime", "utils"));
 
         updateRuntimeConfig({
             public: {

@@ -1,14 +1,67 @@
-import {
-    ApiAction,
-    ApiErrorSource,
-    type ApiRequestHeader,
-    type ApiRequestQuery,
-    type ApiRequestBody,
-    type ApiRequestOptions,
-    type ApiOptions,
-    type ApiActionOptions,
-    type ApiErrorOptions,
-} from "../types/api";
+import { resolve, type Resolvable } from "../utils/resolve";
+
+export enum ApiAction {
+    GET = "get",
+    POST = "post",
+    PUT = "put",
+    PATCH = "patch",
+    DELETE = "delete",
+}
+
+export enum ApiResponseType {
+    JSON = "json",
+    TEXT = "text",
+    BLOB = "blob",
+    ARRAY_BUFFER = "arrayBuffer",
+}
+
+export enum ApiErrorSource {
+    REQUEST = "request",
+    RESPONSE = "response",
+}
+
+export type ApiRequestHeader = Resolvable<Record<string, unknown>>;
+export type ApiRequestQuery = Resolvable<Record<string, unknown>>;
+export type ApiRequestBody = Resolvable<
+    string | number | ArrayBuffer | FormData | Blob | Record<string, any>
+>;
+
+export interface ApiRequestOptions<
+    A extends ApiAction = ApiAction,
+    H extends ApiRequestHeader = ApiRequestHeader,
+    Q extends ApiRequestQuery = ApiRequestQuery,
+    B extends ApiRequestBody = ApiRequestBody,
+> {
+    action?: A;
+    headers?: H;
+    query?: Q;
+    body?: B;
+    responseType?: ApiResponseType;
+    retry?: number | false;
+    retryDelay?: number;
+    retryStatusCodes?: number[];
+}
+
+export interface ApiOptions {
+    url?: string;
+    headers?: ApiRequestHeader;
+    query?: ApiRequestQuery;
+    timeout?: number;
+}
+
+export type ApiActionOptions<
+    A extends ApiAction,
+    H extends ApiRequestHeader = ApiRequestHeader,
+    Q extends ApiRequestQuery = ApiRequestQuery,
+    B extends ApiRequestBody = ApiRequestBody,
+> = Omit<ApiRequestOptions<A, H, Q, B>, "action">;
+
+export interface ApiErrorOptions {
+    source: ApiErrorSource;
+    method: string;
+    url: string;
+    message?: string;
+}
 
 export class ApiError extends Error {
     source: ApiErrorSource;
@@ -43,7 +96,7 @@ export class ApiResponseError extends ApiError {
     }
 }
 
-export function createApi(apiOptions?: ApiOptions) {
+export function createApi(options?: ApiOptions) {
     async function request<
         T,
         A extends ApiAction = ApiAction,
@@ -52,22 +105,25 @@ export function createApi(apiOptions?: ApiOptions) {
         B extends ApiRequestBody = ApiRequestBody,
     >(
         url: string,
-        options?: ApiRequestOptions<A, H, Q, B> & ApiOptions,
+        requestOptions?: ApiRequestOptions<A, H, Q, B> & ApiOptions,
     ): Promise<T> {
         return $fetch<T>(url, {
-            baseURL: apiOptions?.url,
-            method: options?.action ?? ApiAction.GET,
+            baseURL: options?.url,
+            method: requestOptions?.action ?? ApiAction.GET,
             headers: {
-                ...apiOptions?.headers,
-                ...options?.headers,
+                ...resolve(options?.headers),
+                ...resolve(requestOptions?.headers),
             } as any,
-            query: options?.query as any,
-            body: options?.body as any,
-            timeout: options?.timeout ?? apiOptions?.timeout,
-            responseType: options?.responseType,
-            retry: options?.retry,
-            retryDelay: options?.retryDelay,
-            retryStatusCodes: options?.retryStatusCodes,
+            query: {
+                ...resolve(requestOptions?.query),
+                ...resolve(options?.query),
+            } as any,
+            body: resolve(requestOptions?.body) as any,
+            timeout: requestOptions?.timeout ?? options?.timeout,
+            responseType: requestOptions?.responseType,
+            retry: requestOptions?.retry,
+            retryDelay: requestOptions?.retryDelay,
+            retryStatusCodes: requestOptions?.retryStatusCodes,
             onRequestError({ request, options, error }) {
                 throw new ApiRequestError({
                     method: options.method as string,
