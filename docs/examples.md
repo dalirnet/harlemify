@@ -1,6 +1,8 @@
 # Examples
 
-## Basic CRUD Store
+## Collection Store (Products, Users, Orders)
+
+Use `*Units` endpoints for data that represents a list/collection.
 
 ```typescript
 // stores/product.ts
@@ -21,28 +23,23 @@ const ProductSchema = z.object({
     }),
 });
 
+export type Product = z.infer<typeof ProductSchema>;
+
+// Collection store - only *_UNITS endpoints
 export const productStore = createStore("product", ProductSchema, {
-    [Endpoint.GET_UNIT]: {
-        action: ApiAction.GET,
-        url: (params) => `/products/${params.id}`,
-    },
     [Endpoint.GET_UNITS]: {
         action: ApiAction.GET,
         url: "/products",
     },
-    [Endpoint.POST_UNIT]: {
+    [Endpoint.POST_UNITS]: {
         action: ApiAction.POST,
         url: "/products",
     },
-    [Endpoint.PUT_UNIT]: {
-        action: ApiAction.PUT,
-        url: (params) => `/products/${params.id}`,
-    },
-    [Endpoint.PATCH_UNIT]: {
+    [Endpoint.PATCH_UNITS]: {
         action: ApiAction.PATCH,
         url: (params) => `/products/${params.id}`,
     },
-    [Endpoint.DELETE_UNIT]: {
+    [Endpoint.DELETE_UNITS]: {
         action: ApiAction.DELETE,
         url: (params) => `/products/${params.id}`,
     },
@@ -59,32 +56,34 @@ const {
     memorizedUnits,
     endpointsStatus,
     getUnits,
-    postUnit,
-    patchUnit,
-    deleteUnit,
+    postUnits,
+    patchUnits,
+    deleteUnits,
 } = productStore;
 
 // Fetch all products
 await getUnits();
 
-// Create a new product
+// Create a new product (adds to memorizedUnits)
 async function createProduct() {
-    await postUnit({
-        id: 0,
-        name: "New Product",
-        price: 99.99,
-        description: "A great product",
-    });
+    await postUnits([
+        {
+            id: 0,
+            name: "New Product",
+            price: 99.99,
+            description: "A great product",
+        },
+    ]);
 }
 
-// Update product price
+// Update product price (updates in memorizedUnits)
 async function updatePrice(id: number, price: number) {
-    await patchUnit({ id, price });
+    await patchUnits([{ id, price }]);
 }
 
-// Delete a product
+// Delete a product (removes from memorizedUnits)
 async function removeProduct(id: number) {
-    await deleteUnit({ id });
+    await deleteUnits([{ id }]);
 }
 </script>
 
@@ -112,20 +111,20 @@ async function removeProduct(id: number) {
 ```typescript
 import { productStore } from "~/stores/product";
 
-const { postUnit, patchUnit } = productStore;
+const { postUnits, patchUnits } = productStore;
 
 // Validate before creating
 try {
-    await postUnit(
-        {
-            id: 0,
-            name: "",
-            price: -10,
-            description: "Test",
-        },
-        {
-            validate: true,
-        },
+    await postUnits(
+        [
+            {
+                id: 0,
+                name: "",
+                price: -10,
+                description: "Test",
+            },
+        ],
+        { validate: true },
     );
 } catch (error) {
     // ZodError: name must be non-empty, price must be positive
@@ -134,19 +133,101 @@ try {
 
 // Validate before patching
 try {
-    await patchUnit(
-        {
-            id: 1,
-            price: -5,
-        },
-        {
-            validate: true,
-        },
+    await patchUnits(
+        [
+            {
+                id: 1,
+                price: -5,
+            },
+        ],
+        { validate: true },
     );
 } catch (error) {
     // ZodError: price must be positive
     console.error(error);
 }
+```
+
+## Singleton Store (Config, Settings, Current User)
+
+Use `*Unit` actions (without 's') for data that is inherently singular - like app configuration, user settings, or the current authenticated user. These cannot be plural.
+
+```typescript
+// stores/config.ts
+import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
+
+const ConfigSchema = z.object({
+    id: z.number().meta({
+        indicator: true,
+    }),
+    theme: z.enum(["light", "dark"]).meta({
+        actions: [ApiAction.PUT, ApiAction.PATCH],
+    }),
+    language: z.string().meta({
+        actions: [ApiAction.PUT, ApiAction.PATCH],
+    }),
+    notifications: z.boolean().meta({
+        actions: [ApiAction.PUT, ApiAction.PATCH],
+    }),
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
+
+// Only define *_UNIT endpoints - no plural versions needed
+export const configStore = createStore("config", ConfigSchema, {
+    [Endpoint.GET_UNIT]: {
+        action: ApiAction.GET,
+        url: "/config",
+    },
+    [Endpoint.PUT_UNIT]: {
+        action: ApiAction.PUT,
+        url: "/config",
+    },
+    [Endpoint.PATCH_UNIT]: {
+        action: ApiAction.PATCH,
+        url: "/config",
+    },
+});
+```
+
+```vue
+<script setup lang="ts">
+import { configStore } from "~/stores/config";
+
+const {
+    memorizedUnit: config,
+    endpointsStatus,
+    getUnit: getConfig,
+    patchUnit: updateConfig,
+} = configStore;
+
+// Fetch config (stores in memorizedUnit)
+await getConfig();
+
+// Update config (updates memorizedUnit)
+async function toggleTheme() {
+    const newTheme = config.value?.theme === "dark" ? "light" : "dark";
+    await updateConfig({ id: config.value!.id, theme: newTheme });
+}
+
+async function toggleNotifications() {
+    await updateConfig({
+        id: config.value!.id,
+        notifications: !config.value?.notifications,
+    });
+}
+</script>
+
+<template>
+    <div v-if="config">
+        <h2>Settings</h2>
+        <p>Theme: {{ config.theme }}</p>
+        <button @click="toggleTheme">Toggle Theme</button>
+
+        <p>Notifications: {{ config.notifications ? "On" : "Off" }}</p>
+        <button @click="toggleNotifications">Toggle Notifications</button>
+    </div>
+</template>
 ```
 
 ## Dynamic Headers with Auth Token
@@ -157,6 +238,7 @@ import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
 
 const token = ref<string | null>(null);
 
+// Current user is singular - use *Unit actions
 const UserSchema = z.object({
     id: z.number().meta({
         indicator: true,
@@ -166,8 +248,8 @@ const UserSchema = z.object({
     }),
 });
 
-export const userStore = createStore(
-    "user",
+export const currentUserStore = createStore(
+    "currentUser",
     UserSchema,
     {
         [Endpoint.GET_UNIT]: {
@@ -248,82 +330,41 @@ await api.patch("/users/1", {
 await api.del("/users/1");
 ```
 
-## Memory Manipulation
+## Temporary Local State (Mutations)
+
+Use mutations directly for local state that doesn't need API calls - like selecting an item for a modal.
 
 ```typescript
-import { userStore } from "~/stores/user";
+import { productStore } from "~/stores/product";
 
-const {
-    memorizedUnit,
-    memorizedUnits,
-    setMemorizedUnit,
-    setMemorizedUnits,
-    editMemorizedUnit,
-    editMemorizedUnits,
-    dropMemorizedUnit,
-    dropMemorizedUnits,
-    hasMemorizedUnits,
-} = userStore;
+const { memorizedUnit: selectedProduct, setMemorizedUnit: setSelectedProduct } =
+    productStore;
 
-// Set a single unit directly
-setMemorizedUnit({
-    id: 1,
-    name: "John",
-});
+// Select product for detail modal
+function openModal(product: Product) {
+    setSelectedProduct(product);
+}
 
-// Clear single unit
-setMemorizedUnit(null);
+// Clear when modal closes
+function closeModal() {
+    setSelectedProduct(null);
+}
+```
 
-// Set multiple units
-setMemorizedUnits([
-    {
-        id: 1,
-        name: "John",
-    },
-    {
-        id: 2,
-        name: "Jane",
-    },
-]);
+```vue
+<template>
+    <ul>
+        <li v-for="product in memorizedUnits.value" @click="openModal(product)">
+            {{ product.name }}
+        </li>
+    </ul>
 
-// Edit a single unit (merges with existing)
-editMemorizedUnit({
-    id: 1,
-    name: "John Doe",
-});
-
-// Edit multiple units
-editMemorizedUnits([
-    {
-        id: 1,
-        name: "John Doe",
-    },
-    {
-        id: 2,
-        name: "Jane Doe",
-    },
-]);
-
-// Check if units exist in memory
-const exists = hasMemorizedUnits(
-    {
-        id: 1,
-    },
-    {
-        id: 2,
-    },
-);
-// { 1: true, 2: true }
-
-// Drop specific units
-dropMemorizedUnits([
-    {
-        id: 1,
-    },
-]);
-
-// Clear all units
-setMemorizedUnits([]);
+    <!-- Modal uses memorizedUnit for selected item -->
+    <div v-if="selectedProduct" class="modal">
+        <h2>{{ selectedProduct.name }}</h2>
+        <button @click="closeModal">Close</button>
+    </div>
+</template>
 ```
 
 ## Per-Store API Configuration

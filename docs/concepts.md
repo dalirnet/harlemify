@@ -37,16 +37,85 @@ A **unit** is a single data entity managed by the store. It represents one recor
 
 ## Memory
 
-**Memory** is the local state where units are stored after being fetched from the API. It acts as a client-side cache that keeps your data reactive and accessible across components.
+**Memory** is the local state where units are stored. The store maintains two separate memory spaces:
 
-The store maintains two separate memory spaces:
+| Memory           | Description                 |
+| ---------------- | --------------------------- |
+| `memorizedUnit`  | Holds a single unit         |
+| `memorizedUnits` | Holds a collection of units |
 
-| Memory           | Description                 | Example Use Case              |
-| ---------------- | --------------------------- | ----------------------------- |
-| `memorizedUnit`  | Holds a single unit         | Currently viewed user profile |
-| `memorizedUnits` | Holds a collection of units | List of users in a table      |
+### Unit vs Units
 
-These two memory spaces are **independent**, allowing you to manage a selected item separately from a list of items without conflicts.
+All `*Unit` actions/mutations work with `memorizedUnit`, all `*Units` actions/mutations work with `memorizedUnits`.
+
+**Use `*Unit` for singleton data** - data that cannot be plural:
+
+- App configuration (`/config`)
+- User settings (`/settings`)
+- Current authenticated user (`/me`)
+
+```typescript
+// Singleton store - only *_UNIT endpoints
+export const configStore = createStore("config", ConfigSchema, {
+    [Endpoint.GET_UNIT]: {
+        action: ApiAction.GET,
+        url: "/config",
+    },
+    [Endpoint.PATCH_UNIT]: {
+        action: ApiAction.PATCH,
+        url: "/config",
+    },
+});
+
+// Usage
+await getUnit(); // Fetch → memorizedUnit
+await patchUnit({ id: 1, theme: "dark" }); // Update → memorizedUnit
+```
+
+**Use `*Units` for collections/lists:**
+
+- User list (`/users`)
+- Product catalog (`/products`)
+- Order history (`/orders`)
+
+```typescript
+// Collection store - use *_UNITS endpoints
+export const productStore = createStore("product", ProductSchema, {
+    [Endpoint.GET_UNITS]: { action: ApiAction.GET, url: "/products" },
+    [Endpoint.POST_UNITS]: { action: ApiAction.POST, url: "/products" },
+    [Endpoint.PATCH_UNITS]: {
+        action: ApiAction.PATCH,
+        url: (p) => `/products/${p.id}`,
+    },
+    [Endpoint.DELETE_UNITS]: {
+        action: ApiAction.DELETE,
+        url: (p) => `/products/${p.id}`,
+    },
+});
+
+// Usage
+await getUnits(); // Fetch → memorizedUnits
+await postUnits([{ id: 0, name: "New" }]); // Create → adds to memorizedUnits
+await patchUnits([{ id: 1, price: 99 }]); // Update → updates in memorizedUnits
+await deleteUnits([{ id: 1 }]); // Delete → removes from memorizedUnits
+```
+
+**Use mutations for temporary local state** (no API call):
+
+```typescript
+// Select item for modal - use mutation directly
+setMemorizedUnit(selectedUser);
+setMemorizedUnit(null); // Clear when modal closes
+```
+
+### Mutations vs API Actions
+
+| Method                   | Behavior                                               |
+| ------------------------ | ------------------------------------------------------ |
+| `setMemorizedUnit(null)` | Clears immediately, no condition check                 |
+| `deleteUnit({ id })`     | API call + clears only if indicator matches            |
+| `setMemorizedUnits([]) ` | Clears immediately, no condition check                 |
+| `deleteUnits([{ id }])`  | API call + removes only items with matching indicators |
 
 ### Memory Mutations
 
@@ -121,37 +190,15 @@ Enable Zod validation before sending data to the API by passing `validate: true`
 ```typescript
 // Validates only fields with ApiAction.POST in their meta.actions
 await postUnit(
-    {
-        id: 1,
-        name: "John",
-        email: "john@example.com",
-    },
-    {
-        validate: true,
-    },
+    { id: 1, name: "John", email: "john@example.com" },
+    { validate: true },
 );
 
 // Validates only fields with ApiAction.PUT in their meta.actions
-await putUnit(
-    {
-        id: 1,
-        name: "John",
-    },
-    {
-        validate: true,
-    },
-);
+await putUnit({ id: 1, name: "John" }, { validate: true });
 
 // PATCH uses schema.partial() for partial validation
-await patchUnit(
-    {
-        id: 1,
-        name: "John Doe",
-    },
-    {
-        validate: true,
-    },
-);
+await patchUnit({ id: 1, name: "John Doe" }, { validate: true });
 ```
 
 If validation fails, Zod throws a `ZodError` before the API request is made.
