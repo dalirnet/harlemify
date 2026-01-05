@@ -31,11 +31,22 @@ export interface EndpointMemory {
     status: EndpointStatus;
 }
 
+type CapitalizeString<S extends string> = S extends `${infer F}${infer R}`
+    ? `${Uppercase<F>}${R}`
+    : S;
+
+export type EndpointStatusKey<
+    K extends Endpoint = Endpoint,
+    S extends EndpointStatus = EndpointStatus,
+> = `${K}Is${CapitalizeString<S>}`;
+
 export function makeEndpointStatusKey<
     K extends Endpoint,
     S extends EndpointStatus,
->(key: K, status: S): `${K}Is${Capitalize<S>}` {
-    return `${key}Is${status.charAt(0).toUpperCase() + status.slice(1)}` as any;
+>(key: K, status: S): EndpointStatusKey<K, S> {
+    const capitalizedStatus = (status.charAt(0).toUpperCase() +
+        status.slice(1)) as CapitalizeString<S>;
+    return `${key}Is${capitalizedStatus}` as EndpointStatusKey<K, S>;
 }
 
 export function getEndpoint<T = Record<string, unknown>>(
@@ -61,12 +72,14 @@ export function resolveEndpointUrl<T>(
     return endpoint.url;
 }
 
+export type EndpointsStatusMap<T> = {
+    [K in Endpoint as EndpointStatusKey<K, EndpointStatus>]: T;
+};
+
 export function makeEndpointsStatus<T>(
     getter: (name: string, fn: (state: BaseState) => boolean) => T,
-) {
-    const output = {} as {
-        [K in Endpoint as `${K}Is${Capitalize<EndpointStatus>}`]: T;
-    };
+): EndpointsStatusMap<T> {
+    const output = {} as EndpointsStatusMap<T>;
 
     for (const key of Object.values(Endpoint)) {
         for (const status of Object.values(EndpointStatus)) {
