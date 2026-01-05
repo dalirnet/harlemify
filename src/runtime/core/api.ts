@@ -36,6 +36,7 @@ export interface ApiRequestOptions<
     headers?: H;
     query?: Q;
     body?: B;
+    timeout?: number;
     responseType?: ApiResponseType;
     retry?: number | false;
     retryDelay?: number;
