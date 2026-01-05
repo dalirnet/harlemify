@@ -11,6 +11,9 @@ API state management for Nuxt powered by [Harlem](https://harlemjs.com/)
 - CRUD operations with endpoint status tracking
 - Type-safe endpoint URL parameters
 - SSR support via Harlem SSR plugin
+- Configurable primary key indicator
+- Lifecycle hooks (before/after) for API operations
+- Abort controller support for request cancellation
 
 ## Installation
 
@@ -47,24 +50,43 @@ const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-export const userStore = createStore("user", UserSchema, {
-    [Endpoint.GET_UNITS]: {
-        action: ApiAction.GET,
-        url: "/users",
+export const userStore = createStore(
+    "user",
+    UserSchema,
+    {
+        [Endpoint.GET_UNITS]: {
+            action: ApiAction.GET,
+            url: "/users",
+        },
+        [Endpoint.POST_UNITS]: {
+            action: ApiAction.POST,
+            url: "/users",
+        },
+        [Endpoint.PATCH_UNITS]: {
+            action: ApiAction.PATCH,
+            url: (params) => `/users/${params.id}`,
+        },
+        [Endpoint.DELETE_UNITS]: {
+            action: ApiAction.DELETE,
+            url: (params) => `/users/${params.id}`,
+        },
     },
-    [Endpoint.POST_UNITS]: {
-        action: ApiAction.POST,
-        url: "/users",
+    {
+        indicator: "id",
+        hooks: {
+            before() {
+                console.log("Request starting...");
+            },
+            after(error) {
+                if (error) {
+                    console.error("Request failed:", error);
+                } else {
+                    console.log("Request completed");
+                }
+            },
+        },
     },
-    [Endpoint.PATCH_UNITS]: {
-        action: ApiAction.PATCH,
-        url: (params) => `/users/${params.id}`,
-    },
-    [Endpoint.DELETE_UNITS]: {
-        action: ApiAction.DELETE,
-        url: (params) => `/users/${params.id}`,
-    },
-});
+);
 ```
 
 ## Documentation

@@ -35,6 +35,8 @@ createStore(name, schema, endpoints?, options?)
 | `schema`             | `z.ZodObject`        | Zod schema with field metadata      |
 | `endpoints`          | `EndpointDefinition` | Endpoint definitions                |
 | `options.api`        | `ApiOptions`         | Override API options for this store |
+| `options.indicator`  | `string`             | Override the primary key field name |
+| `options.hooks`      | `StoreHooks`         | Lifecycle hooks (before/after)      |
 | `options.extensions` | `Extension[]`        | Harlem extensions                   |
 
 ### Returns
@@ -80,6 +82,7 @@ interface ActionOptions {
     retry?: number | false;
     retryDelay?: number;
     retryStatusCodes?: number[];
+    signal?: AbortSignal;
     validate?: boolean;
 }
 ```
@@ -208,6 +211,40 @@ await postUnits([{ id: 0, name: "New" }], {
 
 ## Types
 
+### StoreOptions
+
+```typescript
+interface StoreOptions {
+    api?: ApiOptions;
+    indicator?: string;
+    hooks?: StoreHooks;
+    extensions?: Extension<BaseState>[];
+}
+```
+
+| Property     | Type          | Description                         |
+| ------------ | ------------- | ----------------------------------- |
+| `api`        | `ApiOptions`  | Override API options for this store |
+| `indicator`  | `string`      | Override the primary key field name |
+| `hooks`      | `StoreHooks`  | Lifecycle hooks for API operations  |
+| `extensions` | `Extension[]` | Harlem extensions                   |
+
+### StoreHooks
+
+```typescript
+interface StoreHooks {
+    before?: () => Promise<void> | void;
+    after?: (error?: Error) => Promise<void> | void;
+}
+```
+
+| Property | Type                                       | Description                       |
+| -------- | ------------------------------------------ | --------------------------------- |
+| `before` | `() => Promise<void> \| void`              | Called before every API operation |
+| `after`  | `(error?: Error) => Promise<void> \| void` | Called after every API operation  |
+
+The `after` hook receives an `Error` parameter if the operation failed, or `undefined` if it succeeded.
+
 ### SchemaMeta
 
 ```typescript
@@ -245,6 +282,7 @@ interface ApiRequestOptions {
     retry?: number | false;
     retryDelay?: number;
     retryStatusCodes?: number[];
+    signal?: AbortSignal;
 }
 ```
 
@@ -258,6 +296,7 @@ interface ApiRequestOptions {
 | `retry`            | `number \| false`  | `false`                | Number of retry attempts              |
 | `retryDelay`       | `number`           | `0`                    | Delay between retries in milliseconds |
 | `retryStatusCodes` | `number[]`         | `[500, 502, 503, 504]` | HTTP status codes to retry on         |
+| `signal`           | `AbortSignal`      | `undefined`            | Signal for request cancellation       |
 
 ### ApiResponseType
 
@@ -279,7 +318,17 @@ enum ApiResponseType {
 
 ## Errors
 
-Harlemify provides structured error classes for handling API failures.
+Harlemify provides structured error classes for handling API and configuration failures.
+
+### StoreConfigurationError
+
+Thrown when the store fails to initialize (e.g., missing runtime config).
+
+```typescript
+class StoreConfigurationError extends Error {
+    name: "StoreConfigurationError";
+}
+```
 
 ### ApiError (Base Class)
 
