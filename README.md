@@ -1,6 +1,6 @@
 # Harlemify
 
-API state management for Nuxt powered by [Harlem](https://harlemjs.com/)
+Schema-driven state management for Nuxt powered by [Harlem](https://harlemjs.com/)
 
 ![Harlemify](https://raw.githubusercontent.com/diphyx/harlemify/main/docs/_media/icon.svg)
 
@@ -8,12 +8,9 @@ API state management for Nuxt powered by [Harlem](https://harlemjs.com/)
 
 - Zod schema validation with field metadata
 - Automatic API client with runtime config
-- CRUD operations with endpoint status tracking
-- Type-safe endpoint URL parameters
+- CRUD operations with endpoint status monitoring
+- Lifecycle hooks and abort controller support
 - SSR support via Harlem SSR plugin
-- Configurable primary key indicator
-- Lifecycle hooks (before/after) for API operations
-- Abort controller support for request cancellation
 
 ## Installation
 
@@ -37,14 +34,15 @@ export default defineNuxtConfig({
 
 ```typescript
 // stores/user.ts
-import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
+import { z } from "zod";
+import { createStore, Endpoint, EndpointMethod } from "@diphyx/harlemify";
 
 const UserSchema = z.object({
     id: z.number().meta({
         indicator: true,
     }),
     name: z.string().meta({
-        actions: [ApiAction.POST, ApiAction.PATCH],
+        methods: [EndpointMethod.POST, EndpointMethod.PATCH],
     }),
 });
 
@@ -55,19 +53,19 @@ export const userStore = createStore(
     UserSchema,
     {
         [Endpoint.GET_UNITS]: {
-            action: ApiAction.GET,
+            method: EndpointMethod.GET,
             url: "/users",
         },
         [Endpoint.POST_UNITS]: {
-            action: ApiAction.POST,
+            method: EndpointMethod.POST,
             url: "/users",
         },
         [Endpoint.PATCH_UNITS]: {
-            action: ApiAction.PATCH,
+            method: EndpointMethod.PATCH,
             url: (params) => `/users/${params.id}`,
         },
         [Endpoint.DELETE_UNITS]: {
-            action: ApiAction.DELETE,
+            method: EndpointMethod.DELETE,
             url: (params) => `/users/${params.id}`,
         },
     },
@@ -75,14 +73,10 @@ export const userStore = createStore(
         indicator: "id",
         hooks: {
             before() {
-                console.log("Request starting...");
+                // Show loading indicator
             },
             after(error) {
-                if (error) {
-                    console.error("Request failed:", error);
-                } else {
-                    console.log("Request completed");
-                }
+                // Hide loading indicator, handle error if present
             },
         },
     },
