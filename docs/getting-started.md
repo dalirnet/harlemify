@@ -23,81 +23,60 @@ export default defineNuxtConfig({
 });
 ```
 
-## Creating Your First Store
-
-### 1. Define a Schema
-
-Create a Zod schema with field metadata:
+## Your First Store
 
 ```typescript
 // stores/user.ts
-import { z, createStore, Endpoint, ApiAction } from "@diphyx/harlemify";
+import { z } from "zod";
+import { createStore, Endpoint, EndpointMethod } from "@diphyx/harlemify";
 
 const UserSchema = z.object({
-    id: z.number().meta({
-        indicator: true, // Primary key for identifying units
-    }),
+    id: z.number().meta({ indicator: true }),
     name: z.string().meta({
-        actions: [ApiAction.POST, ApiAction.PUT, ApiAction.PATCH],
+        methods: [EndpointMethod.POST, EndpointMethod.PATCH],
     }),
     email: z.string().meta({
-        actions: [ApiAction.POST],
+        methods: [EndpointMethod.POST],
     }),
-    createdAt: z.string(), // No meta = read-only field
 });
-```
 
-### 2. Define Endpoints
+export type User = z.infer<typeof UserSchema>;
 
-Map your API endpoints:
-
-```typescript
 export const userStore = createStore("user", UserSchema, {
-    [Endpoint.GET_UNIT]: {
-        action: ApiAction.GET,
-        url: (params) => `/users/${params.id}`,
-    },
     [Endpoint.GET_UNITS]: {
-        action: ApiAction.GET,
+        method: EndpointMethod.GET,
         url: "/users",
     },
-    [Endpoint.POST_UNIT]: {
-        action: ApiAction.POST,
+    [Endpoint.POST_UNITS]: {
+        method: EndpointMethod.POST,
         url: "/users",
     },
-    [Endpoint.PUT_UNIT]: {
-        action: ApiAction.PUT,
+    [Endpoint.PATCH_UNITS]: {
+        method: EndpointMethod.PATCH,
         url: (params) => `/users/${params.id}`,
     },
-    [Endpoint.PATCH_UNIT]: {
-        action: ApiAction.PATCH,
-        url: (params) => `/users/${params.id}`,
-    },
-    [Endpoint.DELETE_UNIT]: {
-        action: ApiAction.DELETE,
+    [Endpoint.DELETE_UNITS]: {
+        method: EndpointMethod.DELETE,
         url: (params) => `/users/${params.id}`,
     },
 });
 ```
 
-### 3. Use in Components
+## Using in a Component
 
 ```vue
 <script setup>
 import { userStore } from "~/stores/user";
 
-const { memorizedUnits, endpointsStatus, getUnits } = userStore;
+const { units, endpoint, monitor } = userStore;
 
-await getUnits();
+await endpoint.getUnits();
 </script>
 
 <template>
-    <div v-if="endpointsStatus.getUnitsIsPending.value">Loading...</div>
-    <div v-else-if="endpointsStatus.getUnitsIsFailed.value">
-        Error loading users
-    </div>
+    <div v-if="monitor.getUnitsIsPending.value">Loading...</div>
     <ul v-else>
-        <li v-for="user in memorizedUnits.value" :key="user.id">
+        <li v-for="user in units.value" :key="user.id">
             {{ user.name }}
         </li>
     </ul>
@@ -106,7 +85,6 @@ await getUnits();
 
 ## Next Steps
 
-- Learn about [Concepts](concepts.md) to understand how Harlemify works
-- Check the [Guide](guide.md) for detailed API documentation
-- See [Examples](examples.md) for common use cases
-- View the [Reference](reference.md) for complete type definitions
+- Read the [Guide](guide.md) for complete documentation
+- View the [Reference](reference.md) for type definitions
+- Run the [Playground](playground.md) for live examples

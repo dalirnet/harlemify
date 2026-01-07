@@ -1,199 +1,485 @@
 # Guide
 
-## Store Actions
+## Concepts
 
-Each store provides API actions for CRUD operations. All actions are async and update memory automatically.
+### Schema
 
-### GET Actions
+A **schema** defines the structure and field types of your units using [Zod](https://zod.dev/). It describes what fields a unit has, their data types, and provides TypeScript type inference.
 
-#### `getUnit(unit?, options?)`
+Schema fields can have metadata:
 
-Fetches a single unit and stores it in `memorizedUnit`.
+| Meta Property | Description                                                     |
+| ------------- | --------------------------------------------------------------- |
+| `indicator`   | Marks the field as primary key (used to identify units)         |
+| `methods`     | Specifies which HTTP methods include this field in request body |
 
 ```typescript
-// Singleton (no params needed)
-await getUnit();
+import { z } from "zod";
+import { EndpointMethod } from "@diphyx/harlemify";
 
-// With identifier
-await getUnit({ id: 1 });
+const UserSchema = z.object({
+    id: z.number().meta({
+        indicator: true,
+    }),
+    name: z.string().meta({
+        methods: [EndpointMethod.POST, EndpointMethod.PUT, EndpointMethod.PATCH],
+    }),
+    email: z.string().meta({
+        methods: [EndpointMethod.POST],
+    }),
+    createdAt: z.string(), // No meta = not sent in any request body
+});
 ```
 
-#### `getUnits(options?)`
+### Unit
 
-Fetches a collection and stores it in `memorizedUnits`.
+A **unit** is a single data entity managed by the store. It represents one record from your API (e.g., a user, a product, an order).
+
+- `unit` refers to a single entity
+- `units` refers to a collection of entities
+
+### Memory
+
+**Memory** is the local state where units are stored. The store maintains two separate memory spaces:
+
+| Property | Description                 |
+| -------- | --------------------------- |
+| `unit`   | Holds a single unit         |
+| `units`  | Holds a collection of units |
+
+### Endpoint
+
+An **endpoint** maps a store action to an API URL:
+
+| Property | Description                                     |
+| -------- | ----------------------------------------------- |
+| `method` | The HTTP method (GET, POST, PUT, PATCH, DELETE) |
+| `url`    | Static string or function with parameters       |
+
+### Monitor
+
+Each endpoint tracks its request status via the `monitor` property:
+
+| Status    | Description                    |
+| --------- | ------------------------------ |
+| `IDLE`    | No request made yet            |
+| `PENDING` | Request in progress            |
+| `SUCCESS` | Request completed successfully |
+| `FAILED`  | Request failed                 |
+
+---
+
+## Creating a Store
+
+### Collection Store
+
+Use `*Units` endpoints for data that represents a list/collection:
 
 ```typescript
-await getUnits();
+import { z } from "zod";
+import { createStore, Endpoint, EndpointMethod } from "@diphyx/harlemify";
+
+const ProductSchema = z.object({
+    id: z.number().meta({ indicator: true }),
+    name: z.string().meta({
+        methods: [EndpointMethod.POST, EndpointMethod.PATCH],
+    }),
+    price: z.number().meta({
+        methods: [EndpointMethod.POST, EndpointMethod.PATCH],
+    }),
+});
+
+export type Product = z.infer<typeof ProductSchema>;
+
+export const productStore = createStore("product", ProductSchema, {
+    [Endpoint.GET_UNITS]: {
+        method: EndpointMethod.GET,
+        url: "/products",
+    },
+    [Endpoint.POST_UNITS]: {
+        method: EndpointMethod.POST,
+        url: "/products",
+    },
+    [Endpoint.PATCH_UNITS]: {
+        method: EndpointMethod.PATCH,
+        url: (params) => `/products/${params.id}`,
+    },
+    [Endpoint.DELETE_UNITS]: {
+        method: EndpointMethod.DELETE,
+        url: (params) => `/products/${params.id}`,
+    },
+});
 ```
 
-### POST Actions
+### Singleton Store
 
-#### `postUnit(unit, options?)`
-
-Creates a single unit and stores it in `memorizedUnit`.
+Use `*Unit` endpoints for singular data (config, settings, current user):
 
 ```typescript
-await postUnit({ id: 0, name: "New Item", price: 99 });
+import { z } from "zod";
+import { createStore, Endpoint, EndpointMethod } from "@diphyx/harlemify";
+
+const ConfigSchema = z.object({
+    id: z.number().meta({ indicator: true }),
+    theme: z.enum(["light", "dark"]).meta({
+        methods: [EndpointMethod.PATCH],
+    }),
+    language: z.string().meta({
+        methods: [EndpointMethod.PATCH],
+    }),
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
+
+export const configStore = createStore("config", ConfigSchema, {
+    [Endpoint.GET_UNIT]: {
+        method: EndpointMethod.GET,
+        url: "/config",
+    },
+    [Endpoint.PATCH_UNIT]: {
+        method: EndpointMethod.PATCH,
+        url: "/config",
+    },
+});
 ```
 
-#### `postUnits(units, options?)`
+### Store Structure
 
-Creates multiple units. Each unit is posted individually and added to `memorizedUnits` progressively. New items are added at the beginning by default.
+Each store returns:
+
+| Property    | Description                          |
+| ----------- | ------------------------------------ |
+| `store`     | Underlying Harlem store instance     |
+| `alias`     | Entity name aliases (unit and units) |
+| `indicator` | The primary key field name           |
+| `unit`      | Single unit state (ComputedRef)      |
+| `units`     | Collection state (ComputedRef)       |
+| `memory`    | Memory mutation methods              |
+| `endpoint`  | API endpoint methods                 |
+| `monitor`   | Endpoint status flags                |
+
+---
+
+## Using in Components
+
+### Collection Example
+
+```vue
+<script setup lang="ts">
+import { productStore } from "~/stores/product";
+
+const { units, endpoint, monitor } = productStore;
+
+await endpoint.getUnits();
+
+async function createProduct() {
+    await endpoint.postUnits([{ id: 0, name: "New Product", price: 99.99 }]);
+}
+
+async function updatePrice(id: number, price: number) {
+    await endpoint.patchUnits([{ id, price }]);
+}
+
+async function removeProduct(id: number) {
+    await endpoint.deleteUnits([{ id }]);
+}
+</script>
+
+<template>
+    <div>
+        <button @click="createProduct">Add Product</button>
+
+        <div v-if="monitor.getUnitsIsPending.value">Loading...</div>
+
+        <ul v-else>
+            <li v-for="product in units.value" :key="product.id">
+                {{ product.name }} - ${{ product.price }}
+                <button @click="updatePrice(product.id, product.price + 10)">+$10</button>
+                <button @click="removeProduct(product.id)">Delete</button>
+            </li>
+        </ul>
+    </div>
+</template>
+```
+
+### Singleton Example
+
+```vue
+<script setup lang="ts">
+import { configStore } from "~/stores/config";
+
+const { unit: config, endpoint } = configStore;
+
+await endpoint.getUnit();
+
+async function toggleTheme() {
+    const newTheme = config.value?.theme === "dark" ? "light" : "dark";
+    await endpoint.patchUnit({ id: config.value!.id, theme: newTheme });
+}
+</script>
+
+<template>
+    <div v-if="config">
+        <p>Theme: {{ config.theme }}</p>
+        <button @click="toggleTheme">Toggle Theme</button>
+    </div>
+</template>
+```
+
+---
+
+## Endpoint Methods
+
+All endpoint methods are async and update memory automatically.
+
+### GET
 
 ```typescript
-await postUnits([
-    { id: 0, name: "Item 1", price: 10 },
-    { id: 0, name: "Item 2", price: 20 },
-]);
+// Fetch single unit → stores in unit
+await store.endpoint.getUnit({ id: 1 });
 
-// Add at end instead of beginning
-await postUnits([{ id: 0, name: "Item" }], {
+// Fetch collection → stores in units
+await store.endpoint.getUnits();
+```
+
+### POST
+
+```typescript
+// Create single unit → stores in unit
+await store.endpoint.postUnit({ id: 0, name: "New" });
+
+// Create multiple → adds to units (beginning by default)
+await store.endpoint.postUnits([{ id: 0, name: "New" }]);
+
+// Add at end instead
+await store.endpoint.postUnits([{ id: 0, name: "New" }], {
     position: StoreMemoryPosition.LAST,
 });
 ```
 
-### PUT Actions
-
-#### `putUnit(unit, options?)`
-
-Replaces a single unit entirely and stores it in `memorizedUnit`.
+### PUT
 
 ```typescript
-await putUnit({ id: 1, name: "Updated Item", price: 150 });
-```
+// Replace single unit entirely
+await store.endpoint.putUnit({ id: 1, name: "Replaced", price: 100 });
 
-#### `putUnits(units, options?)`
-
-Replaces multiple units. Each unit is updated individually and `memorizedUnits` is updated progressively.
-
-```typescript
-await putUnits([
-    { id: 1, name: "Updated 1", price: 100 },
-    { id: 2, name: "Updated 2", price: 200 },
+// Replace multiple units
+await store.endpoint.putUnits([
+    { id: 1, name: "Replaced 1", price: 100 },
+    { id: 2, name: "Replaced 2", price: 200 },
 ]);
 ```
 
-### PATCH Actions
-
-#### `patchUnit(unit, options?)`
-
-Partially updates a single unit and merges changes into `memorizedUnit`.
+### PATCH
 
 ```typescript
-await patchUnit({ id: 1, price: 199 });
-```
+// Partially update single unit → merges into unit
+await store.endpoint.patchUnit({ id: 1, price: 199 });
 
-#### `patchUnits(units, options?)`
-
-Partially updates multiple units. Each unit is patched individually and `memorizedUnits` is updated progressively.
-
-```typescript
-await patchUnits([
+// Partially update multiple → merges into units
+await store.endpoint.patchUnits([
     { id: 1, price: 99 },
     { id: 2, price: 149 },
 ]);
 ```
 
-### DELETE Actions
-
-#### `deleteUnit(unit, options?)`
-
-Deletes a single unit and removes it from `memorizedUnit` if indicator matches.
+### DELETE
 
 ```typescript
-await deleteUnit({ id: 1 });
+// Delete single unit → removes from unit
+await store.endpoint.deleteUnit({ id: 1 });
+
+// Delete multiple → removes from units
+await store.endpoint.deleteUnits([{ id: 1 }, { id: 2 }]);
 ```
 
-#### `deleteUnits(units, options?)`
+### Options
 
-Deletes multiple units. Each unit is deleted individually and removed from `memorizedUnits` progressively.
+All endpoint methods accept options:
 
-```typescript
-await deleteUnits([{ id: 1 }, { id: 2 }]);
-```
-
-## Action Options
-
-All actions accept an optional `options` object:
-
-| Option     | Type                  | Description                                           |
-| ---------- | --------------------- | ----------------------------------------------------- |
-| `query`    | `MaybeRefOrGetter`    | Query parameters appended to the URL                  |
-| `headers`  | `MaybeRefOrGetter`    | Additional headers for this request                   |
-| `body`     | `MaybeRefOrGetter`    | Override the auto-generated request body              |
-| `timeout`  | `number`              | Request timeout in milliseconds                       |
-| `validate` | `boolean`             | Enable Zod validation before sending (POST/PUT/PATCH) |
-| `position` | `StoreMemoryPosition` | Where to add new items (postUnits only)               |
-| `signal`   | `AbortSignal`         | Signal for request cancellation                       |
+| Option     | Type                  | Description                        |
+| ---------- | --------------------- | ---------------------------------- |
+| `query`    | `MaybeRefOrGetter`    | Query parameters                   |
+| `headers`  | `MaybeRefOrGetter`    | Additional headers                 |
+| `body`     | `MaybeRefOrGetter`    | Override request body              |
+| `timeout`  | `number`              | Request timeout in ms              |
+| `validate` | `boolean`             | Validate with Zod before send      |
+| `position` | `StoreMemoryPosition` | Where to add new items (postUnits) |
+| `signal`   | `AbortSignal`         | For request cancellation           |
 
 ```typescript
-await getUnits({
+await store.endpoint.getUnits({
     query: { page: 1, limit: 10 },
     headers: { "X-Custom": "value" },
 });
 
-await postUnits([{ id: 0, name: "Test" }], {
+await store.endpoint.postUnits([{ id: 0, name: "Test" }], {
     validate: true,
 });
 ```
 
-## Request Cancellation
+---
 
-Use an AbortController to cancel in-flight requests:
+## Memory Mutations
+
+Direct state mutations without API calls:
+
+```typescript
+const { memory } = productStore;
+
+// Set
+memory.setUnit({ id: 1, name: "Product" });
+memory.setUnits([{ id: 1, name: "Product" }]);
+memory.setUnit(null); // Clear
+
+// Edit (merge partial data)
+memory.editUnit({ id: 1, name: "Updated" });
+memory.editUnits([{ id: 1, name: "Updated" }]);
+
+// Drop (remove by indicator)
+memory.dropUnit({ id: 1 });
+memory.dropUnits([{ id: 1 }, { id: 2 }]);
+```
+
+### Temporary Local State
+
+Use mutations for UI state that doesn't need API calls:
+
+```typescript
+import { productStore } from "~/stores/product";
+import type { Product } from "~/stores/product";
+
+const { unit: selectedProduct, units, memory } = productStore;
+
+function openModal(product: Product) {
+    memory.setUnit(product);
+}
+
+function closeModal() {
+    memory.setUnit(null);
+}
+```
+
+---
+
+## Monitor (Status Flags)
+
+```typescript
+const { monitor } = userStore;
+
+monitor.getUnitsIsPending.value; // boolean
+monitor.getUnitsIsSuccess.value; // boolean
+monitor.getUnitsIsFailed.value; // boolean
+monitor.getUnitsIsIdle.value; // boolean
+
+// Pattern: {endpointName}Is{Status}
+monitor.postUnitIsPending.value;
+monitor.deleteUnitsIsSuccess.value;
+```
+
+---
+
+## useStoreAlias
+
+Provides entity-named access to store properties:
+
+```typescript
+import { userStore } from "~/stores/user";
+
+const {
+    // State
+    user, // unit
+    users, // units
+
+    // Memory
+    setUser,
+    setUsers,
+    editUser,
+    dropUsers,
+
+    // Endpoints
+    getUser,
+    getUsers,
+    postUsers,
+    patchUsers,
+    deleteUsers,
+
+    // Monitor
+    getUsersIsPending,
+    getUsersIsSuccess,
+} = useStoreAlias(userStore);
+
+await getUsers();
+setUser({ id: 1, name: "John", email: "john@test.com" });
+```
+
+Entity names are automatically pluralized:
+
+- `post` → `posts`
+- `user` → `users`
+- `category` → `categories`
+
+---
+
+## Validation
+
+Enable Zod validation before sending:
+
+```typescript
+const { endpoint } = productStore;
+
+try {
+    await endpoint.postUnits([{ id: 0, name: "", price: -10 }], { validate: true });
+} catch (error) {
+    // ZodError thrown before request
+}
+```
+
+---
+
+## Request Cancellation
 
 ```typescript
 const controller = new AbortController();
 
-// Start the request
-const promise = getUnits({ signal: controller.signal });
+const promise = store.endpoint.getUnits({ signal: controller.signal });
 
-// Cancel it later
+// Cancel later
 controller.abort();
 
-// The promise will reject with an AbortError
 try {
     await promise;
 } catch (error) {
     if (error.name === "AbortError") {
-        console.log("Request was cancelled");
+        // Request was cancelled
     }
 }
 ```
 
-## Standalone API Client
+---
 
-Use `createApi()` for direct HTTP requests without a store.
+## Lifecycle Hooks
+
+Execute code before/after every API operation:
 
 ```typescript
-import { createApi } from "@diphyx/harlemify";
-
-const api = createApi({
-    url: "https://api.example.com",
-    timeout: 5000,
-    headers: {
-        "Content-Type": "application/json",
+export const userStore = createStore("user", UserSchema, endpoints, {
+    hooks: {
+        before: async () => {
+            // Show loading indicator
+        },
+        after: async (error) => {
+            // Hide loading indicator, handle error if present
+        },
     },
 });
-
-// GET
-const users = await api.get("/users", { query: { page: 1 } });
-
-// POST
-const newUser = await api.post("/users", { body: { name: "John" } });
-
-// PUT
-await api.put("/users/1", { body: { name: "John Doe" } });
-
-// PATCH
-await api.patch("/users/1", { body: { name: "Johnny" } });
-
-// DELETE
-await api.del("/users/1");
 ```
 
-## Configuration
+---
 
-Configure the API globally in `nuxt.config.ts`:
+## API Configuration
+
+### Global (nuxt.config.ts)
 
 ```typescript
 export default defineNuxtConfig({
@@ -207,111 +493,84 @@ export default defineNuxtConfig({
 });
 ```
 
-Or per-store:
+### Per-Store
 
 ```typescript
-export const myStore = createStore(
-    "myStore",
-    MySchema,
-    {
-        /* endpoints */
-    },
-    {
-        api: {
-            url: "https://other-api.example.com",
-            timeout: 30000,
+export const externalStore = createStore("external", Schema, endpoints, {
+    api: {
+        url: "https://external-api.example.com",
+        timeout: 30000,
+        headers: {
+            "X-API-Key": "your-api-key",
         },
     },
-);
+});
 ```
 
-## Store Options
-
-The `createStore` function accepts an optional fourth parameter for store-level configuration:
+### Dynamic Headers
 
 ```typescript
-export const myStore = createStore(
-    "myStore",
-    MySchema,
-    {
-        /* endpoints */
-    },
-    {
-        api: {
-            /* API options */
-        },
-        indicator: "id",
-        hooks: {
-            before: async () => {
-                console.log("Request starting...");
-            },
-            after: async (error) => {
-                if (error) {
-                    console.error("Request failed:", error);
-                } else {
-                    console.log("Request completed");
-                }
+import { ref } from "vue";
+
+const token = ref<string | null>(null);
+
+export const authStore = createStore("auth", Schema, endpoints, {
+    api: {
+        headers: {
+            Authorization() {
+                return token.value ? `Bearer ${token.value}` : "";
             },
         },
-        extensions: [],
     },
-);
+});
 ```
 
-| Option       | Type          | Description                         |
-| ------------ | ------------- | ----------------------------------- |
-| `api`        | `ApiOptions`  | Override API options for this store |
-| `indicator`  | `string`      | Override the primary key field name |
-| `hooks`      | `StoreHooks`  | Lifecycle hooks for API operations  |
-| `extensions` | `Extension[]` | Harlem extensions                   |
+---
 
-### Lifecycle Hooks
+## Standalone API Client
 
-Hooks allow you to execute code before and after every API operation:
+Use without a store:
 
 ```typescript
-interface StoreHooks {
-    before?: () => Promise<void> | void;
-    after?: (error?: Error) => Promise<void> | void;
-}
-```
+import { createApi } from "@diphyx/harlemify";
 
-- `before`: Called before every API request starts
-- `after`: Called after every API request completes (receives error if failed)
-
-Both hooks support async functions.
-
-## Endpoint Memory
-
-Manage endpoint status directly:
-
-```typescript
-const { patchEndpointMemory, purgeEndpointMemory, endpointsStatus } = userStore;
-
-// Manually set endpoint status
-patchEndpointMemory({
-    key: Endpoint.GET_UNITS,
-    memory: { status: EndpointStatus.PENDING },
+const api = createApi({
+    url: "https://api.example.com",
+    timeout: 5000,
 });
 
-// Check status
-console.log(endpointsStatus.getUnitsIsPending.value); // true
-
-// Clear all endpoint memory
-purgeEndpointMemory();
+const users = await api.get("/users", { query: { page: 1 } });
+const newUser = await api.post("/users", { body: { name: "John" } });
+await api.put("/users/1", { body: { name: "John Doe" } });
+await api.patch("/users/1", { body: { name: "Johnny" } });
+await api.del("/users/1");
 ```
 
-## Checking Unit Existence
+---
 
-Use `hasMemorizedUnits` to check if units exist in memory:
+## Custom Indicator
+
+Use a field other than `id` as primary key:
 
 ```typescript
-const { hasMemorizedUnits, memorizedUnits } = productStore;
+const DocumentSchema = z.object({
+    uuid: z.string().meta({ indicator: true }),
+    title: z.string().meta({ methods: [EndpointMethod.POST] }),
+});
 
-// Returns an object mapping indicator values to boolean
-const exists = hasMemorizedUnits({ id: 1 }, { id: 2 }, { id: 99 });
+// Indicator auto-detected from schema
+export const documentStore = createStore("document", DocumentSchema, {
+    [Endpoint.DELETE_UNITS]: {
+        method: EndpointMethod.DELETE,
+        url: (p) => `/documents/${p.uuid}`,
+    },
+});
+```
 
-console.log(exists[1]); // true (if product with id 1 exists)
-console.log(exists[2]); // true (if product with id 2 exists)
-console.log(exists[99]); // false (if product with id 99 doesn't exist)
+Or override in options:
+
+```typescript
+export const store = createStore("item", Schema, endpoints, {
+    indicator: "uuid",
+});
 ```

@@ -29,8 +29,8 @@ playground/stores/
 
 ## Features Demonstrated
 
-- **Collection stores**: `user.ts`, `post.ts` - list operations with `*Units` actions
-- **Singleton store**: `config.ts` - single data with `*Unit` actions
-- **Temporary state**: Using `memorizedUnit` + mutations for modal selection
-- **Loading states**: Using `endpointsStatus` for pending/success/failed states
+- **Collection stores**: `user.ts`, `post.ts` - list operations with `*Units` endpoints
+- **Singleton store**: `config.ts` - single data with `*Unit` endpoints
+- **Temporary state**: Using `unit` + `memory` mutations for modal selection
+- **Loading states**: Using `monitor` for pending/success/failed states
 - **CRUD operations**: Create, read, update, delete with type-safe URLs
