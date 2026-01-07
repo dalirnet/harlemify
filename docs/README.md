@@ -32,9 +32,9 @@ export default defineNuxtConfig({
 
 ## Why Harlemify?
 
-| | |
-|-|-|
-| **Type-Safe** | Full TypeScript support with Zod schema inference |
-| **Declarative** | Define schema once, derive everything else |
-| **Reactive** | Powered by Vue's reactivity through Harlem |
-| **Simple** | Minimal boilerplate, maximum productivity |
+|                 |                                                   |
+| --------------- | ------------------------------------------------- |
+| **Type-Safe**   | Full TypeScript support with Zod schema inference |
+| **Declarative** | Define schema once, derive everything else        |
+| **Reactive**    | Powered by Vue's reactivity through Harlem        |
+| **Simple**      | Minimal boilerplate, maximum productivity         |

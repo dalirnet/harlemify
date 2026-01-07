@@ -1,16 +1,18 @@
 # Harlemify
 
-Schema-driven state management for Nuxt powered by [Harlem](https://harlemjs.com/)
+> Schema-driven state management for Nuxt powered by [Harlem](https://harlemjs.com/)
 
 ![Harlemify](https://raw.githubusercontent.com/diphyx/harlemify/main/docs/_media/icon.svg)
 
+Define your data schema once with Zod, and Harlemify handles the rest: type-safe API calls, reactive state, request monitoring, and automatic memory management. Your schema becomes the single source of truth for types, validation, and API payloads.
+
 ## Features
 
-- Zod schema validation with field metadata
-- Automatic API client with runtime config
-- CRUD operations with endpoint status monitoring
-- Lifecycle hooks and abort controller support
-- SSR support via Harlem SSR plugin
+- **Schema-Driven** - Zod schema defines types, validation, and API payloads
+- **Automatic API Client** - Built-in HTTP client with runtime configuration
+- **Reactive Memory** - Unit and collection caching with Vue reactivity
+- **Request Monitoring** - Track pending, success, and failed states
+- **SSR Support** - Server-side rendering via Harlem SSR plugin
 
 ## Installation
 
@@ -38,9 +40,7 @@ import { z } from "zod";
 import { createStore, Endpoint, EndpointMethod } from "@diphyx/harlemify";
 
 const UserSchema = z.object({
-    id: z.number().meta({
-        indicator: true,
-    }),
+    id: z.number().meta({ indicator: true }),
     name: z.string().meta({
         methods: [EndpointMethod.POST, EndpointMethod.PATCH],
     }),
@@ -48,40 +48,22 @@ const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-export const userStore = createStore(
-    "user",
-    UserSchema,
-    {
-        [Endpoint.GET_UNITS]: {
-            method: EndpointMethod.GET,
-            url: "/users",
-        },
-        [Endpoint.POST_UNITS]: {
-            method: EndpointMethod.POST,
-            url: "/users",
-        },
-        [Endpoint.PATCH_UNITS]: {
-            method: EndpointMethod.PATCH,
-            url: (params) => `/users/${params.id}`,
-        },
-        [Endpoint.DELETE_UNITS]: {
-            method: EndpointMethod.DELETE,
-            url: (params) => `/users/${params.id}`,
-        },
-    },
-    {
-        indicator: "id",
-        hooks: {
-            before() {
-                // Show loading indicator
-            },
-            after(error) {
-                // Hide loading indicator, handle error if present
-            },
-        },
-    },
-);
+export const userStore = createStore("user", UserSchema, {
+    [Endpoint.GET_UNITS]: { method: EndpointMethod.GET, url: "/users" },
+    [Endpoint.POST_UNITS]: { method: EndpointMethod.POST, url: "/users" },
+    [Endpoint.PATCH_UNITS]: { method: EndpointMethod.PATCH, url: (p) => `/users/${p.id}` },
+    [Endpoint.DELETE_UNITS]: { method: EndpointMethod.DELETE, url: (p) => `/users/${p.id}` },
+});
 ```
+
+## Why Harlemify?
+
+|                 |                                                   |
+| --------------- | ------------------------------------------------- |
+| **Type-Safe**   | Full TypeScript support with Zod schema inference |
+| **Declarative** | Define schema once, derive everything else        |
+| **Reactive**    | Powered by Vue's reactivity through Harlem        |
+| **Simple**      | Minimal boilerplate, maximum productivity         |
 
 ## Documentation
 
