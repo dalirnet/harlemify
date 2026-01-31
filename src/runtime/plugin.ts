@@ -16,7 +16,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         plugins.push(createServerSSRPlugin());
     }
 
-    if (import.meta.client) {
+    if (import.meta.client && window.__harlemState) {
         plugins.push(createClientSSRPlugin());
     }
 
