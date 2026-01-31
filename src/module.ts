@@ -1,12 +1,8 @@
-import { defineNuxtModule, addPlugin, createResolver, addImportsDir, updateRuntimeConfig } from "@nuxt/kit";
+import { defineNuxtModule, addPlugin, addTemplate, createResolver, addImportsDir } from "@nuxt/kit";
 
-import type { ApiOptions } from "./runtime";
+import type { SharedConfig } from "./runtime";
 
-export interface ModuleOptions {
-    api?: Pick<ApiOptions, "url" | "timeout">;
-}
-
-export default defineNuxtModule<ModuleOptions>({
+export default defineNuxtModule<SharedConfig>({
     meta: {
         name: "harlemify",
         configKey: "harlemify",
@@ -17,23 +13,23 @@ export default defineNuxtModule<ModuleOptions>({
     defaults: {
         api: {},
     },
-    setup(options, _) {
+    setup(options, nuxt) {
         const { resolve } = createResolver(import.meta.url);
 
+        addTemplate({
+            write: true,
+            filename: "harlemify.config.mjs",
+            getContents() {
+                return `export default ${JSON.stringify(options)}`;
+            },
+        });
+
         addPlugin(resolve("./runtime", "plugin"));
+
         addImportsDir(resolve("./runtime", "core"));
         addImportsDir(resolve("./runtime", "composables"));
         addImportsDir(resolve("./runtime", "utils"));
 
-        updateRuntimeConfig({
-            public: {
-                harlemify: options,
-            },
-            options: {
-                build: {
-                    transpile: [/@harlem\//],
-                },
-            },
-        });
+        nuxt.options.build.transpile.push(/@harlem\//);
     },
 });

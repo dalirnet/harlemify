@@ -4,6 +4,7 @@ export { createApi, ApiResponseType, ApiErrorSource, ApiError, ApiRequestError, 
 export { createStore, StoreMemoryPosition } from "./core/store";
 export { useStoreAlias } from "./composables/use";
 
+export type { SharedConfig } from "./shared";
 export type { EndpointDefinition } from "./utils/endpoint";
 export type { SchemaMeta } from "./utils/schema";
 export type {
