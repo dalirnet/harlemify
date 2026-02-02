@@ -1,5 +1,6 @@
 - [Home](/)
 - [Getting Started](getting-started.md)
 - [Guide](guide.md)
+- [Adapters](adapters.md)
 - [Reference](reference.md)
 - [Playground](playground.md)
