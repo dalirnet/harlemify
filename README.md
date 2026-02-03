@@ -7,7 +7,7 @@
 - **Schema-Driven** - Zod schema defines types, validation, and API payloads
 - **Free-form Actions** - Define any action with custom naming
 - **Chainable Builders** - Fluent `Endpoint` and `Memory` APIs
-- **Request Monitoring** - Track pending, success, and failed states
+- **Function-based Monitor** - Track status with `pending()`, `success()`, `failed()`, `idle()`
 - **Custom Adapters** - Override HTTP at module, store, endpoint, or call-time
 - **SSR Support** - Server-side rendering with automatic hydration
 
@@ -25,7 +25,9 @@ export default defineNuxtConfig({
     modules: ["@diphyx/harlemify"],
     harlemify: {
         api: {
-            adapter: { baseURL: "https://api.example.com" },
+            adapter: {
+                baseURL: "https://api.example.com",
+            },
         },
     },
 });
@@ -63,11 +65,12 @@ export const userStore = createStore("user", userSchema, {
 ```vue
 <script setup>
 const { users, listUser, userMonitor } = useStoreAlias(userStore);
+
 await listUser();
 </script>
 
 <template>
-    <div v-if="userMonitor.list.isPending">Loading...</div>
+    <div v-if="userMonitor.list.pending()">Loading...</div>
     <ul v-else>
         <li v-for="user in users" :key="user.id">{{ user.name }}</li>
     </ul>
