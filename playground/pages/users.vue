@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { userStore, type User } from "../stores/user";
 
-const { user, users, getUser, getUsers, postUsers, patchUsers, deleteUsers, getUsersIsPending } =
+const { user, users, getUser, listUser, createUser, updateUser, deleteUser, userMonitor, userMemory } =
     useStoreAlias(userStore);
 
 const showModal = ref(false);
 const editing = ref<User | null>(null);
 const form = ref({ name: "", email: "" });
 
-onMounted(() => getUsers());
+onMounted(() => listUser());
 
 function openCreate() {
     editing.value = null;
@@ -27,22 +27,20 @@ function openEdit(user: User) {
 
 async function save() {
     if (editing.value) {
-        await patchUsers([
-            {
-                id: editing.value.id,
-                name: form.value.name,
-                email: form.value.email,
-            },
-        ]);
+        await updateUser({
+            id: editing.value.id,
+            name: form.value.name,
+            email: form.value.email,
+        });
     } else {
-        await postUsers([{ id: Date.now(), ...form.value }]);
+        await createUser({ id: Date.now(), ...form.value });
     }
     showModal.value = false;
 }
 
 async function remove(u: User) {
     if (confirm(`Delete "${u.name}"?`)) {
-        await deleteUsers([{ id: u.id }]);
+        await deleteUser({ id: u.id });
     }
 }
 
@@ -51,7 +49,7 @@ async function select(u: User) {
 }
 
 function clearUser() {
-    userStore.memory.setUnit(null);
+    userMemory.set(null);
 }
 </script>
 
@@ -69,7 +67,7 @@ function clearUser() {
             <button class="btn btn-primary" @click="openCreate">Add User</button>
         </div>
 
-        <div v-if="getUsersIsPending" class="loading">Loading...</div>
+        <div v-if="userMonitor.list.pending()" class="loading">Loading...</div>
 
         <div v-else class="grid">
             <div v-for="u in users" :key="u.id" class="card">
@@ -89,6 +87,88 @@ function clearUser() {
             <h3>Selected User (user)</h3>
             <pre>{{ JSON.stringify(user, null, 2) }}</pre>
             <button class="btn btn-sm" style="margin-top: 12px" @click="clearUser">Clear</button>
+        </div>
+
+        <!-- Feature Explanation -->
+        <div class="feature-info">
+            <h3>Features Demonstrated</h3>
+            <ul>
+                <li><code>Endpoint.withAdapter</code> - Custom adapter per endpoint</li>
+                <li><code>createStore</code> with <code>adapter</code> option - Store-level adapter</li>
+                <li><code>getSchemaFields(schema)</code> - Get all schema field names</li>
+                <li><code>getFieldsForAction(schema, action)</code> - Get fields for specific action</li>
+                <li><code>meta({ indicator: true })</code> - Mark field as unique identifier</li>
+                <li><code>userMemory.set(null)</code> - Clear unit state</li>
+                <li><code>userMonitor.[action].current()</code> - Current status enum value</li>
+                <li><code>userMonitor.[action].idle()/pending()/success()/failed()</code> - Boolean status flags</li>
+            </ul>
+        </div>
+
+        <!-- Monitor Status -->
+        <div class="monitor-status" data-testid="monitor-status">
+            <h3>Monitor Status</h3>
+            <div class="monitor-grid">
+                <div class="monitor-item">
+                    <span class="monitor-label">get</span>
+                    <span class="monitor-state" :data-status="userMonitor.get.current()">{{
+                        userMonitor.get.current()
+                    }}</span>
+                    <span class="monitor-flags">
+                        <span v-if="userMonitor.get.idle()" class="flag" data-flag="idle">idle</span>
+                        <span v-if="userMonitor.get.pending()" class="flag" data-flag="pending">pending</span>
+                        <span v-if="userMonitor.get.success()" class="flag" data-flag="success">success</span>
+                        <span v-if="userMonitor.get.failed()" class="flag" data-flag="failed">failed</span>
+                    </span>
+                </div>
+                <div class="monitor-item">
+                    <span class="monitor-label">list</span>
+                    <span class="monitor-state" :data-status="userMonitor.list.current()">{{
+                        userMonitor.list.current()
+                    }}</span>
+                    <span class="monitor-flags">
+                        <span v-if="userMonitor.list.idle()" class="flag" data-flag="idle">idle</span>
+                        <span v-if="userMonitor.list.pending()" class="flag" data-flag="pending">pending</span>
+                        <span v-if="userMonitor.list.success()" class="flag" data-flag="success">success</span>
+                        <span v-if="userMonitor.list.failed()" class="flag" data-flag="failed">failed</span>
+                    </span>
+                </div>
+                <div class="monitor-item">
+                    <span class="monitor-label">create</span>
+                    <span class="monitor-state" :data-status="userMonitor.create.current()">{{
+                        userMonitor.create.current()
+                    }}</span>
+                    <span class="monitor-flags">
+                        <span v-if="userMonitor.create.idle()" class="flag" data-flag="idle">idle</span>
+                        <span v-if="userMonitor.create.pending()" class="flag" data-flag="pending">pending</span>
+                        <span v-if="userMonitor.create.success()" class="flag" data-flag="success">success</span>
+                        <span v-if="userMonitor.create.failed()" class="flag" data-flag="failed">failed</span>
+                    </span>
+                </div>
+                <div class="monitor-item">
+                    <span class="monitor-label">update</span>
+                    <span class="monitor-state" :data-status="userMonitor.update.current()">{{
+                        userMonitor.update.current()
+                    }}</span>
+                    <span class="monitor-flags">
+                        <span v-if="userMonitor.update.idle()" class="flag" data-flag="idle">idle</span>
+                        <span v-if="userMonitor.update.pending()" class="flag" data-flag="pending">pending</span>
+                        <span v-if="userMonitor.update.success()" class="flag" data-flag="success">success</span>
+                        <span v-if="userMonitor.update.failed()" class="flag" data-flag="failed">failed</span>
+                    </span>
+                </div>
+                <div class="monitor-item">
+                    <span class="monitor-label">delete</span>
+                    <span class="monitor-state" :data-status="userMonitor.delete.current()">{{
+                        userMonitor.delete.current()
+                    }}</span>
+                    <span class="monitor-flags">
+                        <span v-if="userMonitor.delete.idle()" class="flag" data-flag="idle">idle</span>
+                        <span v-if="userMonitor.delete.pending()" class="flag" data-flag="pending">pending</span>
+                        <span v-if="userMonitor.delete.success()" class="flag" data-flag="success">success</span>
+                        <span v-if="userMonitor.delete.failed()" class="flag" data-flag="failed">failed</span>
+                    </span>
+                </div>
+            </div>
         </div>
 
         <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
@@ -112,3 +192,102 @@ function clearUser() {
         </div>
     </div>
 </template>
+
+<style scoped>
+.feature-info {
+    margin-top: 32px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.feature-info h3 {
+    margin-bottom: 12px;
+}
+
+.feature-info ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.feature-info li {
+    margin-bottom: 8px;
+}
+
+.feature-info code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.monitor-status {
+    margin-top: 32px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.monitor-status h3 {
+    margin-bottom: 12px;
+}
+
+.monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.monitor-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+}
+
+.monitor-label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.monitor-state {
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.monitor-flags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.flag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.flag[data-flag="idle"] {
+    background: #6b7280;
+    color: white;
+}
+
+.flag[data-flag="pending"] {
+    background: #f59e0b;
+    color: white;
+}
+
+.flag[data-flag="success"] {
+    background: #10b981;
+    color: white;
+}
+
+.flag[data-flag="failed"] {
+    background: #ef4444;
+    color: white;
+}
+</style>

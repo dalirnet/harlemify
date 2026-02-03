@@ -23,6 +23,12 @@
                 <p>Collection store with <code>*Units</code> actions</p>
                 <span class="badge">memorizedUnits</span>
             </NuxtLink>
+
+            <NuxtLink to="/projects" class="home-card">
+                <h2>Projects</h2>
+                <p>Nested schema with <code>Memory.unit("field")</code></p>
+                <span class="badge">nested paths</span>
+            </NuxtLink>
         </div>
 
         <footer class="footer">
