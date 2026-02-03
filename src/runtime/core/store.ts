@@ -293,6 +293,12 @@ export function createStore<
     const editMemorizedUnits = store.mutation(
         "editMemorizedUnits",
         (state: any, payload: { units: PartialWithIndicator<S, I>[]; deep?: boolean }) => {
+            const tempIndex = new Map<unknown, number>();
+
+            for (let index = 0; index < state.memory.units.length; index++) {
+                tempIndex.set(state.memory.units[index][indicator], index);
+            }
+
             for (const unit of payload.units) {
                 let unitIndex = indexCache.get(unit[indicator]);
 
@@ -301,11 +307,9 @@ export function createStore<
                     unitIndex >= state.memory.units.length ||
                     state.memory.units[unitIndex]?.[indicator] !== unit[indicator]
                 ) {
-                    const foundIndex = state.memory.units.findIndex((item: S) => {
-                        return item[indicator] === unit[indicator];
-                    });
+                    const foundIndex = tempIndex.get(unit[indicator]);
 
-                    if (foundIndex !== -1) {
+                    if (foundIndex !== undefined) {
                         unitIndex = foundIndex;
                         indexCache.set(unit[indicator], foundIndex);
                     } else {

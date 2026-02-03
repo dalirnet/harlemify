@@ -1025,5 +1025,88 @@ describe("createStore", () => {
             expect(userStore.unit.value?.name).toBe("John Updated");
             expect(userStore.units.value[0].name).toBe("John Updated");
         });
+
+        it("bulk edit with stale cache finds correct items via temp index", () => {
+            const userStore = createStore("user86", UserSchema, actions);
+
+            userStore.memory.set([
+                { id: 1, name: "First", email: "f@test.com", createdAt: "" },
+                { id: 2, name: "Second", email: "s@test.com", createdAt: "" },
+                { id: 3, name: "Third", email: "t@test.com", createdAt: "" },
+            ]);
+
+            // Replace all units to invalidate cache
+            userStore.memory.set([
+                { id: 4, name: "Fourth", email: "fo@test.com", createdAt: "" },
+                { id: 5, name: "Fifth", email: "fi@test.com", createdAt: "" },
+                { id: 6, name: "Sixth", email: "si@test.com", createdAt: "" },
+            ]);
+
+            // Bulk edit with multiple items
+            userStore.memory.edit([
+                { id: 4, name: "Fourth Updated" },
+                { id: 5, name: "Fifth Updated" },
+                { id: 6, name: "Sixth Updated" },
+            ]);
+
+            expect(userStore.units.value[0].name).toBe("Fourth Updated");
+            expect(userStore.units.value[1].name).toBe("Fifth Updated");
+            expect(userStore.units.value[2].name).toBe("Sixth Updated");
+        });
+
+        it("bulk edit handles mixed existing and non-existing items", () => {
+            const userStore = createStore("user87", UserSchema, actions);
+
+            userStore.memory.set([
+                { id: 1, name: "First", email: "f@test.com", createdAt: "" },
+                { id: 2, name: "Second", email: "s@test.com", createdAt: "" },
+            ]);
+
+            // Edit mix of existing and non-existing items
+            userStore.memory.edit([
+                { id: 1, name: "First Updated" },
+                { id: 999, name: "Ghost" },
+                { id: 2, name: "Second Updated" },
+            ]);
+
+            expect(userStore.units.value).toHaveLength(2);
+            expect(userStore.units.value[0].name).toBe("First Updated");
+            expect(userStore.units.value[1].name).toBe("Second Updated");
+        });
+
+        it("bulk edit maintains O(n+m) complexity with large collections", () => {
+            const userStore = createStore("user88", UserSchema, actions);
+
+            const largeCollection = Array.from({ length: 1000 }, (_, i) => ({
+                id: i + 1,
+                name: `User ${i + 1}`,
+                email: `user${i + 1}@test.com`,
+                createdAt: "",
+            }));
+
+            userStore.memory.set(largeCollection);
+
+            // Replace to invalidate cache
+            const newCollection = Array.from({ length: 1000 }, (_, i) => ({
+                id: i + 1001,
+                name: `New User ${i + 1}`,
+                email: `newuser${i + 1}@test.com`,
+                createdAt: "",
+            }));
+
+            userStore.memory.set(newCollection);
+
+            // Bulk edit many items
+            const edits = Array.from({ length: 100 }, (_, i) => ({
+                id: i + 1001,
+                name: `Updated User ${i + 1}`,
+            }));
+
+            userStore.memory.edit(edits);
+
+            expect(userStore.units.value[0].name).toBe("Updated User 1");
+            expect(userStore.units.value[99].name).toBe("Updated User 100");
+            expect(userStore.units.value[100].name).toBe("New User 101");
+        });
     });
 });
