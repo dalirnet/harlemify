@@ -103,11 +103,26 @@ type StoreState<S> = {
 
 function getDefaultMutation(method: EndpointMethod, target: "unit" | "units"): MemoryMutation {
     const defaults: Record<EndpointMethod, { unit: MemoryMutation; units: MemoryMutation }> = {
-        [EndpointMethod.GET]: { unit: "set", units: "set" },
-        [EndpointMethod.POST]: { unit: "set", units: "add" },
-        [EndpointMethod.PUT]: { unit: "set", units: "edit" },
-        [EndpointMethod.PATCH]: { unit: "edit", units: "edit" },
-        [EndpointMethod.DELETE]: { unit: "drop", units: "drop" },
+        [EndpointMethod.GET]: {
+            unit: "set",
+            units: "set",
+        },
+        [EndpointMethod.POST]: {
+            unit: "set",
+            units: "add",
+        },
+        [EndpointMethod.PUT]: {
+            unit: "set",
+            units: "edit",
+        },
+        [EndpointMethod.PATCH]: {
+            unit: "edit",
+            units: "edit",
+        },
+        [EndpointMethod.DELETE]: {
+            unit: "drop",
+            units: "drop",
+        },
     };
 
     return defaults[method][target];
@@ -120,11 +135,12 @@ function setNestedValue(object: any, path: string[], value: any): void {
 
     let current = object;
 
-    for (let i = 0; i < path.length - 1; i++) {
-        if (current[path[i]] === undefined) {
-            current[path[i]] = {};
+    for (let index = 0; index < path.length - 1; index++) {
+        if (current[path[index]] === undefined) {
+            current[path[index]] = {};
         }
-        current = current[path[i]];
+
+        current = current[path[index]];
     }
 
     current[path[path.length - 1]] = value;
@@ -137,24 +153,29 @@ function editNestedValue(object: any, path: string[], value: any, deep?: boolean
 
     let current = object;
 
-    for (let i = 0; i < path.length - 1; i++) {
-        if (current[path[i]] === undefined) {
+    for (let index = 0; index < path.length - 1; index++) {
+        if (current[path[index]] === undefined) {
             return;
         }
-        current = current[path[i]];
+
+        current = current[path[index]];
     }
 
     const key = path[path.length - 1];
 
-    if (current[key] !== undefined) {
-        if (deep) {
-            current[key] = defu(value, current[key]);
-        } else {
-            Object.assign(current[key], value);
-        }
-    } else {
+    if (current[key] === undefined) {
         current[key] = value;
+
+        return;
     }
+
+    if (deep) {
+        current[key] = defu(value, current[key]);
+
+        return;
+    }
+
+    Object.assign(current[key], value);
 }
 
 export function createStore<
@@ -167,18 +188,28 @@ export function createStore<
     const resolvedSchema = resolveSchema(schema, {
         indicator: options?.indicator as keyof S,
     });
+
     const indicator = resolvedSchema.indicator;
 
     const indexCache = createCache<unknown, number>();
-    const schemaCache = createCache<string, { keys: Record<keyof S, true>; fields: (keyof S)[] }>();
+    const schemaCache = createCache<
+        string,
+        {
+            keys: Record<keyof S, true>;
+            fields: (keyof S)[];
+        }
+    >();
 
     for (const actionName in actions) {
         const actionSchema = resolveSchema(schema, {
             indicator,
             action: actionName,
         });
-        const fields = Object.keys(actionSchema.keys) as (keyof S)[];
-        schemaCache.set(actionName, { keys: actionSchema.keys, fields });
+
+        schemaCache.set(actionName, {
+            keys: actionSchema.keys,
+            fields: Object.keys(actionSchema.keys) as (keyof S)[],
+        });
     }
 
     let apiClient: Api;
@@ -232,10 +263,11 @@ export function createStore<
         state.memory.units = units;
 
         indexCache.clear();
+
         if (units && Array.isArray(units)) {
-            for (let i = 0; i < units.length; i++) {
-                if (units[i]) {
-                    indexCache.set(units[i][indicator], i);
+            for (let index = 0; index < units.length; index++) {
+                if (units[index]) {
+                    indexCache.set(units[index][indicator], index);
                 }
             }
         }
@@ -244,13 +276,17 @@ export function createStore<
     const editMemorizedUnit = store.mutation(
         "editMemorizedUnit",
         (state: any, payload: { unit: PartialWithIndicator<S, I>; deep?: boolean }) => {
-            if (state.memory.unit?.[indicator] === payload.unit[indicator]) {
-                if (payload.deep) {
-                    state.memory.unit = defu<any, any>(payload.unit, state.memory.unit);
-                } else {
-                    Object.assign(state.memory.unit, payload.unit);
-                }
+            if (state.memory.unit?.[indicator] !== payload.unit[indicator]) {
+                return;
             }
+
+            if (payload.deep) {
+                state.memory.unit = defu<any, any>(payload.unit, state.memory.unit);
+
+                return;
+            }
+
+            Object.assign(state.memory.unit, payload.unit);
         },
     );
 
@@ -265,7 +301,10 @@ export function createStore<
                     unitIndex >= state.memory.units.length ||
                     state.memory.units[unitIndex]?.[indicator] !== unit[indicator]
                 ) {
-                    const foundIndex = state.memory.units.findIndex((u: S) => u[indicator] === unit[indicator]);
+                    const foundIndex = state.memory.units.findIndex((item: S) => {
+                        return item[indicator] === unit[indicator];
+                    });
+
                     if (foundIndex !== -1) {
                         unitIndex = foundIndex;
                         indexCache.set(unit[indicator], foundIndex);
@@ -274,13 +313,17 @@ export function createStore<
                     }
                 }
 
-                if (unitIndex !== undefined) {
-                    if (payload.deep) {
-                        state.memory.units[unitIndex] = defu<any, any>(unit, state.memory.units[unitIndex]);
-                    } else {
-                        Object.assign(state.memory.units[unitIndex], unit);
-                    }
+                if (unitIndex === undefined) {
+                    continue;
                 }
+
+                if (payload.deep) {
+                    state.memory.units[unitIndex] = defu<any, any>(unit, state.memory.units[unitIndex]);
+
+                    continue;
+                }
+
+                Object.assign(state.memory.units[unitIndex], unit);
             }
         },
     );
@@ -294,7 +337,11 @@ export function createStore<
     const dropMemorizedUnits = store.mutation(
         "dropMemorizedUnits",
         (state: any, units: PartialWithIndicator<S, I>[]) => {
-            const dropSet = new Set(units.map((u) => u[indicator]));
+            const dropSet = new Set(
+                units.map((unit) => {
+                    return unit[indicator];
+                }),
+            );
 
             for (const unit of units) {
                 indexCache.delete(unit[indicator]);
@@ -310,48 +357,54 @@ export function createStore<
         "addMemorizedUnits",
         (state: any, payload: { units: S[]; prepend?: boolean }) => {
             if (payload.prepend) {
-                const shift = payload.units.length;
-
                 indexCache.clear();
-                for (let i = 0; i < payload.units.length; i++) {
-                    indexCache.set(payload.units[i][indicator], i);
+
+                for (let index = 0; index < payload.units.length; index++) {
+                    indexCache.set(payload.units[index][indicator], index);
                 }
-                for (let i = 0; i < state.memory.units.length; i++) {
-                    indexCache.set((state.memory.units[i] as S)[indicator], i + shift);
+
+                for (let index = 0; index < state.memory.units.length; index++) {
+                    indexCache.set((state.memory.units[index] as S)[indicator], index + payload.units.length);
                 }
 
                 state.memory.units = [...payload.units, ...state.memory.units];
-            } else {
-                const start = state.memory.units.length;
 
-                for (let i = 0; i < payload.units.length; i++) {
-                    indexCache.set(payload.units[i][indicator], start + i);
-                }
-
-                state.memory.units = [...state.memory.units, ...payload.units];
+                return;
             }
+
+            for (let index = 0; index < payload.units.length; index++) {
+                indexCache.set(payload.units[index][indicator], state.memory.units.length + index);
+            }
+
+            state.memory.units = [...state.memory.units, ...payload.units];
         },
     );
 
     const setNestedUnit = store.mutation("setNestedUnit", (state: any, payload: { path: string[]; value: any }) => {
-        if (state.memory.unit) {
-            setNestedValue(state.memory.unit, payload.path, payload.value);
+        if (!state.memory.unit) {
+            return;
         }
+
+        setNestedValue(state.memory.unit, payload.path, payload.value);
     });
 
     const editNestedUnit = store.mutation(
         "editNestedUnit",
         (state: any, payload: { path: string[]; value: any; deep?: boolean }) => {
-            if (state.memory.unit) {
-                editNestedValue(state.memory.unit, payload.path, payload.value, payload.deep);
+            if (!state.memory.unit) {
+                return;
             }
+
+            editNestedValue(state.memory.unit, payload.path, payload.value, payload.deep);
         },
     );
 
     const dropNestedUnit = store.mutation("dropNestedUnit", (state: any, payload: { path: string[] }) => {
-        if (state.memory.unit && payload.path.length > 0) {
-            setNestedValue(state.memory.unit, payload.path, null);
+        if (!state.memory.unit || payload.path.length === 0) {
+            return;
         }
+
+        setNestedValue(state.memory.unit, payload.path, null);
     });
 
     const patchStatus = store.mutation(
@@ -366,29 +419,43 @@ export function createStore<
             `${actionName}:current`,
             (state: any) => state.status[actionName] ?? EndpointStatus.IDLE,
         );
+
         const pending = store.getter(
             `${actionName}:pending`,
             (state: any) => state.status[actionName] === EndpointStatus.PENDING,
         );
+
         const success = store.getter(
             `${actionName}:success`,
             (state: any) => state.status[actionName] === EndpointStatus.SUCCESS,
         );
+
         const failed = store.getter(
             `${actionName}:failed`,
             (state: any) => state.status[actionName] === EndpointStatus.FAILED,
         );
+
         const idle = store.getter(
             `${actionName}:idle`,
             (state: any) => state.status[actionName] === EndpointStatus.IDLE,
         );
 
         return {
-            current: () => current.value,
-            pending: () => pending.value,
-            success: () => success.value,
-            failed: () => failed.value,
-            idle: () => idle.value,
+            current() {
+                return current.value;
+            },
+            pending() {
+                return pending.value;
+            },
+            success() {
+                return success.value;
+            },
+            failed() {
+                return failed.value;
+            },
+            idle() {
+                return idle.value;
+            },
         };
     }
 
@@ -405,17 +472,28 @@ export function createStore<
             throw new Error(`Action "${actionName}" is already pending`);
         }
 
-        patchStatus({ action: actionName, status: EndpointStatus.PENDING });
+        patchStatus({
+            action: actionName,
+            status: EndpointStatus.PENDING,
+        });
 
         try {
             const result = await operation();
 
-            patchStatus({ action: actionName, status: EndpointStatus.SUCCESS });
+            patchStatus({
+                action: actionName,
+                status: EndpointStatus.SUCCESS,
+            });
+
             await options?.hooks?.after?.();
 
             return result;
         } catch (error: any) {
-            patchStatus({ action: actionName, status: EndpointStatus.FAILED });
+            patchStatus({
+                action: actionName,
+                status: EndpointStatus.FAILED,
+            });
+
             await options?.hooks?.after?.(error);
 
             throw error;
@@ -432,74 +510,206 @@ export function createStore<
             return;
         }
 
-        const target = memoryDefinition.on;
-        const path = memoryDefinition.path;
-        const mutation = memoryDefinition.mutation ?? getDefaultMutation(method, target);
-        const prepend = memoryDefinition.prepend;
-        const deep = memoryDefinition.deep;
+        const mutation = memoryDefinition.mutation ?? getDefaultMutation(method, memoryDefinition.on);
 
-        if (target === "unit") {
-            if (path.length > 0) {
+        if (memoryDefinition.on === "unit") {
+            if (memoryDefinition.path.length > 0) {
                 switch (mutation) {
-                    case "set":
-                        setNestedUnit({ path, value: response });
-                        break;
-                    case "edit":
-                        editNestedUnit({ path, value: response, deep });
-                        break;
-                    case "drop":
-                        dropNestedUnit({ path });
-                        break;
-                }
-            } else {
-                switch (mutation) {
-                    case "set":
-                        setMemorizedUnit(response);
-                        break;
-                    case "edit": {
-                        const editData = { ...params, ...response } as PartialWithIndicator<S, I>;
-                        editMemorizedUnit({ unit: editData, deep });
-                        // Also update in units if exists
-                        editMemorizedUnits({ units: [editData], deep });
+                    case "set": {
+                        setNestedUnit({
+                            path: memoryDefinition.path,
+                            value: response,
+                        });
+
                         break;
                     }
-                    case "drop":
-                        dropMemorizedUnit(params as PartialWithIndicator<S, I>);
+                    case "edit": {
+                        editNestedUnit({
+                            path: memoryDefinition.path,
+                            value: response,
+                            deep: memoryDefinition.deep,
+                        });
+
                         break;
+                    }
+                    case "drop": {
+                        dropNestedUnit({
+                            path: memoryDefinition.path,
+                        });
+
+                        break;
+                    }
                 }
+
+                return;
             }
-        } else {
-            const items = Array.isArray(response) ? response : [response];
 
             switch (mutation) {
-                case "set":
-                    setMemorizedUnits(items);
+                case "set": {
+                    setMemorizedUnit(response);
+
                     break;
-                case "edit":
-                    editMemorizedUnits({
-                        units: items.map((item) => ({ ...params, ...item })) as PartialWithIndicator<S, I>[],
-                        deep,
+                }
+                case "edit": {
+                    const editData = {
+                        ...params,
+                        ...response,
+                    } as PartialWithIndicator<S, I>;
+
+                    editMemorizedUnit({
+                        unit: editData,
+                        deep: memoryDefinition.deep,
                     });
+
+                    // Also update in units if exists
+                    editMemorizedUnits({
+                        units: [editData],
+                        deep: memoryDefinition.deep,
+                    });
+
                     break;
-                case "drop":
-                    dropMemorizedUnits(
-                        params ? [params as PartialWithIndicator<S, I>] : (items as PartialWithIndicator<S, I>[]),
-                    );
+                }
+                case "drop": {
+                    dropMemorizedUnit(params as PartialWithIndicator<S, I>);
+
                     break;
-                case "add":
-                    addMemorizedUnits({ units: items, prepend });
+                }
+            }
+
+            return;
+        }
+
+        if (Array.isArray(response)) {
+            switch (mutation) {
+                case "set": {
+                    setMemorizedUnits(response);
+
                     break;
+                }
+                case "edit": {
+                    editMemorizedUnits({
+                        units: response.map((item) => {
+                            return {
+                                ...params,
+                                ...item,
+                            };
+                        }) as PartialWithIndicator<S, I>[],
+                        deep: memoryDefinition.deep,
+                    });
+
+                    break;
+                }
+                case "drop": {
+                    if (params) {
+                        dropMemorizedUnits([params as PartialWithIndicator<S, I>]);
+
+                        break;
+                    }
+
+                    dropMemorizedUnits(response as PartialWithIndicator<S, I>[]);
+
+                    break;
+                }
+                case "add": {
+                    addMemorizedUnits({
+                        units: response,
+                        prepend: memoryDefinition.prepend,
+                    });
+
+                    break;
+                }
+            }
+
+            return;
+        }
+
+        switch (mutation) {
+            case "set": {
+                setMemorizedUnits([response]);
+
+                break;
+            }
+            case "edit": {
+                editMemorizedUnits({
+                    units: [
+                        {
+                            ...params,
+                            ...response,
+                        },
+                    ] as PartialWithIndicator<S, I>[],
+                    deep: memoryDefinition.deep,
+                });
+
+                break;
+            }
+            case "drop": {
+                if (params) {
+                    dropMemorizedUnits([params as PartialWithIndicator<S, I>]);
+
+                    break;
+                }
+
+                dropMemorizedUnits([response] as PartialWithIndicator<S, I>[]);
+
+                break;
+            }
+            case "add": {
+                addMemorizedUnits({
+                    units: [response],
+                    prepend: memoryDefinition.prepend,
+                });
+
+                break;
             }
         }
     }
 
+    function resolveRequestBody(
+        actionName: string,
+        params?: Partial<S>,
+        actionOptions?: ActionOptions,
+    ): Partial<S> | undefined {
+        if (actionOptions?.body) {
+            return actionOptions.body as Partial<S>;
+        }
+
+        const cached = schemaCache.get(actionName);
+        if (cached && cached.fields.length > 0 && params) {
+            return cached.fields.reduce((accumulator, key) => {
+                if (key in (params as any)) {
+                    (accumulator as any)[key] = (params as any)[key];
+                }
+
+                return accumulator;
+            }, {} as Partial<S>);
+        }
+
+        return params;
+    }
+
+    function validateRequestBody(actionName: string, params?: Partial<S>, partial?: boolean): void {
+        const cached = schemaCache.get(actionName);
+        if (!cached || cached.fields.length === 0) {
+            return;
+        }
+
+        if (partial) {
+            schema.pick<any>(cached.keys).partial().parse(params);
+
+            return;
+        }
+
+        schema.pick<any>(cached.keys).parse(params);
+    }
+
     function createActionFunction(actionName: string, actionDefinition: ActionDefinition<S>): ActionFunction<S> {
         return async (params?: Partial<S>, actionOptions?: ActionOptions): Promise<S | S[] | boolean> => {
-            const method = actionDefinition.endpoint.method;
-            const url = resolveEndpointUrl(actionDefinition.endpoint, params);
-            const adapter = actionOptions?.adapter ?? actionDefinition.endpoint.adapter;
-
             return withStatus(actionName, async () => {
+                const url = resolveEndpointUrl(actionDefinition.endpoint, params);
+                const body = resolveRequestBody(actionName, params, actionOptions);
+
+                const adapter = actionOptions?.adapter ?? actionDefinition.endpoint.adapter;
+
                 const baseOptions = {
                     query: actionOptions?.query,
                     headers: actionOptions?.headers,
@@ -509,90 +719,58 @@ export function createStore<
 
                 let response: any;
 
-                switch (method) {
-                    case EndpointMethod.GET:
+                switch (actionDefinition.endpoint.method) {
+                    case EndpointMethod.GET: {
                         response = await api().get<S>(url, baseOptions);
+
                         break;
-
+                    }
                     case EndpointMethod.POST: {
-                        const cached = schemaCache.get(actionName);
-                        const body =
-                            actionOptions?.body ??
-                            (cached && cached.fields.length > 0 && params
-                                ? cached.fields.reduce((acc, key) => {
-                                      if (key in (params as any)) {
-                                          (acc as any)[key] = (params as any)[key];
-                                      }
-                                      return acc;
-                                  }, {} as Partial<S>)
-                                : params);
-
-                        if (actionOptions?.validate && cached && cached.fields.length > 0) {
-                            schema.pick<any>(cached.keys).parse(params);
+                        if (actionOptions?.validate) {
+                            validateRequestBody(actionName, params);
                         }
 
                         response = await api().post<S>(url, {
                             ...baseOptions,
                             body,
                         });
+
                         break;
                     }
-
                     case EndpointMethod.PUT: {
-                        const cached = schemaCache.get(actionName);
-                        const body =
-                            actionOptions?.body ??
-                            (cached && cached.fields.length > 0 && params
-                                ? cached.fields.reduce((acc, key) => {
-                                      if (key in (params as any)) {
-                                          (acc as any)[key] = (params as any)[key];
-                                      }
-                                      return acc;
-                                  }, {} as Partial<S>)
-                                : params);
-
-                        if (actionOptions?.validate && cached && cached.fields.length > 0) {
-                            schema.pick<any>(cached.keys).parse(params);
+                        if (actionOptions?.validate) {
+                            validateRequestBody(actionName, params);
                         }
 
                         response = await api().put<S>(url, {
                             ...baseOptions,
                             body,
                         });
+
                         break;
                     }
-
                     case EndpointMethod.PATCH: {
-                        const cached = schemaCache.get(actionName);
-                        const body =
-                            actionOptions?.body ??
-                            (cached && cached.fields.length > 0 && params
-                                ? cached.fields.reduce((acc, key) => {
-                                      if (key in (params as any)) {
-                                          (acc as any)[key] = (params as any)[key];
-                                      }
-                                      return acc;
-                                  }, {} as Partial<S>)
-                                : params);
-
-                        if (actionOptions?.validate && cached && cached.fields.length > 0) {
-                            schema.pick<any>(cached.keys).partial().parse(params);
+                        if (actionOptions?.validate) {
+                            validateRequestBody(actionName, params, true);
                         }
 
                         response = await api().patch<S>(url, {
                             ...baseOptions,
                             body,
                         });
+
                         break;
                     }
-
-                    case EndpointMethod.DELETE:
+                    case EndpointMethod.DELETE: {
                         await api().del<S>(url, baseOptions);
+
                         response = true;
+
                         break;
+                    }
                 }
 
-                applyMemoryOperation(actionDefinition.memory, method, response, params);
+                applyMemoryOperation(actionDefinition.memory, actionDefinition.endpoint.method, response, params);
 
                 return response;
             });
@@ -609,21 +787,47 @@ export function createStore<
         set(data: S | S[] | null) {
             if (Array.isArray(data)) {
                 setMemorizedUnits(data);
-            } else {
-                setMemorizedUnit(data);
+
+                return;
             }
+
+            setMemorizedUnit(data);
         },
         edit(data: PartialWithIndicator<S, I> | PartialWithIndicator<S, I>[], editOptions?: { deep?: boolean }) {
-            const items = Array.isArray(data) ? data : [data];
+            if (Array.isArray(data)) {
+                editMemorizedUnit({
+                    unit: data[0],
+                    deep: editOptions?.deep,
+                });
 
-            editMemorizedUnit({ unit: items[0], deep: editOptions?.deep });
-            editMemorizedUnits({ units: items, deep: editOptions?.deep });
+                editMemorizedUnits({
+                    units: data,
+                    deep: editOptions?.deep,
+                });
+
+                return;
+            }
+
+            editMemorizedUnit({
+                unit: data,
+                deep: editOptions?.deep,
+            });
+
+            editMemorizedUnits({
+                units: [data],
+                deep: editOptions?.deep,
+            });
         },
         drop(data: PartialWithIndicator<S, I> | PartialWithIndicator<S, I>[]) {
-            const items = Array.isArray(data) ? data : [data];
+            if (Array.isArray(data)) {
+                dropMemorizedUnit(data[0]);
+                dropMemorizedUnits(data);
 
-            dropMemorizedUnit(items[0]);
-            dropMemorizedUnits(items);
+                return;
+            }
+
+            dropMemorizedUnit(data);
+            dropMemorizedUnits([data]);
         },
     };
 

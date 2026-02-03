@@ -106,14 +106,12 @@ export function createApi(options?: ApiOptions): Api {
             url,
             body: toValue(requestOptions?.body),
             query: Object.assign({}, toValue(options?.query), toValue(requestOptions?.query)),
-            headers: Object.assign({}, toValue(options?.headers), toValue(requestOptions?.headers)) as Record<
-                string,
-                string
-            >,
+            headers: Object.assign({}, toValue(options?.headers), toValue(requestOptions?.headers)) as any,
             signal: requestOptions?.signal,
         };
 
         const response = await adapter(adapterRequest);
+
         return response.data as T;
     }
 
