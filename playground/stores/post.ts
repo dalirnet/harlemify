@@ -1,38 +1,50 @@
 import { z } from "zod";
 
-const PostSchema = z.object({
+export enum PostAction {
+    LIST = "list",
+    CREATE = "create",
+    UPDATE = "update",
+    DELETE = "delete",
+}
+
+const postSchema = z.object({
     id: z.number().meta({
         indicator: true,
     }),
     userId: z.number().meta({
-        methods: [EndpointMethod.POST],
+        actions: [PostAction.CREATE],
     }),
     title: z.string().meta({
-        methods: [EndpointMethod.POST, EndpointMethod.PATCH],
+        actions: [PostAction.CREATE, PostAction.UPDATE],
     }),
     body: z.string().meta({
-        methods: [EndpointMethod.POST, EndpointMethod.PATCH],
+        actions: [PostAction.CREATE, PostAction.UPDATE],
     }),
 });
 
-export type Post = z.infer<typeof PostSchema>;
+const postActions = {
+    [PostAction.LIST]: {
+        endpoint: Endpoint.get("/posts"),
+        memory: Memory.units(),
+    },
+    [PostAction.CREATE]: {
+        endpoint: Endpoint.post("/posts"),
+        memory: Memory.units().add(),
+    },
+    [PostAction.UPDATE]: {
+        endpoint: Endpoint.patch<Post>((params) => {
+            return `/posts/${params.id}`;
+        }),
+        memory: Memory.units().edit(),
+    },
+    [PostAction.DELETE]: {
+        endpoint: Endpoint.delete<Post>((params) => {
+            return `/posts/${params.id}`;
+        }),
+        memory: Memory.units().drop(),
+    },
+};
 
-// Collection store - uses *_UNITS endpoints
-export const postStore = createStore("post", PostSchema, {
-    [Endpoint.GET_UNITS]: {
-        method: EndpointMethod.GET,
-        url: "/posts",
-    },
-    [Endpoint.POST_UNITS]: {
-        method: EndpointMethod.POST,
-        url: "/posts",
-    },
-    [Endpoint.PATCH_UNITS]: {
-        method: EndpointMethod.PATCH,
-        url: (params) => `/posts/${params.id}`,
-    },
-    [Endpoint.DELETE_UNITS]: {
-        method: EndpointMethod.DELETE,
-        url: (params) => `/posts/${params.id}`,
-    },
-});
+export const postStore = createStore("post", postSchema, postActions);
+
+export type Post = z.infer<typeof postSchema>;

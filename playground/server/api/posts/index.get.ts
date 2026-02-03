@@ -1,5 +1,5 @@
-import { posts } from "~/server/utils/data";
+import { data } from "~/server/utils/data";
 
 export default defineEventHandler(() => {
-    return posts;
+    return data.posts;
 });

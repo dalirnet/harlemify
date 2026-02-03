@@ -2,11 +2,9 @@ import { describe, it, expect } from "vitest";
 
 import {
     EndpointMethod,
-    Endpoint,
     EndpointStatus,
+    Endpoint,
     makeEndpointStatusFlag,
-    makeEndpointStatusName,
-    getEndpoint,
     resolveEndpointUrl,
 } from "../src/runtime/utils/endpoint";
 import type { EndpointDefinition } from "../src/runtime/utils/endpoint";
@@ -29,47 +27,66 @@ describe("makeEndpointStatusFlag", () => {
     });
 });
 
-describe("makeEndpointStatusName", () => {
-    it("creates correct status names", () => {
-        expect(makeEndpointStatusName(Endpoint.GET_UNIT, EndpointStatus.IDLE)).toBe("getUnitIsIdle");
-        expect(makeEndpointStatusName(Endpoint.GET_UNITS, EndpointStatus.PENDING)).toBe("getUnitsIsPending");
-        expect(makeEndpointStatusName(Endpoint.POST_UNIT, EndpointStatus.SUCCESS)).toBe("postUnitIsSuccess");
-        expect(makeEndpointStatusName(Endpoint.DELETE_UNITS, EndpointStatus.FAILED)).toBe("deleteUnitsIsFailed");
+describe("Endpoint builder", () => {
+    it("creates GET endpoint with static URL", () => {
+        const endpoint = Endpoint.get("/users");
+
+        expect(endpoint.method).toBe(EndpointMethod.GET);
+        expect(endpoint.url).toBe("/users");
+        expect(endpoint.adapter).toBeUndefined();
     });
 
-    it("capitalizes status correctly", () => {
-        const name = makeEndpointStatusName(Endpoint.PATCH_UNIT, EndpointStatus.PENDING);
-        expect(name).toBe("patchUnitIsPending");
-        expect(name).toContain("IsPending");
-    });
-});
+    it("creates POST endpoint with static URL", () => {
+        const endpoint = Endpoint.post("/users");
 
-describe("getEndpoint", () => {
-    const endpoints: Partial<Record<Endpoint, EndpointDefinition>> = {
-        [Endpoint.GET_UNIT]: {
-            method: EndpointMethod.GET,
-            url: "/users/:id",
-        },
-        [Endpoint.GET_UNITS]: {
-            method: EndpointMethod.GET,
-            url: "/users",
-        },
-    };
-
-    it("returns endpoint when it exists", () => {
-        const endpoint = getEndpoint(endpoints, Endpoint.GET_UNIT);
-        expect(endpoint).toEqual({
-            method: EndpointMethod.GET,
-            url: "/users/:id",
-        });
+        expect(endpoint.method).toBe(EndpointMethod.POST);
+        expect(endpoint.url).toBe("/users");
     });
 
-    it("throws error when endpoint is not configured", () => {
-        expect(() => getEndpoint(endpoints, Endpoint.PUT_UNIT)).toThrow('Endpoint "putUnit" is not configured');
+    it("creates PUT endpoint with static URL", () => {
+        const endpoint = Endpoint.put("/users");
+
+        expect(endpoint.method).toBe(EndpointMethod.PUT);
+        expect(endpoint.url).toBe("/users");
     });
 
-    it("throws error when endpoints is undefined", () => {
-        expect(() => getEndpoint(undefined, Endpoint.GET_UNIT)).toThrow('Endpoint "getUnit" is not configured');
+    it("creates PATCH endpoint with static URL", () => {
+        const endpoint = Endpoint.patch("/users");
+
+        expect(endpoint.method).toBe(EndpointMethod.PATCH);
+        expect(endpoint.url).toBe("/users");
+    });
+
+    it("creates DELETE endpoint with static URL", () => {
+        const endpoint = Endpoint.delete("/users");
+
+        expect(endpoint.method).toBe(EndpointMethod.DELETE);
+        expect(endpoint.url).toBe("/users");
+    });
+
+    it("creates endpoint with dynamic URL function", () => {
+        const endpoint = Endpoint.get<{ id: number }>((p) => `/users/${p.id}`);
+
+        expect(endpoint.method).toBe(EndpointMethod.GET);
+        expect(typeof endpoint.url).toBe("function");
+    });
+
+    it("chains withAdapter method", () => {
+        const mockAdapter = async () => ({ data: {} });
+        const endpoint = Endpoint.get("/users").withAdapter(mockAdapter);
+
+        expect(endpoint.method).toBe(EndpointMethod.GET);
+        expect(endpoint.url).toBe("/users");
+        expect(endpoint.adapter).toBe(mockAdapter);
+    });
+
+    it("withAdapter chain returns new object", () => {
+        const mockAdapter = async () => ({ data: {} });
+        const base = Endpoint.get("/users");
+        const withAdapterResult = base.withAdapter(mockAdapter);
+
+        expect(base.adapter).toBeUndefined();
+        expect(withAdapterResult.adapter).toBe(mockAdapter);
     });
 });
 
@@ -99,5 +116,13 @@ describe("resolveEndpointUrl", () => {
             url: (params) => `/orgs/${params.orgId}/users/${params.userId}`,
         };
         expect(resolveEndpointUrl(endpoint, { orgId: 1, userId: 5 })).toBe("/orgs/1/users/5");
+    });
+
+    it("handles empty params with function URL", () => {
+        const endpoint: EndpointDefinition<{ id?: number }> = {
+            method: EndpointMethod.GET,
+            url: (params) => `/users/${params.id ?? "all"}`,
+        };
+        expect(resolveEndpointUrl(endpoint)).toBe("/users/all");
     });
 });

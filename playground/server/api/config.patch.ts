@@ -1,9 +1,9 @@
-import { config } from "~/server/utils/data";
+import { data } from "~/server/utils/data";
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
 
-    Object.assign(config, body);
+    data.config = { ...data.config, ...body };
 
-    return config;
+    return data.config;
 });

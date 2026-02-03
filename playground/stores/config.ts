@@ -1,30 +1,36 @@
 import { z } from "zod";
 
-const ConfigSchema = z.object({
+export enum ConfigAction {
+    GET = "get",
+    UPDATE = "update",
+}
+
+const configSchema = z.object({
     id: z.number().meta({
         indicator: true,
     }),
     theme: z.enum(["light", "dark"]).meta({
-        methods: [EndpointMethod.PATCH],
+        actions: [ConfigAction.UPDATE],
     }),
     language: z.string().meta({
-        methods: [EndpointMethod.PATCH],
+        actions: [ConfigAction.UPDATE],
     }),
     notifications: z.boolean().meta({
-        methods: [EndpointMethod.PATCH],
+        actions: [ConfigAction.UPDATE],
     }),
 });
 
-export type Config = z.infer<typeof ConfigSchema>;
+const configActions = {
+    [ConfigAction.GET]: {
+        endpoint: Endpoint.get("/config"),
+        memory: Memory.unit(),
+    },
+    [ConfigAction.UPDATE]: {
+        endpoint: Endpoint.patch("/config"),
+        memory: Memory.unit().edit(),
+    },
+};
 
-// Singleton store - uses *_UNIT endpoints only
-export const configStore = createStore("config", ConfigSchema, {
-    [Endpoint.GET_UNIT]: {
-        method: EndpointMethod.GET,
-        url: "/config",
-    },
-    [Endpoint.PATCH_UNIT]: {
-        method: EndpointMethod.PATCH,
-        url: "/config",
-    },
-});
+export const configStore = createStore("config", configSchema, configActions);
+
+export type Config = z.infer<typeof configSchema>;

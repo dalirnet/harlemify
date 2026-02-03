@@ -1,8 +1,68 @@
 import { z } from "zod";
 import { describe, it, expect } from "vitest";
 
-import { getMeta, resolveSchema } from "../src/runtime/utils/schema";
-import { EndpointMethod } from "../src/runtime/utils/endpoint";
+import { getMeta, getSchemaFields, resolveSchema } from "../src/runtime/utils/schema";
+
+describe("getSchemaFields", () => {
+    const TestSchema = z.object({
+        id: z.number().meta({ indicator: true }),
+        name: z.string().meta({ actions: ["create", "update"] }),
+        email: z.string().meta({ actions: ["create"] }),
+        createdAt: z.string(),
+    });
+
+    it("returns all field info from schema", () => {
+        const fields = getSchemaFields(TestSchema);
+
+        expect(fields).toHaveLength(4);
+        expect(fields.map((f) => f.name)).toEqual(["id", "name", "email", "createdAt"]);
+    });
+
+    it("detects indicator field", () => {
+        const fields = getSchemaFields(TestSchema);
+        const idField = fields.find((f) => f.name === "id");
+
+        expect(idField?.indicator).toBe(true);
+    });
+
+    it("extracts actions from meta", () => {
+        const fields = getSchemaFields(TestSchema);
+        const nameField = fields.find((f) => f.name === "name");
+        const emailField = fields.find((f) => f.name === "email");
+
+        expect(nameField?.actions).toEqual(["create", "update"]);
+        expect(emailField?.actions).toEqual(["create"]);
+    });
+
+    it("returns empty actions for fields without meta", () => {
+        const fields = getSchemaFields(TestSchema);
+        const createdAtField = fields.find((f) => f.name === "createdAt");
+
+        expect(createdAtField?.actions).toEqual([]);
+        expect(createdAtField?.indicator).toBe(false);
+    });
+
+    it("returns cached result on subsequent calls", () => {
+        const fields1 = getSchemaFields(TestSchema);
+        const fields2 = getSchemaFields(TestSchema);
+
+        expect(fields1).toBe(fields2);
+    });
+
+    it("caches different schemas separately", () => {
+        const OtherSchema = z.object({
+            uuid: z.string().meta({ indicator: true }),
+            title: z.string(),
+        });
+
+        const testFields = getSchemaFields(TestSchema);
+        const otherFields = getSchemaFields(OtherSchema);
+
+        expect(testFields).not.toBe(otherFields);
+        expect(testFields).toHaveLength(4);
+        expect(otherFields).toHaveLength(2);
+    });
+});
 
 describe("getMeta", () => {
     it("returns undefined for field without meta", () => {
@@ -17,21 +77,21 @@ describe("getMeta", () => {
 
     it("returns meta with actions", () => {
         const field = z.string().meta({
-            methods: [EndpointMethod.POST, EndpointMethod.PUT],
+            actions: ["create", "update"],
         });
         expect(getMeta(field)).toEqual({
-            methods: [EndpointMethod.POST, EndpointMethod.PUT],
+            actions: ["create", "update"],
         });
     });
 
     it("returns meta with both indicator and actions", () => {
         const field = z.number().meta({
             indicator: true,
-            methods: [EndpointMethod.GET],
+            actions: ["get"],
         });
         expect(getMeta(field)).toEqual({
             indicator: true,
-            methods: [EndpointMethod.GET],
+            actions: ["get"],
         });
     });
 });
@@ -40,10 +100,10 @@ describe("resolveSchema", () => {
     const UserSchema = z.object({
         id: z.number().meta({ indicator: true }),
         name: z.string().meta({
-            methods: [EndpointMethod.POST, EndpointMethod.PUT, EndpointMethod.PATCH],
+            actions: ["create", "update"],
         }),
         email: z.string().meta({
-            methods: [EndpointMethod.POST],
+            actions: ["create"],
         }),
         createdAt: z.string(),
     });
@@ -76,28 +136,28 @@ describe("resolveSchema", () => {
     });
 
     describe("keys extraction", () => {
-        it("returns empty keys when no endpoint", () => {
+        it("returns empty keys when no action", () => {
             const result = resolveSchema(UserSchema);
             expect(result.keys).toEqual({});
         });
 
-        it("extracts keys for POST action", () => {
+        it("extracts keys for create action", () => {
             const result = resolveSchema(UserSchema, {
-                endpoint: { method: EndpointMethod.POST, url: "/users" },
+                action: "create",
             });
             expect(result.keys).toEqual({ name: true, email: true });
         });
 
-        it("extracts keys for PATCH action", () => {
+        it("extracts keys for update action", () => {
             const result = resolveSchema(UserSchema, {
-                endpoint: { method: EndpointMethod.PATCH, url: "/users" },
+                action: "update",
             });
             expect(result.keys).toEqual({ name: true });
         });
 
-        it("returns empty keys for GET action", () => {
+        it("returns empty keys for get action", () => {
             const result = resolveSchema(UserSchema, {
-                endpoint: { method: EndpointMethod.GET, url: "/users" },
+                action: "get",
             });
             expect(result.keys).toEqual({});
         });
@@ -106,14 +166,14 @@ describe("resolveSchema", () => {
     describe("values extraction", () => {
         it("returns empty values when no unit", () => {
             const result = resolveSchema(UserSchema, {
-                endpoint: { method: EndpointMethod.POST, url: "/users" },
+                action: "create",
             });
             expect(result.values).toEqual({});
         });
 
         it("extracts values for matching keys", () => {
             const result = resolveSchema(UserSchema, {
-                endpoint: { method: EndpointMethod.POST, url: "/users" },
+                action: "create",
                 unit: { id: 1, name: "John", email: "john@example.com" },
             });
             expect(result.values).toEqual({
@@ -124,7 +184,7 @@ describe("resolveSchema", () => {
 
         it("excludes fields without matching action", () => {
             const result = resolveSchema(UserSchema, {
-                endpoint: { method: EndpointMethod.PATCH, url: "/users" },
+                action: "update",
                 unit: { id: 1, name: "John", email: "john@example.com" },
             });
             expect(result.values).toEqual({ name: "John" });
@@ -132,7 +192,7 @@ describe("resolveSchema", () => {
 
         it("only includes values for fields in unit", () => {
             const result = resolveSchema(UserSchema, {
-                endpoint: { method: EndpointMethod.POST, url: "/users" },
+                action: "create",
                 unit: { id: 1, name: "John" },
             });
             expect(result.values).toEqual({ name: "John" });

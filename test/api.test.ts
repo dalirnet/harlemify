@@ -1,9 +1,9 @@
 import { ref, computed } from "vue";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { ApiErrorSource, ApiError, ApiRequestError, ApiResponseError } from "../src/runtime/core/errors";
+import { ApiErrorSource, ApiError, ApiRequestError, ApiResponseError } from "../src/runtime/utils/errors";
 import { createApi } from "../src/runtime/core/api";
-import { defineApiAdapter } from "../src/runtime/core/adapter";
+import { defineApiAdapter } from "../src/runtime/utils/adapter";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("$fetch", mockFetch);
