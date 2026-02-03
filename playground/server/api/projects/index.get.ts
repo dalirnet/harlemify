@@ -1,5 +1,5 @@
 import { data } from "~/server/utils/data";
 
 export default defineEventHandler(() => {
-    return data.users;
+    return data.projects;
 });
