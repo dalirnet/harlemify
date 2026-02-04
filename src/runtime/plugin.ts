@@ -5,10 +5,10 @@ import { createServerSSRPlugin, createClientSSRPlugin, getBridgingScript } from 
 // @ts-expect-error - Generated at build time by addTemplate
 import config from "#build/harlemify.config";
 
-import { sharedConfig } from "./shared";
+import { runtimeConfig } from "./config";
 
 export default defineNuxtPlugin((nuxtApp) => {
-    sharedConfig.api = config.api;
+    runtimeConfig.api = config.api;
 
     const plugins = [];
 

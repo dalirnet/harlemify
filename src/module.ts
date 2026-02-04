@@ -1,8 +1,8 @@
 import { defineNuxtModule, addPlugin, addTemplate, createResolver, addImportsDir } from "@nuxt/kit";
 
-import type { SharedConfig } from "./runtime";
+import type { RuntimeConfig } from "./runtime";
 
-export default defineNuxtModule<SharedConfig>({
+export default defineNuxtModule<RuntimeConfig>({
     meta: {
         name: "harlemify",
         configKey: "harlemify",

@@ -1,6 +1,6 @@
 import type { ApiFetchAdapterOptions } from "./utils/adapter";
 
-export type SharedConfig = {
+export type RuntimeConfig = {
     api?: {
         headers?: Record<string, string>;
         query?: Record<string, unknown>;
@@ -8,6 +8,6 @@ export type SharedConfig = {
     };
 };
 
-export const sharedConfig: SharedConfig = {
+export const runtimeConfig: RuntimeConfig = {
     api: {},
 };
