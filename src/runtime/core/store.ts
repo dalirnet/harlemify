@@ -6,16 +6,17 @@ import type { ComputedRef } from "vue";
 import type { Extension, BaseState } from "@harlem/core";
 
 import { createApi } from "./api";
-import { sharedConfig } from "../shared";
+import { runtimeConfig } from "../config";
 import { createCache } from "../utils/cache";
 import { defineApiAdapter } from "../utils/adapter";
-import { pluralize } from "../utils/transform";
+import { pluralize } from "../utils/text";
+import { assignValueByPath, mergeValueByPath } from "../utils/nested";
 import { resolveSchema } from "../utils/schema";
 import { EndpointMethod, EndpointStatus, resolveEndpointUrl } from "../utils/endpoint";
 
 import type { Api } from "./api";
 import type { ApiAdapter } from "../utils/adapter";
-import type { Pluralize } from "../utils/transform";
+import type { Pluralize } from "../utils/text";
 import type { EndpointDefinition } from "../utils/endpoint";
 import type { MemoryDefinition, MemoryMutation } from "../utils/memory";
 
@@ -128,56 +129,6 @@ function getDefaultMutation(method: EndpointMethod, target: "unit" | "units"): M
     return defaults[method][target];
 }
 
-function setNestedValue(object: any, path: string[], value: any): void {
-    if (path.length === 0) {
-        return;
-    }
-
-    let current = object;
-
-    for (let index = 0; index < path.length - 1; index++) {
-        if (current[path[index]] === undefined) {
-            current[path[index]] = {};
-        }
-
-        current = current[path[index]];
-    }
-
-    current[path[path.length - 1]] = value;
-}
-
-function editNestedValue(object: any, path: string[], value: any, deep?: boolean): void {
-    if (path.length === 0) {
-        return;
-    }
-
-    let current = object;
-
-    for (let index = 0; index < path.length - 1; index++) {
-        if (current[path[index]] === undefined) {
-            return;
-        }
-
-        current = current[path[index]];
-    }
-
-    const key = path[path.length - 1];
-
-    if (current[key] === undefined) {
-        current[key] = value;
-
-        return;
-    }
-
-    if (deep) {
-        current[key] = defu(value, current[key]);
-
-        return;
-    }
-
-    Object.assign(current[key], value);
-}
-
 export function createStore<
     E extends string,
     T extends z.ZodRawShape,
@@ -191,7 +142,7 @@ export function createStore<
 
     const indicator = resolvedSchema.indicator;
 
-    const indexCache = createCache<unknown, number>();
+    const indicatorIndexCache = createCache<unknown, number>();
     const schemaCache = createCache<
         string,
         {
@@ -214,12 +165,12 @@ export function createStore<
 
     let apiClient: Api;
 
-    function api(): Api {
+    function getApiClient(): Api {
         if (!apiClient) {
             apiClient = createApi({
-                headers: sharedConfig.api?.headers,
-                query: sharedConfig.api?.query,
-                adapter: options?.adapter ?? defineApiAdapter(sharedConfig.api?.adapter),
+                headers: runtimeConfig.api?.headers,
+                query: runtimeConfig.api?.query,
+                adapter: options?.adapter ?? defineApiAdapter(runtimeConfig.api?.adapter),
             });
         }
 
@@ -262,12 +213,12 @@ export function createStore<
     const setMemorizedUnits = store.mutation("setMemorizedUnits", (state: any, units: S[] = []) => {
         state.memory.units = units;
 
-        indexCache.clear();
+        indicatorIndexCache.clear();
 
         if (units && Array.isArray(units)) {
             for (let index = 0; index < units.length; index++) {
                 if (units[index]) {
-                    indexCache.set(units[index][indicator], index);
+                    indicatorIndexCache.set(units[index][indicator], index);
                 }
             }
         }
@@ -300,7 +251,7 @@ export function createStore<
             }
 
             for (const unit of payload.units) {
-                let unitIndex = indexCache.get(unit[indicator]);
+                let unitIndex = indicatorIndexCache.get(unit[indicator]);
 
                 if (
                     unitIndex === undefined ||
@@ -311,7 +262,7 @@ export function createStore<
 
                     if (foundIndex !== undefined) {
                         unitIndex = foundIndex;
-                        indexCache.set(unit[indicator], foundIndex);
+                        indicatorIndexCache.set(unit[indicator], foundIndex);
                     } else {
                         unitIndex = undefined;
                     }
@@ -348,7 +299,7 @@ export function createStore<
             );
 
             for (const unit of units) {
-                indexCache.delete(unit[indicator]);
+                indicatorIndexCache.delete(unit[indicator]);
             }
 
             state.memory.units = state.memory.units.filter((memorizedUnit: S) => {
@@ -361,14 +312,14 @@ export function createStore<
         "addMemorizedUnits",
         (state: any, payload: { units: S[]; prepend?: boolean }) => {
             if (payload.prepend) {
-                indexCache.clear();
+                indicatorIndexCache.clear();
 
                 for (let index = 0; index < payload.units.length; index++) {
-                    indexCache.set(payload.units[index][indicator], index);
+                    indicatorIndexCache.set(payload.units[index][indicator], index);
                 }
 
                 for (let index = 0; index < state.memory.units.length; index++) {
-                    indexCache.set((state.memory.units[index] as S)[indicator], index + payload.units.length);
+                    indicatorIndexCache.set((state.memory.units[index] as S)[indicator], index + payload.units.length);
                 }
 
                 state.memory.units = [...payload.units, ...state.memory.units];
@@ -377,72 +328,73 @@ export function createStore<
             }
 
             for (let index = 0; index < payload.units.length; index++) {
-                indexCache.set(payload.units[index][indicator], state.memory.units.length + index);
+                indicatorIndexCache.set(payload.units[index][indicator], state.memory.units.length + index);
             }
 
             state.memory.units = [...state.memory.units, ...payload.units];
         },
     );
 
-    const setNestedUnit = store.mutation("setNestedUnit", (state: any, payload: { path: string[]; value: any }) => {
-        if (!state.memory.unit) {
-            return;
-        }
+    const setNestedMemorizedUnit = store.mutation(
+        "setNestedMemorizedUnit",
+        (state: any, payload: { path: string[]; value: any }) => {
+            if (!state.memory.unit) {
+                return;
+            }
 
-        setNestedValue(state.memory.unit, payload.path, payload.value);
-    });
+            assignValueByPath(state.memory.unit, payload.path, payload.value);
+        },
+    );
 
-    const editNestedUnit = store.mutation(
-        "editNestedUnit",
+    const editNestedMemorizedUnit = store.mutation(
+        "editNestedMemorizedUnit",
         (state: any, payload: { path: string[]; value: any; deep?: boolean }) => {
             if (!state.memory.unit) {
                 return;
             }
 
-            editNestedValue(state.memory.unit, payload.path, payload.value, payload.deep);
+            mergeValueByPath(state.memory.unit, payload.path, payload.value, payload.deep);
         },
     );
 
-    const dropNestedUnit = store.mutation("dropNestedUnit", (state: any, payload: { path: string[] }) => {
-        if (!state.memory.unit || payload.path.length === 0) {
-            return;
-        }
+    const dropNestedMemorizedUnit = store.mutation(
+        "dropNestedMemorizedUnit",
+        (state: any, payload: { path: string[] }) => {
+            if (!state.memory.unit || !payload.path.length) {
+                return;
+            }
 
-        setNestedValue(state.memory.unit, payload.path, null);
-    });
+            assignValueByPath(state.memory.unit, payload.path, null);
+        },
+    );
 
-    const patchStatus = store.mutation(
-        "patchStatus",
+    const setActionStatus = store.mutation(
+        "setActionStatus",
         (state: any, payload: { action: string; status: EndpointStatus }) => {
             state.status[payload.action] = payload.status;
         },
     );
 
     function createActionStatus(actionName: string): ActionStatus {
-        const current = store.getter(
-            `${actionName}:current`,
-            (state: any) => state.status[actionName] ?? EndpointStatus.IDLE,
-        );
+        const current = store.getter(`${actionName}:current`, (state: any) => {
+            return state.status[actionName] ?? EndpointStatus.IDLE;
+        });
 
-        const pending = store.getter(
-            `${actionName}:pending`,
-            (state: any) => state.status[actionName] === EndpointStatus.PENDING,
-        );
+        const pending = store.getter(`${actionName}:pending`, (state: any) => {
+            return state.status[actionName] === EndpointStatus.PENDING;
+        });
 
-        const success = store.getter(
-            `${actionName}:success`,
-            (state: any) => state.status[actionName] === EndpointStatus.SUCCESS,
-        );
+        const success = store.getter(`${actionName}:success`, (state: any) => {
+            return state.status[actionName] === EndpointStatus.SUCCESS;
+        });
 
-        const failed = store.getter(
-            `${actionName}:failed`,
-            (state: any) => state.status[actionName] === EndpointStatus.FAILED,
-        );
+        const failed = store.getter(`${actionName}:failed`, (state: any) => {
+            return state.status[actionName] === EndpointStatus.FAILED;
+        });
 
-        const idle = store.getter(
-            `${actionName}:idle`,
-            (state: any) => state.status[actionName] === EndpointStatus.IDLE,
-        );
+        const idle = store.getter(`${actionName}:idle`, (state: any) => {
+            return state.status[actionName] === EndpointStatus.IDLE;
+        });
 
         return {
             current() {
@@ -469,14 +421,14 @@ export function createStore<
         (monitor as any)[actionName] = createActionStatus(actionName);
     }
 
-    async function withStatus<R>(actionName: string, operation: () => Promise<R>): Promise<R> {
+    async function withStatusTracking<R>(actionName: string, operation: () => Promise<R>): Promise<R> {
         await options?.hooks?.before?.();
 
         if (store.state.status[actionName] === EndpointStatus.PENDING) {
             throw new Error(`Action "${actionName}" is already pending`);
         }
 
-        patchStatus({
+        setActionStatus({
             action: actionName,
             status: EndpointStatus.PENDING,
         });
@@ -484,7 +436,7 @@ export function createStore<
         try {
             const result = await operation();
 
-            patchStatus({
+            setActionStatus({
                 action: actionName,
                 status: EndpointStatus.SUCCESS,
             });
@@ -493,7 +445,7 @@ export function createStore<
 
             return result;
         } catch (error: any) {
-            patchStatus({
+            setActionStatus({
                 action: actionName,
                 status: EndpointStatus.FAILED,
             });
@@ -520,7 +472,7 @@ export function createStore<
             if (memoryDefinition.path.length > 0) {
                 switch (mutation) {
                     case "set": {
-                        setNestedUnit({
+                        setNestedMemorizedUnit({
                             path: memoryDefinition.path,
                             value: response,
                         });
@@ -528,7 +480,7 @@ export function createStore<
                         break;
                     }
                     case "edit": {
-                        editNestedUnit({
+                        editNestedMemorizedUnit({
                             path: memoryDefinition.path,
                             value: response,
                             deep: memoryDefinition.deep,
@@ -537,7 +489,7 @@ export function createStore<
                         break;
                     }
                     case "drop": {
-                        dropNestedUnit({
+                        dropNestedMemorizedUnit({
                             path: memoryDefinition.path,
                         });
 
@@ -708,7 +660,7 @@ export function createStore<
 
     function createActionFunction(actionName: string, actionDefinition: ActionDefinition<S>): ActionFunction<S> {
         return async (params?: Partial<S>, actionOptions?: ActionOptions): Promise<S | S[] | boolean> => {
-            return withStatus(actionName, async () => {
+            return withStatusTracking(actionName, async () => {
                 const url = resolveEndpointUrl(actionDefinition.endpoint, params);
                 const body = resolveRequestBody(actionName, params, actionOptions);
 
@@ -725,7 +677,7 @@ export function createStore<
 
                 switch (actionDefinition.endpoint.method) {
                     case EndpointMethod.GET: {
-                        response = await api().get<S>(url, baseOptions);
+                        response = await getApiClient().get<S>(url, baseOptions);
 
                         break;
                     }
@@ -734,7 +686,7 @@ export function createStore<
                             validateRequestBody(actionName, params);
                         }
 
-                        response = await api().post<S>(url, {
+                        response = await getApiClient().post<S>(url, {
                             ...baseOptions,
                             body,
                         });
@@ -746,7 +698,7 @@ export function createStore<
                             validateRequestBody(actionName, params);
                         }
 
-                        response = await api().put<S>(url, {
+                        response = await getApiClient().put<S>(url, {
                             ...baseOptions,
                             body,
                         });
@@ -758,7 +710,7 @@ export function createStore<
                             validateRequestBody(actionName, params, true);
                         }
 
-                        response = await api().patch<S>(url, {
+                        response = await getApiClient().patch<S>(url, {
                             ...baseOptions,
                             body,
                         });
@@ -766,7 +718,7 @@ export function createStore<
                         break;
                     }
                     case EndpointMethod.DELETE: {
-                        await api().del<S>(url, baseOptions);
+                        await getApiClient().del<S>(url, baseOptions);
 
                         response = true;
 
