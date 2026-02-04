@@ -1,7 +1,7 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
 
-import { pluralize, capitalize } from "../src/runtime/utils/transform";
-import type { Pluralize, Capitalize } from "../src/runtime/utils/transform";
+import { pluralize, capitalize } from "../src/runtime/utils/text";
+import type { Pluralize, Capitalize } from "../src/runtime/utils/text";
 
 describe("pluralize", () => {
     it("adds s for regular words", () => {
