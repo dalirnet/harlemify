@@ -1,106 +1,75 @@
 import type { z } from "zod";
 
-export interface SchemaMeta<A extends string = string> {
+export type SchemaShape = z.ZodRawShape;
+export type SchemaObject<T extends SchemaShape = SchemaShape> = z.ZodObject<T>;
+export type SchemaInfer<T extends SchemaShape = SchemaShape> = z.infer<z.ZodObject<T>>;
+
+export interface SchemaFieldMeta<A extends string = string> {
     indicator?: boolean;
     actions?: A[];
 }
 
-export function getMeta(field: any): SchemaMeta | undefined {
-    return (field as z.ZodType).meta() as any;
-}
-
-export interface SchemaFieldInfo<A extends string = string> {
+export interface SchemaField<A extends string = string> {
     name: string;
     indicator: boolean;
     actions: A[];
 }
 
-const schemaFieldsCache = new WeakMap<z.ZodObject<any>, SchemaFieldInfo<any>[]>();
-
-export function getSchemaFields<T extends z.ZodRawShape, A extends string = string>(
-    schema: z.ZodObject<T>,
-): SchemaFieldInfo<A>[] {
-    const cached = schemaFieldsCache.get(schema);
-
-    if (cached) {
-        return cached as SchemaFieldInfo<A>[];
-    }
-
-    const fields: SchemaFieldInfo<A>[] = [];
-
-    for (const key in schema.shape) {
-        const meta = getMeta(schema.shape[key]);
-
-        fields.push({
-            name: key,
-            indicator: meta?.indicator ?? false,
-            actions: (meta?.actions as A[]) ?? [],
-        });
-    }
-
-    schemaFieldsCache.set(schema, fields);
-
-    return fields;
+export interface Schema<T extends SchemaShape, A extends string = string> {
+    schema: SchemaObject<T>;
+    getFieldMeta(field: any): SchemaFieldMeta<A> | undefined;
+    getFields(): SchemaField<A>[];
+    getActionFields(action: A): string[];
 }
 
-export function getFieldsForAction<T extends z.ZodRawShape, A extends string = string>(
-    schema: z.ZodObject<T>,
-    action: A,
-): string[] {
-    const fields: string[] = [];
+const fieldsCache = new WeakMap<SchemaObject, SchemaField[]>();
 
-    for (const key in schema.shape) {
-        const meta = getMeta(schema.shape[key]);
+export function createSchema<T extends SchemaShape, A extends string = string>(schema: SchemaObject<T>): Schema<T, A> {
+    function getFieldMeta(field: any): SchemaFieldMeta<A> | undefined {
+        return (field as z.ZodType).meta() as any;
+    }
 
-        if (meta?.actions) {
-            const actionsSet = new Set(meta.actions);
+    function getFields(): SchemaField<A>[] {
+        const cached = fieldsCache.get(schema);
+        if (cached) {
+            return cached as SchemaField<A>[];
+        }
 
-            if (actionsSet.has(action)) {
+        const fields: SchemaField<A>[] = [];
+
+        for (const key in schema.shape) {
+            const meta = getFieldMeta(schema.shape[key]);
+
+            fields.push({
+                name: key,
+                indicator: meta?.indicator ?? false,
+                actions: (meta?.actions as A[]) ?? [],
+            });
+        }
+
+        fieldsCache.set(schema, fields);
+
+        return fields;
+    }
+
+    function getActionFields(action: A): string[] {
+        const fields: string[] = [];
+
+        for (const key in schema.shape) {
+            const meta = getFieldMeta(schema.shape[key]);
+
+            if (meta?.actions?.includes(action)) {
                 fields.push(key);
             }
         }
+
+        return fields;
     }
 
-    return fields;
-}
-
-export interface ResolveSchemaOptions<S> {
-    indicator?: keyof S;
-    action?: string;
-    unit?: Partial<S>;
-}
-
-export function resolveSchema<T extends z.ZodRawShape, S extends z.infer<z.ZodObject<T>>>(
-    schema: z.ZodObject<T>,
-    options?: ResolveSchemaOptions<S>,
-) {
-    const output = {
-        indicator: (options?.indicator ?? "id") as keyof S,
-        keys: {} as Record<keyof S, true>,
-        values: {} as Partial<S>,
+    return {
+        schema,
+        getFieldMeta,
+        getFields,
+        getActionFields,
     };
-
-    for (const key in schema.shape) {
-        const meta = getMeta(schema.shape[key]);
-
-        if (meta?.indicator) {
-            output.indicator = key as keyof S;
-        }
-
-        if (!options?.action || !meta?.actions) {
-            continue;
-        }
-
-        const actionsSet = new Set(meta.actions);
-
-        if (actionsSet.has(options.action)) {
-            output.keys[key as keyof S] = true;
-
-            if (options?.unit && key in options.unit) {
-                (output.values as any)[key] = (options.unit as any)[key];
-            }
-        }
-    }
-
-    return output;
 }
