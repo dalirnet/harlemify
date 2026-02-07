@@ -26,7 +26,7 @@ describe("createViewFactory", () => {
         users: modelFactory.many(UserShape),
     };
 
-    const viewFactory = createViewFactory({}, model);
+    const viewFactory = createViewFactory({}, undefined, model);
 
     it("from() creates single-source definition", () => {
         const definition = viewFactory.from("user");

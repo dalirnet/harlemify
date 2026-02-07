@@ -1,4 +1,4 @@
-import { createStore, shape, ActionOneMode, ActionManyMode, type ShapeInfer } from "../../src/runtime";
+import { createStore, shape, ActionOneMode, ActionManyMode, AUTO, type ShapeInfer } from "../../src/runtime";
 
 const userShape = shape((factory) => {
     return {
@@ -74,14 +74,14 @@ export const userStore = createStore({
                 .post({
                     url: "/users",
                 })
-                .commit("list", ActionManyMode.ADD, undefined, { unique: true }),
+                .commit("list", ActionManyMode.ADD, AUTO, { unique: true }),
             patchByEmail: api
                 .patch({
                     url(view) {
                         return `/users/${view.user.value?.id}`;
                     },
                 })
-                .commit("list", ActionManyMode.PATCH, undefined, { by: "email" }),
+                .commit("list", ActionManyMode.PATCH, AUTO, { by: "email" }),
         };
     },
 });

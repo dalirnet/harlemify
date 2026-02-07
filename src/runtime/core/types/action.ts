@@ -12,6 +12,7 @@ export interface RuntimeActionConfig {
 }
 
 export const DEFINITION = Symbol("definition");
+export const AUTO = Symbol("auto");
 
 export enum ActionOneMode {
     SET = "set",
@@ -164,14 +165,14 @@ export interface ActionCommitMethod<M extends Model, V, R> {
         mode: Mode,
         ...args: Mode extends ActionOneMode.RESET
             ? []
-            : [value?: ActionCommitValue<M, K, Mode>, options?: MutationsOneOptions]
+            : [value?: ActionCommitValue<M, K, Mode> | typeof AUTO, options?: MutationsOneOptions]
     ): ActionCommitChain<M, V, R>;
     <K extends keyof M, Mode extends ActionManyMode>(
         model: K,
         mode: Mode,
         ...args: Mode extends ActionManyMode.RESET
             ? []
-            : [value?: ActionCommitValue<M, K, Mode>, options?: MutationsManyOptions]
+            : [value?: ActionCommitValue<M, K, Mode> | typeof AUTO, options?: MutationsManyOptions]
     ): ActionCommitChain<M, V, R>;
 }
 

@@ -16,6 +16,7 @@ import {
     ActionConcurrent,
     ActionApiMethod,
     DEFINITION,
+    AUTO,
 } from "../src/runtime/core/types/action";
 import type { Model } from "../src/runtime/core/types/model";
 import { useIsolatedActionStatus, useIsolatedActionError } from "../src/runtime/composables/action";
@@ -41,7 +42,7 @@ describe("createActionFactory", () => {
         users: modelFactory.many(UserShape),
     };
 
-    const factory = createActionFactory({}, model);
+    const factory = createActionFactory({}, undefined, model);
 
     describe("api()", () => {
         it("returns chain with handle, commit, and DEFINITION", () => {
@@ -162,6 +163,21 @@ describe("buildCommitMethod", () => {
         expect(result[DEFINITION].commit?.model).toBe("users");
         expect(result[DEFINITION].commit?.mode).toBe(ActionManyMode.SET);
         expect(result[DEFINITION].commit?.value).toEqual([{ id: 1 }]);
+    });
+
+    it("stores AUTO symbol as value in DEFINITION", () => {
+        const definition: ActionDefinition<Model, object, unknown> = {
+            api: {
+                url: "/test",
+                method: ActionApiMethod.GET,
+            },
+        };
+        const commit = buildCommitMethod(definition);
+
+        const result = commit("users", ActionManyMode.ADD, AUTO, { unique: true });
+
+        expect(result[DEFINITION].commit?.value).toBe(AUTO);
+        expect(result[DEFINITION].commit?.options).toEqual({ unique: true });
     });
 });
 
@@ -346,6 +362,39 @@ describe("createAction", () => {
             name: "Alice",
             email: "alice@test.com",
         });
+    });
+
+    it("AUTO commit uses api result as value", async () => {
+        const user: User = {
+            id: 1,
+            name: "Alice",
+            email: "alice@test.com",
+        };
+        mockFetch.mockResolvedValue(user);
+
+        const { action, source } = setup({
+            api: {
+                url: "/users",
+                method: ActionApiMethod.POST,
+            },
+            commit: {
+                model: "users",
+                mode: ActionManyMode.ADD,
+                value: AUTO,
+                options: { unique: true },
+            },
+        });
+
+        await action();
+
+        expect(source.state.users as User[]).toHaveLength(1);
+        expect((source.state.users as User[])[0]).toEqual(user);
+
+        // Call again — unique should prevent duplicate
+        mockFetch.mockResolvedValue(user);
+        await action();
+
+        expect(source.state.users as User[]).toHaveLength(1);
     });
 
     describe("concurrency", () => {

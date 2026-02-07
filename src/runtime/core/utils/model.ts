@@ -15,7 +15,7 @@ import {
     type Mutations,
     ModelKind,
 } from "../types/model";
-import { type ActionCommitter, ActionOneMode, ActionManyMode } from "../types/action";
+import { type ActionCommitter, ActionOneMode, ActionManyMode, AUTO } from "../types/action";
 
 export function initializeState<M extends Model>(model: M): ModelStateOf<M> {
     const state = {} as Record<string, unknown>;
@@ -306,7 +306,10 @@ export function executeCommit<M extends Model>(
             break;
         }
         default: {
-            handler(definition.value ?? result, definition.options);
+            handler(
+                definition.value === AUTO || definition.value === undefined ? result : definition.value,
+                definition.options,
+            );
         }
     }
 }

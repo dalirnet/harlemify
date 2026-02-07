@@ -10,7 +10,14 @@ export type { ShapeInfer } from "./core/types/shape";
 export { ModelKind } from "./core/types/model";
 
 // Action
-export { ActionOneMode, ActionManyMode, ActionStatus, ActionConcurrent, ActionApiMethod } from "./core/types/action";
+export {
+    AUTO,
+    ActionOneMode,
+    ActionManyMode,
+    ActionStatus,
+    ActionConcurrent,
+    ActionApiMethod,
+} from "./core/types/action";
 export type {
     Action,
     ActionCallPayload,

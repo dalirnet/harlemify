@@ -1,4 +1,12 @@
-import { createStore, shape, ActionOneMode, ActionManyMode, ActionApiMethod, type ShapeInfer } from "../../src/runtime";
+import {
+    createStore,
+    shape,
+    ActionOneMode,
+    ActionManyMode,
+    ActionApiMethod,
+    AUTO,
+    type ShapeInfer,
+} from "../../src/runtime";
 
 const projectShape = shape((factory) => {
     return {
@@ -79,7 +87,7 @@ export const projectStore = createStore({
         const create = api({
             method: ActionApiMethod.POST,
             url: "/projects",
-        }).commit("list", ActionManyMode.ADD, undefined, { prepend: true });
+        }).commit("list", ActionManyMode.ADD, AUTO, { prepend: true });
 
         const update = api({
             method: ActionApiMethod.PATCH,
