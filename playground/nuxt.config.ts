@@ -7,6 +7,7 @@ export default defineNuxtConfig({
             endpoint: "/api",
             timeout: 10000,
         },
+        logger: 999,
     },
     app: {
         head: {
