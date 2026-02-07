@@ -18,7 +18,7 @@ import {
 import { type ActionCommitter, ActionOneMode, ActionManyMode } from "../types/action";
 
 export function initializeState<M extends Model>(model: M): ModelStateOf<M> {
-    const state = {} as Record<string, any>;
+    const state = {} as Record<string, unknown>;
     for (const [key, definition] of Object.entries(model)) {
         if (definition.kind === ModelKind.OBJECT) {
             state[key] = definition.options?.default ?? null;
@@ -48,36 +48,33 @@ function createOneMutations<S extends Shape>(
     key: string,
     definition: ModelOneDefinition<S>,
 ): MutationsOne<S> {
-    const setOperation: Mutation<S> = source.mutation(`${key}:set`, (state: any, value: S) => {
+    const setOperation: Mutation<S> = source.mutation(`${key}:set`, (state, value: S) => {
         state[key] = value;
     });
 
-    const resetOperation: Mutation<undefined> = source.mutation(`${key}:reset`, (state: any) => {
+    const resetOperation: Mutation<undefined> = source.mutation(`${key}:reset`, (state) => {
         state[key] = definition.options?.default ?? null;
     });
 
     const patchOperation: Mutation<{
         value: Partial<S>;
         options?: MutationsOneOptions;
-    }> = source.mutation(
-        `${key}:patch`,
-        (state: any, payload: { value: Partial<S>; options?: MutationsOneOptions }) => {
-            if (state[key] === null) {
-                return;
-            }
+    }> = source.mutation(`${key}:patch`, (state, payload: { value: Partial<S>; options?: MutationsOneOptions }) => {
+        if (state[key] === null) {
+            return;
+        }
 
-            if (payload.options?.deep) {
-                state[key] = defu(payload.value, state[key]) as S;
+        if (payload.options?.deep) {
+            state[key] = defu(payload.value, state[key]) as S;
 
-                return;
-            }
+            return;
+        }
 
-            state[key] = {
-                ...state[key],
-                ...payload.value,
-            };
-        },
-    );
+        state[key] = {
+            ...state[key],
+            ...payload.value,
+        };
+    });
 
     function set(value: S) {
         setOperation(value);
@@ -103,7 +100,7 @@ function createManyMutations<S extends Shape>(
     key: string,
     definition: ModelManyDefinition<S>,
 ): MutationsMany<S> {
-    const identifier = getIdentifier(definition as any);
+    const identifier = getIdentifier(definition);
 
     const setOperation: Mutation<S[]> = source.mutation(`${key}:set`, (state, value: S[]) => {
         state[key] = value;
@@ -220,12 +217,12 @@ function createManyMutations<S extends Shape>(
 }
 
 export function createMutations<M extends Model>(source: SourceStore<BaseState>, model: M): Mutations<M> {
-    const mutations = {} as Record<string, any>;
+    const mutations = {} as Record<string, MutationsOne<Shape> | MutationsMany<Shape>>;
     for (const [key, definition] of Object.entries(model)) {
         if (definition.kind === ModelKind.OBJECT) {
-            mutations[key] = createOneMutations(source, key, definition as any);
+            mutations[key] = createOneMutations(source, key, definition as ModelOneDefinition<Shape>);
         } else {
-            mutations[key] = createManyMutations(source, key, definition as any);
+            mutations[key] = createManyMutations(source, key, definition as ModelManyDefinition<Shape>);
         }
     }
 
@@ -242,7 +239,8 @@ export function executeCommit<M extends Model>(
     mutations: Mutations<M>,
     result?: unknown,
 ): void {
-    const handler = (mutations[definition.model] as any)[definition.mode];
+    const target = mutations[definition.model] as Record<string, (...args: unknown[]) => void>;
+    const handler = target[definition.mode];
 
     switch (definition.mode) {
         case ActionOneMode.RESET:
@@ -258,7 +256,12 @@ export function executeCommit<M extends Model>(
 }
 
 export function createCommitter<M extends Model>(mutations: Mutations<M>): ActionCommitter<M> {
-    function committer(model: keyof M, mode: any, value?: any, options?: any) {
+    function committer(
+        model: keyof M,
+        mode: ActionOneMode | ActionManyMode,
+        value?: unknown,
+        options?: MutationsOneOptions | MutationsManyOptions,
+    ) {
         executeCommit({ model, mode, value, options }, mutations);
     }
 

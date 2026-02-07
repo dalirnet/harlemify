@@ -307,7 +307,7 @@ describe("createAction", () => {
                 method: ActionApiMethod.GET,
             },
             handle: async ({ api }: ActionHandleContext<Model, object>) => {
-                const data = (await api()) as User[];
+                const data = await api<User[]>();
 
                 return data[0];
             },

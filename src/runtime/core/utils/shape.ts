@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 import type { ShapeMeta } from "../types/shape";
 
-export function resolveShape(shape: z.ZodObject<any>): ShapeMeta {
+export function resolveShape(shape: z.ZodObject<z.ZodRawShape>): ShapeMeta {
     const meta: ShapeMeta = {
         identifier: undefined,
         defaults: {},
@@ -12,7 +12,7 @@ export function resolveShape(shape: z.ZodObject<any>): ShapeMeta {
     for (const [key, field] of Object.entries(shape.shape)) {
         meta.fields.push(key);
 
-        const fieldDefinition = (field as any)?._def;
+        const fieldDefinition = (field as any).def;
 
         if (fieldDefinition?.meta?.identifier) {
             meta.identifier = key;

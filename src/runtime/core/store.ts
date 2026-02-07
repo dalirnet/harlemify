@@ -48,9 +48,9 @@ export interface StoreConfig<
         factory: ActionFactory<M, StoreView<M, VD>>,
     ) => Record<
         string,
-        | ActionApiChain<M, StoreView<M, VD>, any>
-        | ActionHandleChain<M, StoreView<M, VD>, any>
-        | ActionCommitChain<M, StoreView<M, VD>, any>
+        | ActionApiChain<M, StoreView<M, VD>, unknown>
+        | ActionHandleChain<M, StoreView<M, VD>, unknown>
+        | ActionCommitChain<M, StoreView<M, VD>, unknown>
     >;
 }
 
@@ -80,12 +80,11 @@ function createStoreAction<
     VD extends ViewDefinitions<M>,
     AD extends ActionDefinitions<M, StoreView<M, VD>>,
 >(
-    actionDefinitions: Record<string, any>,
+    actionDefinitions: Record<string, { readonly [DEFINITION]: ActionDefinition<M, StoreView<M, VD>, unknown> }>,
     view: StoreView<M, VD>,
     mutations: Mutations<M>,
 ): StoreAction<M, StoreView<M, VD>, AD> {
     const actions = {} as Record<string, Action<StoreView<M, VD>>>;
-
     for (const [key, chain] of Object.entries(actionDefinitions)) {
         actions[key] = createAction((chain as any)[DEFINITION], view, mutations);
     }

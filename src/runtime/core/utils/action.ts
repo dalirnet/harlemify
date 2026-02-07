@@ -89,7 +89,7 @@ function createConcurrentError(): ActionConcurrentError {
 export function buildCommitMethod<M extends Model, V, R>(
     definition: ActionDefinition<M, V, R>,
 ): ActionCommitMethod<M, V, R> {
-    function commit(model: keyof M, mode: ActionOneMode | ActionManyMode, value?: any, options?: any) {
+    function commit(model: keyof M, mode: ActionOneMode | ActionManyMode, value?: unknown, options?: unknown) {
         return {
             [DEFINITION]: {
                 ...definition,
@@ -106,11 +106,11 @@ export function buildCommitMethod<M extends Model, V, R>(
     return commit as ActionCommitMethod<M, V, R>;
 }
 
-function resolveApiValue<V, T>(value: unknown, view: DeepReadonly<V>, fallback?: any): T {
+function resolveApiValue<V, T>(value: unknown, view: DeepReadonly<V>, fallback?: T): T {
     if (typeof value === "function") {
         const handler = value as (view: DeepReadonly<V>) => T;
 
-        return handler(view) || fallback;
+        return handler(view) || (fallback as T);
     }
 
     return toValue(value as T) || (fallback as T);
@@ -158,8 +158,8 @@ function resolveApiBody<V>(
         return undefined;
     }
 
-    const initial = resolveApiValue(definition.body, view, {}) as any;
-    const custom = resolveApiValue(payload?.body, view, {}) as any;
+    const initial = resolveApiValue<V, Record<string, unknown>>(definition.body, view, {});
+    const custom = resolveApiValue<V, Record<string, unknown>>(payload?.body, view, {});
 
     return defu(custom, initial);
 }
@@ -239,13 +239,15 @@ export function createAction<M extends Model, V, R>(
                             signal: payload?.signal ?? abortController!.signal,
                         } as ActionCallPayload<V>;
 
-                        response = await executeApi(definition.api, view as any, apiPayload);
-                    } catch (error: any) {
-                        const errorMessage = error?.message ?? "API request failed";
+                        response = await executeApi(definition.api, view as DeepReadonly<V>, apiPayload);
+                    } catch (error: unknown) {
+                        const err = error as Record<string, unknown> | undefined;
+                        const res = (err?.response ?? {}) as Record<string, unknown>;
+                        const errorMessage = (err?.message as string) ?? "API request failed";
                         const errorOptions = {
-                            status: error?.status ?? error?.response?.status,
-                            statusText: error?.statusText ?? error?.response?.statusText,
-                            data: error?.data ?? error?.response?._data,
+                            status: (err?.status ?? res.status) as number | undefined,
+                            statusText: (err?.statusText ?? res.statusText) as string | undefined,
+                            data: (err?.data ?? res._data) as unknown,
                         };
 
                         throw createApiError(errorMessage, errorOptions);
@@ -292,7 +294,7 @@ export function createAction<M extends Model, V, R>(
                 }
 
                 if (payload?.transformer) {
-                    result = payload.transformer(result as any) as R;
+                    result = payload.transformer(result) as R;
                 }
 
                 if (definition.commit) {

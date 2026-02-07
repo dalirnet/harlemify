@@ -85,16 +85,18 @@ export interface ActionApiDefinition<V> {
     concurrent?: ActionConcurrent;
 }
 
+export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
+
 export type ActionCommitValue<M extends Model, K extends keyof M, Mode> = Mode extends ActionOneMode.SET
     ? ModelShape<M, K>
     : Mode extends ActionOneMode.PATCH
-      ? Partial<ModelShape<M, K>>
+      ? DeepPartial<ModelShape<M, K>>
       : Mode extends ActionOneMode.RESET
         ? never
         : Mode extends ActionManyMode.SET
           ? ModelShape<M, K>[]
           : Mode extends ActionManyMode.PATCH
-            ? Partial<ModelShape<M, K>> | Partial<ModelShape<M, K>>[]
+            ? DeepPartial<ModelShape<M, K>> | DeepPartial<ModelShape<M, K>>[]
             : Mode extends ActionManyMode.REMOVE
               ? ModelShape<M, K> | ModelShape<M, K>[]
               : Mode extends ActionManyMode.ADD
@@ -121,7 +123,7 @@ export type ActionCommitter<M extends Model> = {
 };
 
 export interface ActionHandleContext<M extends Model, V, ApiResponse = unknown> {
-    api: () => Promise<ApiResponse>;
+    api: <T = ApiResponse>() => Promise<T>;
     view: DeepReadonly<V>;
     commit: ActionCommitter<M>;
 }
