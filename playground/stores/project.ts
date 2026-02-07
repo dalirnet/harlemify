@@ -1,4 +1,4 @@
-import { createStore, shape, ActionOneMode, ActionManyMode, type ShapeInfer } from "../../src/runtime";
+import { createStore, shape, ActionOneMode, ActionManyMode, ActionApiMethod, type ShapeInfer } from "../../src/runtime";
 
 const projectShape = shape((factory) => {
     return {
@@ -64,116 +64,138 @@ export const projectStore = createStore({
         };
     },
     action({ api }) {
+        const get = api({
+            method: ActionApiMethod.GET,
+            url(view) {
+                return `/projects/${view.project.value?.id}`;
+            },
+        }).commit("current", ActionOneMode.SET);
+
+        const list = api({
+            method: ActionApiMethod.GET,
+            url: "/projects",
+        }).commit("list", ActionManyMode.SET);
+
+        const create = api({
+            method: ActionApiMethod.POST,
+            url: "/projects",
+        }).commit("list", ActionManyMode.ADD, undefined, { prepend: true });
+
+        const update = api({
+            method: ActionApiMethod.PATCH,
+            url(view) {
+                return `/projects/${view.project.value?.id}`;
+            },
+        }).commit("current", ActionOneMode.PATCH);
+
+        const remove = api({
+            method: ActionApiMethod.DELETE,
+            url(view) {
+                return `/projects/${view.project.value?.id}`;
+            },
+        }).commit("list", ActionManyMode.REMOVE);
+
+        const toggle = api({
+            method: ActionApiMethod.PUT,
+            url(view) {
+                return `/projects/${view.project.value?.id}/toggle`;
+            },
+        }).handle(async ({ api, commit }) => {
+            const result = await api<Project>();
+
+            commit("current", ActionOneMode.PATCH, result);
+            commit("list", ActionManyMode.PATCH, result);
+
+            return result;
+        });
+
+        const milestones = api({
+            method: ActionApiMethod.GET,
+            url(view) {
+                return `/projects/${view.project.value?.id}/milestones`;
+            },
+        }).handle(async ({ api, commit }) => {
+            const milestones = await api<ProjectMilestone[]>();
+
+            commit("current", ActionOneMode.PATCH, { milestones });
+            commit("list", ActionManyMode.PATCH, { milestones });
+
+            return milestones;
+        });
+
+        const meta = api({
+            method: ActionApiMethod.GET,
+            url(view) {
+                return `/projects/${view.project.value?.id}/meta`;
+            },
+        }).handle(async ({ api, commit }) => {
+            const meta = await api<ProjectMeta>();
+
+            commit("current", ActionOneMode.PATCH, { meta });
+            commit("list", ActionManyMode.PATCH, { meta });
+
+            return meta;
+        });
+
+        const options = api({
+            method: ActionApiMethod.GET,
+            url(view) {
+                return `/projects/${view.project.value?.id}/options`;
+            },
+        }).handle(async ({ api, commit, view }) => {
+            const options = await api<ProjectOptions>();
+
+            const patch = {
+                meta: {
+                    ...view.meta.value,
+                    options,
+                },
+            };
+
+            commit("current", ActionOneMode.PATCH, patch, { deep: true });
+            commit("list", ActionManyMode.PATCH, patch, { deep: true });
+
+            return options;
+        });
+
+        const exportData = api({
+            method: ActionApiMethod.GET,
+            url(view) {
+                return `/projects/${view.project.value?.id}/export`;
+            },
+        }).handle(async ({ api }) => {
+            return await api();
+        });
+
+        const slowExport = api({
+            method: ActionApiMethod.GET,
+            url(view) {
+                return `/projects/${view.project.value?.id}/export-slow`;
+            },
+        }).handle(async ({ api }) => {
+            return await api();
+        });
+
+        const triggerError = api({
+            method: ActionApiMethod.GET,
+            url: "/projects/error",
+        }).handle(async ({ api }) => {
+            return await api();
+        });
+
         return {
-            get: api
-                .get({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}`;
-                    },
-                })
-                .commit("current", ActionOneMode.SET),
-            list: api
-                .get({
-                    url: "/projects",
-                })
-                .commit("list", ActionManyMode.SET),
-            create: api
-                .post({
-                    url: "/projects",
-                })
-                .commit("list", ActionManyMode.ADD, undefined, { prepend: true }),
-            update: api
-                .patch({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}`;
-                    },
-                })
-                .commit("current", ActionOneMode.PATCH),
-            delete: api
-                .delete({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}`;
-                    },
-                })
-                .commit("list", ActionManyMode.REMOVE),
-            toggle: api
-                .put({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}/toggle`;
-                    },
-                })
-                .commit("current", ActionOneMode.PATCH),
-            milestones: api
-                .get({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}/milestones`;
-                    },
-                })
-                .handle(async ({ api, commit }) => {
-                    const milestones = await api();
-
-                    commit("current", ActionOneMode.PATCH, { milestones } as any);
-
-                    return milestones;
-                }),
-            meta: api
-                .get({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}/meta`;
-                    },
-                })
-                .handle(async ({ api, commit }) => {
-                    const meta = await api();
-
-                    commit("current", ActionOneMode.PATCH, { meta } as any);
-
-                    return meta;
-                }),
-            options: api
-                .get({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}/options`;
-                    },
-                })
-                .handle(async ({ api, commit, view }) => {
-                    const options = await api();
-                    commit(
-                        "current",
-                        ActionOneMode.PATCH,
-                        {
-                            meta: { ...view.meta.value, options },
-                        } as any,
-                        {
-                            deep: true,
-                        },
-                    );
-                    return options;
-                }),
-            export: api
-                .get({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}/export`;
-                    },
-                })
-                .handle(async ({ api }) => {
-                    return await api();
-                }),
-            slowExport: api
-                .get({
-                    url(view) {
-                        return `/projects/${view.project.value?.id}/export-slow`;
-                    },
-                })
-                .handle(async ({ api }) => {
-                    return await api();
-                }),
-            triggerError: api
-                .get({
-                    url: "/projects/error",
-                })
-                .handle(async ({ api }) => {
-                    return await api();
-                }),
+            get,
+            list,
+            create,
+            update,
+            delete: remove,
+            toggle,
+            milestones,
+            meta,
+            options,
+            export: exportData,
+            slowExport,
+            triggerError,
         };
     },
 });
