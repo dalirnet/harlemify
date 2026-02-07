@@ -1,3 +1,5 @@
+import type { ConsolaInstance } from "consola";
+
 import type { Model, ModelInstance } from "./model";
 
 export interface RuntimeViewConfig {}
@@ -15,11 +17,13 @@ export type ViewMergeResolver<M extends Model, K extends readonly (keyof M)[], R
 export interface ViewFromDefinition<M extends Model, K extends keyof M, R = ModelInstance<M, K>> {
     sources: readonly [K];
     resolver?: ViewFromResolver<M, K, R>;
+    logger?: ConsolaInstance;
 }
 
 export interface ViewMergeDefinition<M extends Model, K extends readonly (keyof M)[], R> {
     sources: K;
     resolver: ViewMergeResolver<M, K, R>;
+    logger?: ConsolaInstance;
 }
 
 export type ViewDefinition<M extends Model> =

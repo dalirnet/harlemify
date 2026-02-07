@@ -164,27 +164,11 @@ function resolveApiBody<V>(
     return defu(custom, initial);
 }
 
-async function executeApi<V>(
-    definition: ActionApiDefinition<V>,
-    view: DeepReadonly<V>,
-    payload?: ActionCallPayload<V>,
-): Promise<unknown> {
-    const url = resolveApiUrl(definition, view);
-
-    return $fetch(url, {
-        method: definition.method,
-        headers: resolveApiHeaders(definition, view, payload),
-        query: resolveApiQuery(definition, view, payload),
-        body: resolveApiBody(definition, view, payload),
-        timeout: payload?.timeout ?? definition.timeout,
-        signal: payload?.signal,
-    });
-}
-
 export function createAction<M extends Model, V, R>(
     definition: ActionDefinition<M, V, R>,
-    view: V,
     mutations: Mutations<M>,
+    view: V,
+    key: string,
 ): Action<V, R> {
     const globalError = ref<ActionError | null>(null);
     const globalStatus = ref<ActionStatus>(ActionStatus.IDLE);
@@ -206,12 +190,24 @@ export function createAction<M extends Model, V, R>(
 
             switch (concurrent) {
                 case ActionConcurrent.BLOCK: {
+                    definition.logger?.error("Action blocked by concurrent guard", {
+                        action: key,
+                    });
+
                     throw createConcurrentError();
                 }
                 case ActionConcurrent.SKIP: {
+                    definition.logger?.warn("Action skipped by concurrent guard", {
+                        action: key,
+                    });
+
                     return currentController!;
                 }
                 case ActionConcurrent.CANCEL: {
+                    definition.logger?.warn("Action cancelling previous execution", {
+                        action: key,
+                    });
+
                     abortController?.abort();
                 }
             }
@@ -239,16 +235,40 @@ export function createAction<M extends Model, V, R>(
                             signal: payload?.signal ?? abortController!.signal,
                         } as ActionCallPayload<V>;
 
-                        response = await executeApi(definition.api, view as DeepReadonly<V>, apiPayload);
-                    } catch (error: unknown) {
-                        const err = error as Record<string, unknown> | undefined;
-                        const res = (err?.response ?? {}) as Record<string, unknown>;
-                        const errorMessage = (err?.message as string) ?? "API request failed";
+                        const url = resolveApiUrl(definition.api, view as DeepReadonly<V>);
+
+                        definition.logger?.debug("Action API request", {
+                            action: key,
+                            method: definition.api.method,
+                            url,
+                        });
+
+                        response = await $fetch(url, {
+                            method: definition.api.method,
+                            headers: resolveApiHeaders(definition.api, view as DeepReadonly<V>, apiPayload),
+                            query: resolveApiQuery(definition.api, view as DeepReadonly<V>, apiPayload),
+                            body: resolveApiBody(definition.api, view as DeepReadonly<V>, apiPayload),
+                            timeout: apiPayload?.timeout ?? definition.api.timeout,
+                            signal: apiPayload?.signal,
+                        });
+
+                        definition.logger?.debug("Action API response received", {
+                            action: key,
+                            method: definition.api.method,
+                            url,
+                        });
+                    } catch (error: any) {
+                        const errorMessage = error?.message ?? "API request failed";
                         const errorOptions = {
-                            status: (err?.status ?? res.status) as number | undefined,
-                            statusText: (err?.statusText ?? res.statusText) as string | undefined,
-                            data: (err?.data ?? res._data) as unknown,
+                            status: error?.status ?? error?.response?.status,
+                            statusText: error?.statusText ?? error?.response?.statusText,
+                            data: error?.data ?? error?.response?._data,
                         };
+
+                        definition.logger?.error("Action API error", {
+                            action: key,
+                            error: errorMessage,
+                        });
 
                         throw createApiError(errorMessage, errorOptions);
                     }
@@ -257,6 +277,10 @@ export function createAction<M extends Model, V, R>(
                         const handler = definition.handle as ActionHandleResolver<R>;
 
                         try {
+                            definition.logger?.debug("Action handle phase", {
+                                action: key,
+                            });
+
                             result = await handler({
                                 view,
                                 commit: committer,
@@ -264,10 +288,15 @@ export function createAction<M extends Model, V, R>(
                                     return response;
                                 },
                             });
-                        } catch (handleError) {
+                        } catch (handleError: any) {
                             if (handleError instanceof ApiError || handleError instanceof HandleError) {
                                 throw handleError;
                             }
+
+                            definition.logger?.error("Action handle error", {
+                                action: key,
+                                error: handleError?.message,
+                            });
 
                             throw createHandleError(handleError as Error);
                         }
@@ -278,14 +307,23 @@ export function createAction<M extends Model, V, R>(
                     const handler = definition.handle as ActionHandleResolver<R>;
 
                     try {
+                        definition.logger?.debug("Action handle phase", {
+                            action: key,
+                        });
+
                         result = await handler({
                             view,
                             commit: committer,
                         });
-                    } catch (handleError) {
+                    } catch (handleError: any) {
                         if (handleError instanceof HandleError) {
                             throw handleError;
                         }
+
+                        definition.logger?.error("Action handle error", {
+                            action: key,
+                            error: handleError?.message,
+                        });
 
                         throw createHandleError(handleError as Error);
                     }
@@ -299,6 +337,12 @@ export function createAction<M extends Model, V, R>(
 
                 if (definition.commit) {
                     try {
+                        definition.logger?.debug("Action commit phase", {
+                            action: key,
+                            model: definition.commit.model as string,
+                            mode: definition.commit.mode,
+                        });
+
                         executeCommit(
                             {
                                 ...definition.commit,
@@ -307,13 +351,22 @@ export function createAction<M extends Model, V, R>(
                             mutations,
                             result,
                         );
-                    } catch (commitError) {
+                    } catch (commitError: any) {
+                        definition.logger?.error("Action commit error", {
+                            action: key,
+                            error: commitError?.message,
+                        });
+
                         throw createCommitError(commitError as Error);
                     }
                 }
 
                 data = result;
                 activeStatus.value = ActionStatus.SUCCESS;
+
+                definition.logger?.debug("Action success", {
+                    action: key,
+                });
 
                 return result;
             } catch (actionError) {

@@ -1,3 +1,5 @@
+import type { ConsolaInstance } from "consola";
+
 import type { Shape, ShapeType } from "./shape";
 
 export interface RuntimeModelConfig {
@@ -23,12 +25,14 @@ export interface ModelOneDefinition<S extends Shape> {
     shape: ShapeType<S>;
     kind: ModelKind.OBJECT;
     options?: ModelOneOptions<S>;
+    logger?: ConsolaInstance;
 }
 
 export interface ModelManyDefinition<S extends Shape> {
     shape: ShapeType<S>;
     kind: ModelKind.ARRAY;
     options?: ModelManyOptions<S>;
+    logger?: ConsolaInstance;
 }
 
 export type ModelDefinition<S extends Shape> = ModelOneDefinition<S> | ModelManyDefinition<S>;

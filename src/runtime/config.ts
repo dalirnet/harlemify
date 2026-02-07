@@ -9,10 +9,12 @@ export type RuntimeConfig = {
     model?: RuntimeModelConfig;
     view?: RuntimeViewConfig;
     action?: RuntimeActionConfig;
+    logger?: number;
 };
 
 export const runtimeConfig: RuntimeConfig = {
     model: config.model ?? {},
     view: config.view ?? {},
     action: config.action ?? {},
+    logger: config.logger ?? -999,
 };

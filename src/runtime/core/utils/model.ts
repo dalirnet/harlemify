@@ -45,8 +45,8 @@ function getIdentifier(definition: ModelOneDefinition<Shape> | ModelManyDefiniti
 
 function createOneMutations<S extends Shape>(
     source: SourceStore<BaseState>,
-    key: string,
     definition: ModelOneDefinition<S>,
+    key: string,
 ): MutationsOne<S> {
     const setOperation: Mutation<S> = source.mutation(`${key}:set`, (state, value: S) => {
         state[key] = value;
@@ -77,15 +77,33 @@ function createOneMutations<S extends Shape>(
     });
 
     function set(value: S) {
+        definition.logger?.debug("Model mutation", {
+            model: key,
+            mutation: "set",
+        });
+
         setOperation(value);
     }
 
     function reset() {
+        definition.logger?.debug("Model mutation", {
+            model: key,
+            mutation: "reset",
+        });
+
         resetOperation();
     }
 
     function patch(value: Partial<S>, options?: MutationsOneOptions) {
-        patchOperation({ value, options });
+        definition.logger?.debug("Model mutation", {
+            model: key,
+            mutation: "patch",
+        });
+
+        patchOperation({
+            value,
+            options,
+        });
     }
 
     return {
@@ -97,8 +115,8 @@ function createOneMutations<S extends Shape>(
 
 function createManyMutations<S extends Shape>(
     source: SourceStore<BaseState>,
-    key: string,
     definition: ModelManyDefinition<S>,
+    key: string,
 ): MutationsMany<S> {
     const identifier = getIdentifier(definition as any);
 
@@ -188,23 +206,57 @@ function createManyMutations<S extends Shape>(
     });
 
     function set(value: S[]) {
+        definition.logger?.debug("Model mutation", {
+            model: key,
+            mutation: "set",
+        });
+
         setOperation(value);
     }
 
     function reset() {
+        definition.logger?.debug("Model mutation", {
+            model: key,
+            mutation: "reset",
+        });
+
         resetOperation();
     }
 
     function patch(value: Partial<S> | Partial<S>[], options?: MutationsManyOptions) {
-        patchOperation({ value, options });
+        definition.logger?.debug("Model mutation", {
+            model: key,
+            mutation: "patch",
+        });
+
+        patchOperation({
+            value,
+            options,
+        });
     }
 
     function remove(value: S | S[], options?: MutationsManyOptions) {
-        removeOperation({ value, options });
+        definition.logger?.debug("Model mutation", {
+            model: key,
+            mutation: "remove",
+        });
+
+        removeOperation({
+            value,
+            options,
+        });
     }
 
     function add(value: S | S[], options?: MutationsManyOptions) {
-        addOperation({ value, options });
+        definition.logger?.debug("Model mutation", {
+            model: key,
+            mutation: "add",
+        });
+
+        addOperation({
+            value,
+            options,
+        });
     }
 
     return {
@@ -219,10 +271,15 @@ function createManyMutations<S extends Shape>(
 export function createMutations<M extends Model>(source: SourceStore<BaseState>, model: M): Mutations<M> {
     const mutations = {} as Record<string, MutationsOne<Shape> | MutationsMany<Shape>>;
     for (const [key, definition] of Object.entries(model)) {
+        definition.logger?.debug("Model registered", {
+            model: key,
+            kind: definition.kind,
+        });
+
         if (definition.kind === ModelKind.OBJECT) {
-            mutations[key] = createOneMutations(source, key, definition as ModelOneDefinition<Shape>);
+            mutations[key] = createOneMutations(source, definition as ModelOneDefinition<Shape>, key);
         } else {
-            mutations[key] = createManyMutations(source, key, definition as ModelManyDefinition<Shape>);
+            mutations[key] = createManyMutations(source, definition as ModelManyDefinition<Shape>, key);
         }
     }
 

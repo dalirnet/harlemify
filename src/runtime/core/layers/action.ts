@@ -1,3 +1,5 @@
+import type { ConsolaInstance } from "consola";
+
 import { buildCommitMethod } from "../utils/action";
 
 import type { Model } from "../types/model";
@@ -17,6 +19,7 @@ import {
 
 export function createActionFactory<M extends Model, V>(
     config?: RuntimeActionConfig,
+    logger?: ConsolaInstance,
     _model?: M,
     _view?: V,
 ): ActionFactory<M, V> {
@@ -32,6 +35,7 @@ export function createActionFactory<M extends Model, V>(
 
         const actionDefinition: ActionDefinition<M, V, A> = {
             api: apiDefinition,
+            logger,
         };
 
         return {
@@ -39,6 +43,7 @@ export function createActionFactory<M extends Model, V>(
                 const handleDefinition: ActionDefinition<M, V, R> = {
                     api: apiDefinition,
                     handle: callback as ActionHandleCallback<M, V, R, unknown>,
+                    logger,
                 };
 
                 return {
@@ -109,6 +114,7 @@ export function createActionFactory<M extends Model, V>(
     function handle<R>(callback: ActionHandleCallbackNoApi<M, V, R>): ActionHandleChain<M, V, R> {
         const definition: ActionDefinition<M, V, R> = {
             handle: callback,
+            logger,
         };
 
         return {
@@ -119,7 +125,7 @@ export function createActionFactory<M extends Model, V>(
         };
     }
 
-    const commit = buildCommitMethod({} as ActionDefinition<M, V, void>);
+    const commit = buildCommitMethod({ logger } as ActionDefinition<M, V, void>);
 
     return {
         api,

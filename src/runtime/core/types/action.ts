@@ -1,3 +1,4 @@
+import type { ConsolaInstance } from "consola";
 import type { ComputedRef, DeepReadonly, MaybeRefOrGetter, Ref } from "vue";
 
 import type { Model, ModelShape, MutationsOneOptions, MutationsManyOptions } from "./model";
@@ -152,6 +153,7 @@ export interface ActionDefinition<M extends Model, V, R = void> {
         value?: unknown;
         options?: MutationsOneOptions | MutationsManyOptions;
     };
+    logger?: ConsolaInstance;
 }
 
 export type ActionDefinitions<M extends Model, V> = Record<string, ActionDefinition<M, V, unknown>>;

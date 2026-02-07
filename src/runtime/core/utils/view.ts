@@ -10,6 +10,11 @@ export function createView<M extends Model, VD extends ViewDefinitions<M>>(
 ): StoreView<M, VD> {
     const view = {} as Record<string, unknown>;
     for (const [key, definition] of Object.entries(definitions)) {
+        definition.logger?.debug("View registered", {
+            view: key,
+            sources: definition.sources,
+        });
+
         view[key] = source.getter(key, (state) => {
             const values = definition.sources.map((sourceKey) => {
                 return state[sourceKey as string];
