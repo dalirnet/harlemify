@@ -4,7 +4,7 @@ import { shape } from "../src/runtime/core/layers/shape";
 import { ActionOneMode, ActionManyMode, ActionStatus } from "../src/runtime/core/types/action";
 import type { ShapeInfer } from "../src/runtime/core/types/shape";
 
-const mockFetch = globalThis.$fetch as unknown as ReturnType<typeof vi.fn>;
+const mockFetch = globalThis["$fetch"] as unknown as ReturnType<typeof vi.fn>;
 
 const UserShape = shape((factory) => {
     return {
