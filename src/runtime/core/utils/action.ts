@@ -25,10 +25,10 @@ import { createCommitter, executeCommit } from "./model";
 import type { Model, Mutations } from "../types/model";
 
 class ApiError extends Error implements ActionApiError {
-    name = "ActionApiError" as const;
-    status?: number;
-    statusText?: string;
-    data?: unknown;
+    override name = "ActionApiError" as const;
+    declare status?: number;
+    declare statusText?: string;
+    declare data?: unknown;
 
     constructor(message: string, options?: { status?: number; statusText?: string; data?: unknown }) {
         super(message);
@@ -39,8 +39,8 @@ class ApiError extends Error implements ActionApiError {
 }
 
 class HandleError extends Error implements ActionHandleError {
-    name = "ActionHandleError" as const;
-    cause: Error;
+    override name = "ActionHandleError" as const;
+    declare cause: Error;
 
     constructor(cause: Error) {
         super(cause.message);
@@ -49,8 +49,8 @@ class HandleError extends Error implements ActionHandleError {
 }
 
 class CommitError extends Error implements ActionCommitError {
-    name = "ActionCommitError" as const;
-    cause: Error;
+    override name = "ActionCommitError" as const;
+    declare cause: Error;
 
     constructor(cause: Error) {
         super(cause.message);
@@ -59,7 +59,7 @@ class CommitError extends Error implements ActionCommitError {
 }
 
 class ConcurrentError extends Error implements ActionConcurrentError {
-    name = "ActionConcurrentError" as const;
+    override name = "ActionConcurrentError" as const;
 
     constructor() {
         super("Action is already pending");
