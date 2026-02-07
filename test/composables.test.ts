@@ -43,6 +43,7 @@ describe("useIsolatedActionError", () => {
         const apiError: ActionApiError = Object.assign(new Error("test"), {
             name: "ActionApiError" as const,
         });
+
         error1.value = apiError;
 
         expect(error1.value).toBeDefined();

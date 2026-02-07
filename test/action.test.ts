@@ -177,9 +177,8 @@ describe("createAction", () => {
         const state = initializeState(model);
         const source = createStore("test-action-" + Math.random(), state);
         const mutations = createMutations(source, model);
-        const view = {};
 
-        const action = createAction(definition, view, mutations);
+        const action = createAction(definition, mutations, {}, "test");
 
         return {
             action,
