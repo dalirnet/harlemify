@@ -16,7 +16,7 @@ export function createView<M extends Model, VD extends ViewDefinitions<M>>(
             });
 
             if (definition.resolver) {
-                return definition.resolver(...(values as unknown[]));
+                return definition.resolver(...(values as [any]));
             }
 
             return values[0];

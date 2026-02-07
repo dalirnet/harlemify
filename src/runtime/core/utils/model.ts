@@ -100,7 +100,7 @@ function createManyMutations<S extends Shape>(
     key: string,
     definition: ModelManyDefinition<S>,
 ): MutationsMany<S> {
-    const identifier = getIdentifier(definition);
+    const identifier = getIdentifier(definition as any);
 
     const setOperation: Mutation<S[]> = source.mutation(`${key}:set`, (state, value: S[]) => {
         state[key] = value;
@@ -239,8 +239,7 @@ export function executeCommit<M extends Model>(
     mutations: Mutations<M>,
     result?: unknown,
 ): void {
-    const target = mutations[definition.model] as Record<string, (...args: unknown[]) => void>;
-    const handler = target[definition.mode];
+    const handler = (mutations[definition.model] as any)[definition.mode];
 
     switch (definition.mode) {
         case ActionOneMode.RESET:
