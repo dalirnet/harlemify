@@ -2,7 +2,7 @@ import type { Model, ModelInstance } from "./model";
 
 export interface RuntimeViewConfig {}
 
-export type ViewFromResolver<M extends Model, K extends keyof M, R> = (value: ModelInstance<M, K>) => R;
+export type ViewFromResolver<M extends Model, K extends keyof M, R> = (model: ModelInstance<M, K>) => R;
 
 export type ModelInstanceTuple<M extends Model, K extends readonly (keyof M)[]> = {
     [I in keyof K]: K[I] extends keyof M ? ModelInstance<M, K[I]> : never;
