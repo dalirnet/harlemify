@@ -1,6 +1,7 @@
-import { defineNuxtPlugin, useHead } from "#imports";
 import { createVuePlugin } from "@harlem/core";
 import { createServerSSRPlugin, createClientSSRPlugin, getBridgingScript } from "@harlem/plugin-ssr";
+
+import { defineNuxtPlugin, useHead } from "#imports";
 
 export default defineNuxtPlugin((nuxtApp) => {
     const plugins = [];

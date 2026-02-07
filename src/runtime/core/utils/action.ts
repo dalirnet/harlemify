@@ -1,5 +1,5 @@
 import { defu } from "defu";
-import { type DeepReadonly, type Ref, ref, computed, readonly, toValue } from "vue";
+import { type DeepReadonly, type Ref, ref, computed, readonly, toValue, nextTick } from "vue";
 
 import {
     type Action,
@@ -199,6 +199,8 @@ export function createAction<M extends Model, V, R>(
     let abortController: AbortController | null = null;
 
     async function execute(payload?: ActionCallPayload<V, R>): Promise<R> {
+        await nextTick();
+
         if (loading.value) {
             const concurrent = payload?.concurrent ?? definition.api?.concurrent ?? ActionConcurrent.BLOCK;
 
@@ -226,7 +228,6 @@ export function createAction<M extends Model, V, R>(
         currentController = (async () => {
             try {
                 let result: R;
-                const readonlyView = readonly(view as object) as DeepReadonly<V>;
                 const committer = createCommitter(mutations);
 
                 if (definition.api) {
@@ -238,7 +239,7 @@ export function createAction<M extends Model, V, R>(
                             signal: payload?.signal ?? abortController!.signal,
                         } as ActionCallPayload<V>;
 
-                        response = await executeApi(definition.api, readonlyView, apiPayload);
+                        response = await executeApi(definition.api, view as any, apiPayload);
                     } catch (error: any) {
                         const errorMessage = error?.message ?? "API request failed";
                         const errorOptions = {
@@ -255,9 +256,11 @@ export function createAction<M extends Model, V, R>(
 
                         try {
                             result = await handler({
-                                api: () => Promise.resolve(response),
-                                view: readonlyView,
+                                view,
                                 commit: committer,
+                                async api() {
+                                    return response;
+                                },
                             });
                         } catch (handleError) {
                             if (handleError instanceof ApiError || handleError instanceof HandleError) {
@@ -274,7 +277,7 @@ export function createAction<M extends Model, V, R>(
 
                     try {
                         result = await handler({
-                            view: readonlyView,
+                            view,
                             commit: committer,
                         });
                     } catch (handleError) {
