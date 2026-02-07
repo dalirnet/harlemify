@@ -49,7 +49,7 @@ type ProjectOptions = Project["meta"]["options"];
 ## Store
 
 ```typescript
-import { createStore, ActionOneMode, ActionManyMode, ActionApiMethod } from "@diphyx/harlemify";
+import { createStore, ActionOneMode, ActionManyMode, ActionApiMethod, AUTO } from "@diphyx/harlemify";
 
 export const projectStore = createStore({
     name: "projects",
@@ -100,7 +100,7 @@ export const projectStore = createStore({
         const create = api({
             method: ActionApiMethod.POST,
             url: "/projects",
-        }).commit("list", ActionManyMode.ADD, undefined, { prepend: true });
+        }).commit("list", ActionManyMode.ADD, AUTO, { prepend: true });
 
         const update = api({
             method: ActionApiMethod.PATCH,

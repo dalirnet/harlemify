@@ -153,20 +153,34 @@ The commit method stores the API response (or handle result) into a model:
 .commit("list", ActionManyMode.RESET)
 ```
 
+### Auto Commit Value
+
+When chaining `.commit()` after `api` or `handle`, the action result is automatically used as the commit value. To make this intent explicit — especially when passing options — use the `AUTO` symbol instead of `undefined`:
+
+```typescript
+import { AUTO } from "@diphyx/harlemify";
+
+// Without options — AUTO is implicit
+.commit("list", ActionManyMode.SET)
+
+// With options — use AUTO to signal "use the action result"
+.commit("list", ActionManyMode.ADD, AUTO, { unique: true })
+```
+
 ### Commit with Options
 
 ```typescript
 // Add to beginning of list
-.commit("list", ActionManyMode.ADD, undefined, { prepend: true })
+.commit("list", ActionManyMode.ADD, AUTO, { prepend: true })
 
 // Add only unique items
-.commit("list", ActionManyMode.ADD, undefined, { unique: true })
+.commit("list", ActionManyMode.ADD, AUTO, { unique: true })
 
 // Match by a different field
-.commit("list", ActionManyMode.PATCH, undefined, { by: "email" })
+.commit("list", ActionManyMode.PATCH, AUTO, { by: "email" })
 
 // Deep merge
-.commit("current", ActionOneMode.PATCH, undefined, { deep: true })
+.commit("current", ActionOneMode.PATCH, AUTO, { deep: true })
 ```
 
 ## Calling Actions

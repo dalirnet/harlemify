@@ -160,16 +160,18 @@ async function removePost() {
 
 ## Prepend New Items
 
-Add new items to the beginning of the list:
+Add new items to the beginning of the list. Use `AUTO` to signal that the API response should be used as the commit value:
 
 ```typescript
+import { AUTO } from "@diphyx/harlemify";
+
 action({ api }) {
     return {
         create: api
             .post({
                 url: "/posts",
             })
-            .commit("list", ActionManyMode.ADD, undefined, { prepend: true }),
+            .commit("list", ActionManyMode.ADD, AUTO, { prepend: true }),
     };
 },
 ```
@@ -179,13 +181,15 @@ action({ api }) {
 Prevent duplicate additions:
 
 ```typescript
+import { AUTO } from "@diphyx/harlemify";
+
 action({ api }) {
     return {
         add: api
             .post({
                 url: "/users",
             })
-            .commit("list", ActionManyMode.ADD, undefined, { unique: true }),
+            .commit("list", ActionManyMode.ADD, AUTO, { unique: true }),
     };
 },
 ```

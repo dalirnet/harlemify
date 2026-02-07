@@ -205,6 +205,24 @@ interface ActionCommitChain<M, V, R> {
 
 ---
 
+## Symbols
+
+### AUTO
+
+```typescript
+const AUTO: unique symbol
+```
+
+A symbol used as the `value` argument in `.commit()` to explicitly signal that the action result (API response or handle return value) should be used as the commit value. This is especially useful when you need to pass commit options without providing an explicit value:
+
+```typescript
+import { AUTO } from "@diphyx/harlemify";
+
+.commit("list", ActionManyMode.ADD, AUTO, { unique: true })
+```
+
+---
+
 ## Enums
 
 ### ActionOneMode
