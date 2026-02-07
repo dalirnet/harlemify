@@ -53,6 +53,7 @@
         "@harlem/core": "^3.0.0",
         "@harlem/plugin-ssr": "^3.0.0",
         "@nuxt/kit": "^3.14.0",
+        "consola": "^3.0.0",
         "defu": "^6.0.0",
         "zod": "^4.0.0"
     },
