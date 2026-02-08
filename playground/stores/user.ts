@@ -1,4 +1,4 @@
-import { createStore, shape, ActionOneMode, ActionManyMode, AUTO, type ShapeInfer } from "../../src/runtime";
+import { createStore, shape, ModelOneMode, ModelManyMode, type ShapeInfer } from "../../src/runtime";
 
 const userShape = shape((factory) => {
     return {
@@ -36,52 +36,49 @@ export const userStore = createStore({
             }),
         };
     },
-    action({ api, commit }) {
+    action({ api, handler }) {
         return {
-            get: api
-                .get({
+            get: api.get(
+                {
                     url(view) {
                         return `/users/${view.user.value?.id}`;
                     },
-                })
-                .commit("current", ActionOneMode.SET),
-            list: api
-                .get({
-                    url: "/users",
-                })
-                .commit("list", ActionManyMode.SET),
-            create: api
-                .post({
-                    url: "/users",
-                })
-                .commit("list", ActionManyMode.ADD),
-            update: api
-                .patch({
+                },
+                { model: "current", mode: ModelOneMode.SET },
+            ),
+            list: api.get({ url: "/users" }, { model: "list", mode: ModelManyMode.SET }),
+            create: api.post({ url: "/users" }, { model: "list", mode: ModelManyMode.ADD }),
+            update: api.patch(
+                {
                     url(view) {
                         return `/users/${view.user.value?.id}`;
                     },
-                })
-                .commit("list", ActionManyMode.PATCH),
-            delete: api
-                .delete({
+                },
+                { model: "list", mode: ModelManyMode.PATCH },
+            ),
+            delete: api.delete(
+                {
                     url(view) {
                         return `/users/${view.user.value?.id}`;
                     },
-                })
-                .commit("list", ActionManyMode.REMOVE),
-            clear: commit("list", ActionManyMode.RESET),
-            addUnique: api
-                .post({
-                    url: "/users",
-                })
-                .commit("list", ActionManyMode.ADD, AUTO, { unique: true }),
-            patchByEmail: api
-                .patch({
+                },
+                { model: "list", mode: ModelManyMode.REMOVE },
+            ),
+            clear: handler(async ({ model }) => {
+                model.list.reset();
+            }),
+            addUnique: api.post(
+                { url: "/users" },
+                { model: "list", mode: ModelManyMode.ADD, options: { unique: true } },
+            ),
+            patchByEmail: api.patch(
+                {
                     url(view) {
                         return `/users/${view.user.value?.id}`;
                     },
-                })
-                .commit("list", ActionManyMode.PATCH, AUTO, { by: "email" }),
+                },
+                { model: "list", mode: ModelManyMode.PATCH, options: { by: "email" } },
+            ),
         };
     },
 });

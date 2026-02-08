@@ -1,4 +1,4 @@
-import { createStore, shape, ActionOneMode, type ShapeInfer } from "../../src/runtime";
+import { createStore, shape, ModelOneMode, type ShapeInfer } from "../../src/runtime";
 
 const configShape = shape((factory) => {
     return {
@@ -33,8 +33,9 @@ export const configStore = createStore({
     },
     action({ api }) {
         return {
-            get: api.get({ url: "/config" }).commit("config", ActionOneMode.SET),
-            update: api.patch({ url: "/config" }).commit("config", ActionOneMode.PATCH),
+            get: api.get({ url: "/config" }, { model: "config", mode: ModelOneMode.SET }),
+            update: api.patch({ url: "/config" }, { model: "config", mode: ModelOneMode.PATCH }),
+            replace: api.put({ url: "/config" }, { model: "config", mode: ModelOneMode.SET }),
         };
     },
 });

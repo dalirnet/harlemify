@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { ActionOneMode, ActionManyMode } from "../../src/runtime";
+import { ModelManyMode } from "../../src/runtime";
 import { postStore, type Post } from "../stores/post";
-
-const { view, action, model } = postStore;
 
 const showModal = ref(false);
 const editing = ref<Post | null>(null);
 const form = ref({ title: "", body: "", userId: 1 });
 
-onMounted(() => action.list());
+onMounted(() => postStore.action.list());
 
 function openCreate() {
     editing.value = null;
@@ -18,43 +16,55 @@ function openCreate() {
 
 function openEdit(post: Post) {
     editing.value = post;
+    postStore.model.current.set(post);
+    postStore.model.draft.set(post);
     form.value = { title: post.title, body: post.body, userId: post.userId };
     showModal.value = true;
 }
 
+watch(
+    () => form.value.title,
+    (title) => {
+        if (editing.value) {
+            postStore.model.draft.patch({ title });
+        }
+    },
+);
+
 async function save() {
     if (editing.value) {
-        model("current", ActionOneMode.SET, editing.value);
-        await action.update({
+        postStore.model.current.set(editing.value);
+        await postStore.action.update({
             body: { title: form.value.title, body: form.value.body },
         });
     } else {
-        await action.create({
+        await postStore.action.create({
             body: { id: Date.now(), ...form.value },
         });
     }
+    postStore.model.draft.reset();
     showModal.value = false;
 }
 
 async function remove(post: Post) {
     if (confirm(`Delete "${post.title}"?`)) {
-        model("current", ActionOneMode.SET, post);
-        await action.delete();
+        postStore.model.current.set(post);
+        await postStore.action.delete();
     }
 }
 
 async function sortPosts() {
-    await action.sort();
+    await postStore.action.sort();
 }
 
 async function appendFromServer() {
-    await action.list({
-        commit: { mode: ActionManyMode.ADD },
+    await postStore.action.list({
+        commit: { mode: ModelManyMode.ADD },
     });
 }
 
 function resetSortAction() {
-    action.sort.reset();
+    postStore.action.sort.reset();
 }
 </script>
 
@@ -68,7 +78,7 @@ function resetSortAction() {
         </div>
 
         <div class="toolbar">
-            <h2 data-testid="post-count">{{ view.count.value }} posts</h2>
+            <h2 data-testid="post-count">{{ postStore.view.count.value }} posts</h2>
             <button class="btn btn-primary" data-testid="add-post" @click="openCreate">Add Post</button>
         </div>
 
@@ -78,11 +88,11 @@ function resetSortAction() {
             <button class="btn btn-sm" data-testid="reset-sort" @click="resetSortAction">Reset Sort</button>
         </div>
 
-        <div v-if="action.list.loading.value" class="loading" data-testid="loading">Loading...</div>
+        <div v-if="postStore.action.list.loading.value" class="loading" data-testid="loading">Loading...</div>
 
         <div v-else class="list" data-testid="post-list">
             <div
-                v-for="post in view.posts.value.slice(0, 15)"
+                v-for="post in postStore.view.posts.value.slice(0, 15)"
                 :key="post.id"
                 class="list-item"
                 :data-testid="`post-${post.id}`"
@@ -102,12 +112,17 @@ function resetSortAction() {
 
         <div class="detail" data-testid="merged-overview">
             <h3>Merged View (view.overview)</h3>
-            <pre>{{ JSON.stringify(view.overview.value, null, 2) }}</pre>
+            <pre>{{ JSON.stringify(postStore.view.overview.value, null, 2) }}</pre>
         </div>
 
-        <div v-if="action.sort.data" class="detail" data-testid="sort-data">
+        <div class="detail" data-testid="merged-editor">
+            <h3>3-Model Merge (view.editor)</h3>
+            <pre>{{ JSON.stringify(postStore.view.editor.value, null, 2) }}</pre>
+        </div>
+
+        <div v-if="postStore.action.sort.data" class="detail" data-testid="sort-data">
             <h3>action.sort.data (last sort result)</h3>
-            <p>{{ (action.sort.data as any)?.length }} items sorted</p>
+            <p>{{ (postStore.action.sort.data as any)?.length }} items sorted</p>
         </div>
 
         <!-- Action Status -->
@@ -116,32 +131,32 @@ function resetSortAction() {
             <div class="monitor-grid">
                 <div class="monitor-item" data-testid="status-list">
                     <span class="monitor-label">list</span>
-                    <span class="monitor-state" :data-status="action.list.status.value">{{
-                        action.list.status.value
+                    <span class="monitor-state" :data-status="postStore.action.list.status.value">{{
+                        postStore.action.list.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-create">
                     <span class="monitor-label">create</span>
-                    <span class="monitor-state" :data-status="action.create.status.value">{{
-                        action.create.status.value
+                    <span class="monitor-state" :data-status="postStore.action.create.status.value">{{
+                        postStore.action.create.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-update">
                     <span class="monitor-label">update</span>
-                    <span class="monitor-state" :data-status="action.update.status.value">{{
-                        action.update.status.value
+                    <span class="monitor-state" :data-status="postStore.action.update.status.value">{{
+                        postStore.action.update.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-delete">
                     <span class="monitor-label">delete</span>
-                    <span class="monitor-state" :data-status="action.delete.status.value">{{
-                        action.delete.status.value
+                    <span class="monitor-state" :data-status="postStore.action.delete.status.value">{{
+                        postStore.action.delete.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-sort">
                     <span class="monitor-label">sort</span>
-                    <span class="monitor-state" :data-status="action.sort.status.value">{{
-                        action.sort.status.value
+                    <span class="monitor-state" :data-status="postStore.action.sort.status.value">{{
+                        postStore.action.sort.status.value
                     }}</span>
                 </div>
             </div>
@@ -154,6 +169,7 @@ function resetSortAction() {
                 <li><code>model.many(shape)</code> - Collection pattern for managing lists</li>
                 <li><code>handle(async (&#123; view, commit &#125;) => ...)</code> - Standalone handle without API</li>
                 <li><code>view.merge(["current", "list"], resolver)</code> - Multi-source merged view</li>
+                <li><code>view.merge(["current", "draft", "list"], resolver)</code> - 3-model merged view</li>
                 <li>
                     <code>action(&#123; commit: &#123; mode: ActionManyMode.ADD &#125; &#125;)</code> - Call-time
                     commit.mode override

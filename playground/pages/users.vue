@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { ActionOneMode } from "../../src/runtime";
 import { userStore, type User } from "../stores/user";
-
-const { view, action, model } = userStore;
 
 const showModal = ref(false);
 const editing = ref<User | null>(null);
 const form = ref({ name: "", email: "" });
 
-onMounted(() => action.list());
+onMounted(() => userStore.action.list());
 
 function openCreate() {
     editing.value = null;
@@ -24,12 +21,12 @@ function openEdit(user: User) {
 
 async function save() {
     if (editing.value) {
-        model("current", ActionOneMode.SET, editing.value);
-        await action.update({
+        userStore.model.current.set(editing.value);
+        await userStore.action.update({
             body: { name: form.value.name, email: form.value.email },
         });
     } else {
-        await action.create({
+        await userStore.action.create({
             body: { id: Date.now(), ...form.value },
         });
     }
@@ -38,43 +35,43 @@ async function save() {
 
 async function remove(u: User) {
     if (confirm(`Delete "${u.name}"?`)) {
-        model("current", ActionOneMode.SET, u);
-        await action.delete();
+        userStore.model.current.set(u);
+        await userStore.action.delete();
     }
 }
 
 async function select(u: User) {
-    model("current", ActionOneMode.SET, u);
+    userStore.model.current.set(u);
     await nextTick();
-    await action.get();
+    await userStore.action.get();
 }
 
 function clearSelection() {
-    model("current", ActionOneMode.RESET);
+    userStore.model.current.reset();
 }
 
 async function clearAll() {
-    await action.clear();
+    await userStore.action.clear();
 }
 
 async function addUniqueUser() {
-    const first = view.users.value[0];
+    const first = userStore.view.users.value[0];
     if (!first) return;
-    await action.addUnique({
+    await userStore.action.addUnique({
         body: { id: first.id, name: first.name + " (dup)", email: first.email },
     });
 }
 
 async function patchByEmailDemo() {
-    if (!view.user.value) return;
-    model("current", ActionOneMode.SET, view.user.value);
-    await action.patchByEmail({
-        body: { email: view.user.value.email, name: view.user.value.name + " (by email)" },
+    if (!userStore.view.user.value) return;
+    userStore.model.current.set(userStore.view.user.value);
+    await userStore.action.patchByEmail({
+        body: { email: userStore.view.user.value.email, name: userStore.view.user.value.name + " (by email)" },
     });
 }
 
 function resetListAction() {
-    action.list.reset();
+    userStore.action.list.reset();
 }
 </script>
 
@@ -88,7 +85,7 @@ function resetListAction() {
         </div>
 
         <div class="toolbar">
-            <h2 data-testid="user-count">{{ view.count.value }} users</h2>
+            <h2 data-testid="user-count">{{ userStore.view.count.value }} users</h2>
             <button class="btn btn-primary" data-testid="add-user" @click="openCreate">Add User</button>
         </div>
 
@@ -98,7 +95,7 @@ function resetListAction() {
             <button
                 class="btn btn-sm"
                 data-testid="patch-by-email"
-                :disabled="!view.user.value"
+                :disabled="!userStore.view.user.value"
                 @click="patchByEmailDemo"
             >
                 Patch by Email
@@ -106,10 +103,10 @@ function resetListAction() {
             <button class="btn btn-sm" data-testid="reset-list-action" @click="resetListAction">Reset Action</button>
         </div>
 
-        <div v-if="action.list.loading.value" class="loading" data-testid="loading">Loading...</div>
+        <div v-if="userStore.action.list.loading.value" class="loading" data-testid="loading">Loading...</div>
 
         <div v-else class="grid" data-testid="user-grid">
-            <div v-for="u in view.users.value" :key="u.id" class="card" :data-testid="`user-${u.id}`">
+            <div v-for="u in userStore.view.users.value" :key="u.id" class="card" :data-testid="`user-${u.id}`">
                 <div class="card-body">
                     <h3 data-testid="user-name">{{ u.name }}</h3>
                     <p class="subtitle" data-testid="user-email">{{ u.email }}</p>
@@ -122,9 +119,9 @@ function resetListAction() {
             </div>
         </div>
 
-        <div v-if="view.user.value" class="detail" data-testid="selected-user">
+        <div v-if="userStore.view.user.value" class="detail" data-testid="selected-user">
             <h3>Selected User (view.user)</h3>
-            <pre>{{ JSON.stringify(view.user.value, null, 2) }}</pre>
+            <pre>{{ JSON.stringify(userStore.view.user.value, null, 2) }}</pre>
             <button class="btn btn-sm" style="margin-top: 12px" data-testid="clear-user" @click="clearSelection">
                 Clear
             </button>
@@ -132,12 +129,12 @@ function resetListAction() {
 
         <div class="detail" data-testid="merged-summary">
             <h3>Merged View (view.summary)</h3>
-            <pre>{{ JSON.stringify(view.summary.value, null, 2) }}</pre>
+            <pre>{{ JSON.stringify(userStore.view.summary.value, null, 2) }}</pre>
         </div>
 
-        <div v-if="action.list.data" class="detail" data-testid="action-data">
+        <div v-if="userStore.action.list.data" class="detail" data-testid="action-data">
             <h3>action.list.data (last successful result)</h3>
-            <pre>{{ JSON.stringify(action.list.data, null, 2)?.substring(0, 200) }}...</pre>
+            <pre>{{ JSON.stringify(userStore.action.list.data, null, 2)?.substring(0, 200) }}...</pre>
         </div>
 
         <!-- Action Status -->
@@ -146,50 +143,50 @@ function resetListAction() {
             <div class="monitor-grid">
                 <div class="monitor-item" data-testid="status-get">
                     <span class="monitor-label">get</span>
-                    <span class="monitor-state" :data-status="action.get.status.value">{{
-                        action.get.status.value
+                    <span class="monitor-state" :data-status="userStore.action.get.status.value">{{
+                        userStore.action.get.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-list">
                     <span class="monitor-label">list</span>
-                    <span class="monitor-state" :data-status="action.list.status.value">{{
-                        action.list.status.value
+                    <span class="monitor-state" :data-status="userStore.action.list.status.value">{{
+                        userStore.action.list.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-create">
                     <span class="monitor-label">create</span>
-                    <span class="monitor-state" :data-status="action.create.status.value">{{
-                        action.create.status.value
+                    <span class="monitor-state" :data-status="userStore.action.create.status.value">{{
+                        userStore.action.create.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-update">
                     <span class="monitor-label">update</span>
-                    <span class="monitor-state" :data-status="action.update.status.value">{{
-                        action.update.status.value
+                    <span class="monitor-state" :data-status="userStore.action.update.status.value">{{
+                        userStore.action.update.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-delete">
                     <span class="monitor-label">delete</span>
-                    <span class="monitor-state" :data-status="action.delete.status.value">{{
-                        action.delete.status.value
+                    <span class="monitor-state" :data-status="userStore.action.delete.status.value">{{
+                        userStore.action.delete.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-clear">
                     <span class="monitor-label">clear</span>
-                    <span class="monitor-state" :data-status="action.clear.status.value">{{
-                        action.clear.status.value
+                    <span class="monitor-state" :data-status="userStore.action.clear.status.value">{{
+                        userStore.action.clear.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-addUnique">
                     <span class="monitor-label">addUnique</span>
-                    <span class="monitor-state" :data-status="action.addUnique.status.value">{{
-                        action.addUnique.status.value
+                    <span class="monitor-state" :data-status="userStore.action.addUnique.status.value">{{
+                        userStore.action.addUnique.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-patchByEmail">
                     <span class="monitor-label">patchByEmail</span>
-                    <span class="monitor-state" :data-status="action.patchByEmail.status.value">{{
-                        action.patchByEmail.status.value
+                    <span class="monitor-state" :data-status="userStore.action.patchByEmail.status.value">{{
+                        userStore.action.patchByEmail.status.value
                     }}</span>
                 </div>
             </div>

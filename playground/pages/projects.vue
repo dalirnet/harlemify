@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { ActionOneMode, ActionConcurrent, useIsolatedActionStatus, useIsolatedActionError } from "../../src/runtime";
-import type { ActionError } from "../../src/runtime";
+import { ActionConcurrent, useIsolatedActionStatus, useIsolatedActionError } from "../../src/runtime";
 import { projectStore, type Project, type ProjectMilestone } from "../stores/project";
-
-const { view, action, model } = projectStore;
 
 // Form state
 const showCreateModal = ref(false);
@@ -31,12 +28,12 @@ const isolatedStatus = useIsolatedActionStatus();
 const isolatedError = useIsolatedActionError();
 
 // Error demo
-const errorResult = ref<ActionError | null>(null);
+const errorResult = ref<Error | null>(null);
 
-onMounted(() => action.list());
+onMounted(() => projectStore.action.list());
 
 async function handleCreate() {
-    await action.create({
+    await projectStore.action.create({
         body: {
             name: newProjectName.value,
             description: newProjectDescription.value,
@@ -49,59 +46,67 @@ async function handleCreate() {
 
 async function handleSelect(p: Project) {
     exportResult.value = null;
-    model("current", ActionOneMode.SET, p);
-    await action.get();
+    projectStore.model.current.set(p);
+    await projectStore.action.get();
 }
 
 async function handleDelete(p: Project) {
     if (confirm(`Delete "${p.name}"?`)) {
-        model("current", ActionOneMode.SET, p);
-        await action.delete();
-        model("current", ActionOneMode.RESET);
+        projectStore.model.current.set(p);
+        await projectStore.action.delete();
+        projectStore.model.current.reset();
     }
 }
 
+async function handleCheck() {
+    if (!projectStore.view.project.value) return;
+    await projectStore.action.check({
+        params: { id: String(projectStore.view.project.value.id) },
+    });
+}
+
 async function handleToggle() {
-    if (!view.project.value) return;
-    await action.toggle();
+    if (!projectStore.view.project.value) return;
+    await projectStore.action.toggle();
 }
 
 async function loadMilestones() {
-    if (!view.project.value) return;
-    await action.milestones();
+    if (!projectStore.view.project.value) return;
+    await projectStore.action.milestones();
 }
 
 async function loadMeta() {
-    if (!view.project.value) return;
-    await action.meta();
+    if (!projectStore.view.project.value) return;
+    await projectStore.action.meta();
 }
 
 async function loadOptions() {
-    if (!view.project.value) return;
-    await action.options();
+    if (!projectStore.view.project.value) return;
+    await projectStore.action.options();
 }
 
 async function handleExport(format: "json" | "csv" = "json") {
-    if (!view.project.value) return;
-    exportResult.value = await action.export({
+    if (!projectStore.view.project.value) return;
+    exportResult.value = await projectStore.action.export({
         query: { format, includeStats: true },
         headers: { "X-Export-Request": "playground-demo" },
     });
 }
 
 function clearSelection() {
-    model("current", ActionOneMode.RESET);
+    projectStore.model.current.reset();
     exportResult.value = null;
 }
 
 // Concurrent demo
 async function handleSlowExport() {
-    if (!view.project.value) return;
+    if (!projectStore.view.project.value) return;
     concurrentError.value = null;
 
     try {
-        concurrentResult.value = await action.slowExport({
+        concurrentResult.value = await projectStore.action.slowExport({
             query: { delay: 2000 },
+            timeout: 5000,
             concurrent: ActionConcurrent[concurrentMode.value],
         });
     } catch (e: any) {
@@ -111,29 +116,35 @@ async function handleSlowExport() {
 
 // Transformer demo
 async function handleTransformedExport() {
-    if (!view.project.value) return;
+    if (!projectStore.view.project.value) return;
 
-    transformedResult.value = await action.export({
+    transformedResult.value = await projectStore.action.export({
         query: { format: "json", includeStats: true },
-        transformer(response: any) {
-            return {
-                ...response,
-                transformedAt: new Date().toISOString(),
-                label: `[TRANSFORMED] ${response.summary?.name ?? "unknown"}`,
-            };
+        transformer: {
+            request(api) {
+                return { ...api, headers: { ...api.headers, "X-Transformed": "true" } };
+            },
+            response(data: unknown) {
+                const response = data as any;
+                return {
+                    ...response,
+                    transformedAt: new Date().toISOString(),
+                    label: `[TRANSFORMED] ${response.summary?.name ?? "unknown"}`,
+                };
+            },
         },
     });
 }
 
 // Signal demo
 async function handleCancellableExport() {
-    if (!view.project.value) return;
+    if (!projectStore.view.project.value) return;
     signalAborted.value = false;
 
     activeAbortController.value = new AbortController();
 
     try {
-        signalResult.value = await action.slowExport({
+        signalResult.value = await projectStore.action.slowExport({
             query: { delay: 3000 },
             signal: activeAbortController.value.signal,
             concurrent: ActionConcurrent.ALLOW,
@@ -151,10 +162,10 @@ function cancelExport() {
 
 // Bind demo
 async function handleBoundExport() {
-    if (!view.project.value) return;
+    if (!projectStore.view.project.value) return;
 
     try {
-        await action.export({
+        await projectStore.action.export({
             query: { format: "json" },
             bind: {
                 status: isolatedStatus,
@@ -170,11 +181,11 @@ async function handleBoundExport() {
 async function handleTriggerError() {
     errorResult.value = null;
     try {
-        await action.triggerError({
+        await projectStore.action.triggerError({
             query: { status: 422, message: "Validation failed" },
         });
     } catch {
-        errorResult.value = action.triggerError.error.value;
+        errorResult.value = projectStore.action.triggerError.error.value;
     }
 }
 </script>
@@ -192,20 +203,20 @@ async function handleTriggerError() {
         </div>
 
         <div class="toolbar">
-            <h2 data-testid="project-count">{{ view.count.value }} projects</h2>
+            <h2 data-testid="project-count">{{ projectStore.view.count.value }} projects</h2>
             <button class="btn btn-primary" data-testid="add-project" @click="showCreateModal = true">
                 Add Project
             </button>
         </div>
 
-        <div v-if="action.list.loading.value" class="loading" data-testid="loading">Loading...</div>
+        <div v-if="projectStore.action.list.loading.value" class="loading" data-testid="loading">Loading...</div>
 
         <div v-else class="grid" data-testid="project-grid">
             <div
-                v-for="p in view.projects.value"
+                v-for="p in projectStore.view.projects.value"
                 :key="p.id"
                 class="card"
-                :class="{ 'card-selected': view.project.value?.id === p.id }"
+                :class="{ 'card-selected': projectStore.view.project.value?.id === p.id }"
                 :data-testid="`project-${p.id}`"
             >
                 <div class="card-body">
@@ -231,16 +242,19 @@ async function handleTriggerError() {
         </div>
 
         <!-- Selected Project Detail -->
-        <div v-if="view.project.value" class="detail" data-testid="project-detail">
+        <div v-if="projectStore.view.project.value" class="detail" data-testid="project-detail">
             <div class="detail-header">
-                <h3>Selected: {{ view.project.value.name }}</h3>
+                <h3>Selected: {{ projectStore.view.project.value.name }}</h3>
                 <button class="btn btn-sm" data-testid="clear-selection" @click="clearSelection">Clear</button>
             </div>
 
             <!-- Actions -->
             <div class="action-buttons" data-testid="action-buttons">
+                <button class="btn btn-sm" data-testid="check-project" @click="handleCheck">
+                    Check <code>api.head()</code>
+                </button>
                 <button class="btn btn-sm" data-testid="toggle-active" @click="handleToggle">
-                    {{ view.isActive.value ? "Deactivate" : "Activate" }}
+                    {{ projectStore.view.isActive.value ? "Deactivate" : "Activate" }}
                 </button>
                 <button class="btn btn-sm" data-testid="load-milestones" @click="loadMilestones">
                     Load Milestones <code>handle + commit</code>
@@ -262,7 +276,7 @@ async function handleTriggerError() {
             <!-- Raw State -->
             <div class="state-section" data-testid="project-state">
                 <h4>project (view.project)</h4>
-                <pre>{{ JSON.stringify(view.project.value, null, 2) }}</pre>
+                <pre>{{ JSON.stringify(projectStore.view.project.value, null, 2) }}</pre>
             </div>
 
             <!-- Export Result (action without memory) -->
@@ -352,7 +366,7 @@ async function handleTriggerError() {
                             Trigger Server Error
                         </button>
                         <span class="monitor-state" data-testid="error-action-status">
-                            {{ action.triggerError.status.value }}
+                            {{ projectStore.action.triggerError.status.value }}
                         </span>
                     </div>
                     <div v-if="errorResult" class="error-box" data-testid="error-result">
@@ -371,68 +385,74 @@ async function handleTriggerError() {
             <div class="monitor-grid">
                 <div class="monitor-item" data-testid="status-get">
                     <span class="monitor-label">get</span>
-                    <span class="monitor-state" :data-status="action.get.status.value">{{
-                        action.get.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.get.status.value">{{
+                        projectStore.action.get.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-list">
                     <span class="monitor-label">list</span>
-                    <span class="monitor-state" :data-status="action.list.status.value">{{
-                        action.list.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.list.status.value">{{
+                        projectStore.action.list.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-create">
                     <span class="monitor-label">create</span>
-                    <span class="monitor-state" :data-status="action.create.status.value">{{
-                        action.create.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.create.status.value">{{
+                        projectStore.action.create.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-delete">
                     <span class="monitor-label">delete</span>
-                    <span class="monitor-state" :data-status="action.delete.status.value">{{
-                        action.delete.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.delete.status.value">{{
+                        projectStore.action.delete.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-toggle">
                     <span class="monitor-label">toggle</span>
-                    <span class="monitor-state" :data-status="action.toggle.status.value">{{
-                        action.toggle.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.toggle.status.value">{{
+                        projectStore.action.toggle.status.value
+                    }}</span>
+                </div>
+                <div class="monitor-item" data-testid="status-check">
+                    <span class="monitor-label">check</span>
+                    <span class="monitor-state" :data-status="projectStore.action.check.status.value">{{
+                        projectStore.action.check.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-milestones">
                     <span class="monitor-label">milestones</span>
-                    <span class="monitor-state" :data-status="action.milestones.status.value">{{
-                        action.milestones.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.milestones.status.value">{{
+                        projectStore.action.milestones.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-meta">
                     <span class="monitor-label">meta</span>
-                    <span class="monitor-state" :data-status="action.meta.status.value">{{
-                        action.meta.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.meta.status.value">{{
+                        projectStore.action.meta.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-options">
                     <span class="monitor-label">options</span>
-                    <span class="monitor-state" :data-status="action.options.status.value">{{
-                        action.options.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.options.status.value">{{
+                        projectStore.action.options.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-export">
                     <span class="monitor-label">export</span>
-                    <span class="monitor-state" :data-status="action.export.status.value">{{
-                        action.export.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.export.status.value">{{
+                        projectStore.action.export.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-slowExport">
                     <span class="monitor-label">slowExport</span>
-                    <span class="monitor-state" :data-status="action.slowExport.status.value">{{
-                        action.slowExport.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.slowExport.status.value">{{
+                        projectStore.action.slowExport.status.value
                     }}</span>
                 </div>
                 <div class="monitor-item" data-testid="status-triggerError">
                     <span class="monitor-label">triggerError</span>
-                    <span class="monitor-state" :data-status="action.triggerError.status.value">{{
-                        action.triggerError.status.value
+                    <span class="monitor-state" :data-status="projectStore.action.triggerError.status.value">{{
+                        projectStore.action.triggerError.status.value
                     }}</span>
                 </div>
             </div>

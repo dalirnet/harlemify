@@ -1,4 +1,4 @@
-import { createStore, shape, ActionManyMode, type ShapeInfer } from "../../src/runtime";
+import { createStore, shape, ModelManyMode, type ShapeInfer } from "../../src/runtime";
 
 const postShape = shape((factory) => {
     return {
@@ -18,6 +18,7 @@ export const postStore = createStore({
     model({ one, many }) {
         return {
             current: one(postShape),
+            draft: one(postShape),
             list: many(postShape),
         };
     },
@@ -41,39 +42,51 @@ export const postStore = createStore({
                     ),
                 };
             }),
+            editor: merge(["current", "draft", "list"], (current, draft, list) => {
+                return {
+                    hasSelection: current !== null,
+                    hasDraft: draft !== null,
+                    isDirty: draft !== null && draft.title !== (current?.title ?? ""),
+                    totalPosts: list.length,
+                };
+            }),
         };
     },
-    action({ api, handle }) {
+    action({ api, handler }) {
         return {
-            list: api
-                .get({
-                    url: "/posts",
-                })
-                .commit("list", ActionManyMode.SET),
-            create: api
-                .post({
-                    url: "/posts",
-                })
-                .commit("list", ActionManyMode.ADD),
-            update: api
-                .patch({
+            list: api.get({ url: "/posts" }, { model: "list", mode: ModelManyMode.SET }),
+            create: api.post(
+                { url: "/posts" },
+                {
+                    model: "list",
+                    mode: ModelManyMode.ADD,
+                    value: (data) => {
+                        const post = data as Post;
+                        return { ...post, title: post.title.toUpperCase() };
+                    },
+                },
+            ),
+            update: api.patch(
+                {
                     url(view) {
                         return `/posts/${view.post.value?.id}`;
                     },
-                })
-                .commit("list", ActionManyMode.PATCH),
-            delete: api
-                .delete({
+                },
+                { model: "list", mode: ModelManyMode.PATCH },
+            ),
+            delete: api.delete(
+                {
                     url(view) {
                         return `/posts/${view.post.value?.id}`;
                     },
-                })
-                .commit("list", ActionManyMode.REMOVE),
-            sort: handle(async ({ view, commit }) => {
+                },
+                { model: "list", mode: ModelManyMode.REMOVE },
+            ),
+            sort: handler(async ({ model, view }) => {
                 const sorted = [...view.posts.value].sort((a, b) => {
                     return a.title.localeCompare(b.title);
                 });
-                commit("list", ActionManyMode.SET, sorted);
+                model.list.set(sorted);
                 return sorted;
             }),
         };

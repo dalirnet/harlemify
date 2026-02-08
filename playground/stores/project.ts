@@ -1,12 +1,4 @@
-import {
-    createStore,
-    shape,
-    ActionOneMode,
-    ActionManyMode,
-    ActionApiMethod,
-    AUTO,
-    type ShapeInfer,
-} from "../../src/runtime";
+import { createStore, shape, ModelOneMode, ModelManyMode, type ShapeInfer } from "../../src/runtime";
 
 const projectShape = shape((factory) => {
     return {
@@ -71,124 +63,104 @@ export const projectStore = createStore({
             }),
         };
     },
-    action({ api }) {
-        const get = api({
-            method: ActionApiMethod.GET,
-            url(view) {
-                return `/projects/${view.project.value?.id}`;
+    action({ api, handler }) {
+        const get = api.get(
+            {
+                url(view) {
+                    return `/projects/${view.project.value?.id}`;
+                },
             },
-        }).commit("current", ActionOneMode.SET);
+            { model: "current", mode: ModelOneMode.SET },
+        );
 
-        const list = api({
-            method: ActionApiMethod.GET,
-            url: "/projects",
-        }).commit("list", ActionManyMode.SET);
+        const list = api.get({ url: "/projects" }, { model: "list", mode: ModelManyMode.SET });
 
-        const create = api({
-            method: ActionApiMethod.POST,
-            url: "/projects",
-        }).commit("list", ActionManyMode.ADD, AUTO, { prepend: true });
+        const create = api.post(
+            { url: "/projects" },
+            { model: "list", mode: ModelManyMode.ADD, options: { prepend: true } },
+        );
 
-        const update = api({
-            method: ActionApiMethod.PATCH,
-            url(view) {
-                return `/projects/${view.project.value?.id}`;
+        const update = api.patch(
+            {
+                url(view) {
+                    return `/projects/${view.project.value?.id}`;
+                },
             },
-        }).commit("current", ActionOneMode.PATCH);
+            { model: "current", mode: ModelOneMode.PATCH },
+        );
 
-        const remove = api({
-            method: ActionApiMethod.DELETE,
-            url(view) {
-                return `/projects/${view.project.value?.id}`;
+        const remove = api.delete(
+            {
+                url(view) {
+                    return `/projects/${view.project.value?.id}`;
+                },
             },
-        }).commit("list", ActionManyMode.REMOVE);
+            { model: "list", mode: ModelManyMode.REMOVE },
+        );
 
-        const toggle = api({
-            method: ActionApiMethod.PUT,
-            url(view) {
-                return `/projects/${view.project.value?.id}/toggle`;
-            },
-        }).handle(async ({ api, commit }) => {
-            const result = await api<Project>();
+        const toggle = handler(async ({ model, view }) => {
+            const result = await $fetch<Project>(`/api/projects/${view.project.value?.id}/toggle`, {
+                method: "PUT",
+            });
 
-            commit("current", ActionOneMode.PATCH, result);
-            commit("list", ActionManyMode.PATCH, result);
+            model.current.patch(result);
+            model.list.patch(result);
 
             return result;
         });
 
-        const milestones = api({
-            method: ActionApiMethod.GET,
-            url(view) {
-                return `/projects/${view.project.value?.id}/milestones`;
-            },
-        }).handle(async ({ api, commit }) => {
-            const milestones = await api<ProjectMilestone[]>();
+        const milestones = handler(async ({ model, view }) => {
+            const result = await $fetch<ProjectMilestone[]>(`/api/projects/${view.project.value?.id}/milestones`);
 
-            commit("current", ActionOneMode.PATCH, { milestones });
-            commit("list", ActionManyMode.PATCH, { milestones });
+            model.current.patch({ milestones: result });
+            model.list.patch({ milestones: result });
 
-            return milestones;
+            return result;
         });
 
-        const meta = api({
-            method: ActionApiMethod.GET,
-            url(view) {
-                return `/projects/${view.project.value?.id}/meta`;
-            },
-        }).handle(async ({ api, commit }) => {
-            const meta = await api<ProjectMeta>();
+        const meta = handler(async ({ model, view }) => {
+            const result = await $fetch<ProjectMeta>(`/api/projects/${view.project.value?.id}/meta`);
 
-            commit("current", ActionOneMode.PATCH, { meta });
-            commit("list", ActionManyMode.PATCH, { meta });
+            model.current.patch({ meta: result });
+            model.list.patch({ meta: result });
 
-            return meta;
+            return result;
         });
 
-        const options = api({
-            method: ActionApiMethod.GET,
-            url(view) {
-                return `/projects/${view.project.value?.id}/options`;
-            },
-        }).handle(async ({ api, commit, view }) => {
-            const options = await api<ProjectOptions>();
+        const options = handler(async ({ model, view }) => {
+            const result = await $fetch<ProjectOptions>(`/api/projects/${view.project.value?.id}/options`);
 
             const patch = {
                 meta: {
-                    ...view.meta.value,
-                    options,
+                    ...view.meta.value!,
+                    options: result,
                 },
             };
 
-            commit("current", ActionOneMode.PATCH, patch, { deep: true });
-            commit("list", ActionManyMode.PATCH, patch, { deep: true });
+            model.current.patch(patch, { deep: true });
+            model.list.patch(patch, { deep: true });
 
-            return options;
+            return result;
         });
 
-        const exportData = api({
-            method: ActionApiMethod.GET,
+        const exportData = api.get({
             url(view) {
                 return `/projects/${view.project.value?.id}/export`;
             },
-        }).handle(async ({ api }) => {
-            return await api();
         });
 
-        const slowExport = api({
-            method: ActionApiMethod.GET,
+        const slowExport = api.get({
             url(view) {
                 return `/projects/${view.project.value?.id}/export-slow`;
             },
-        }).handle(async ({ api }) => {
-            return await api();
         });
 
-        const triggerError = api({
-            method: ActionApiMethod.GET,
+        const check = api.head({
+            url: "/projects/:id",
+        });
+
+        const triggerError = api.get({
             url: "/projects/error",
-        }).handle(async ({ api }) => {
-            return await api();
         });
 
         return {
@@ -198,6 +170,7 @@ export const projectStore = createStore({
             update,
             delete: remove,
             toggle,
+            check,
             milestones,
             meta,
             options,

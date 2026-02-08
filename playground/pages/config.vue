@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { configStore } from "../stores/config";
 
-const { view, action } = configStore;
-
 const languageInput = ref("");
 
-onMounted(() => action.get());
+onMounted(() => configStore.action.get());
 
 watch(
-    view.config,
+    configStore.view.config,
     (val) => {
         if (val) {
             languageInput.value = val.language;
@@ -19,20 +17,26 @@ watch(
 );
 
 async function toggleTheme() {
-    if (!view.config.value) return;
-    const newTheme = view.config.value.theme === "dark" ? "light" : "dark";
+    if (!configStore.view.config.value) return;
+    const newTheme = configStore.view.config.value.theme === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", newTheme);
-    await action.update({ body: { theme: newTheme } });
+    await configStore.action.update({ body: { theme: newTheme } });
 }
 
 async function updateLanguage() {
-    if (!view.config.value || !languageInput.value.trim()) return;
-    await action.update({ body: { language: languageInput.value.trim() } });
+    if (!configStore.view.config.value || !languageInput.value.trim()) return;
+    await configStore.action.update({ body: { language: languageInput.value.trim() } });
 }
 
 async function toggleNotifications() {
-    if (!view.config.value) return;
-    await action.update({ body: { notifications: !view.config.value.notifications } });
+    if (!configStore.view.config.value) return;
+    await configStore.action.update({ body: { notifications: !configStore.view.config.value.notifications } });
+}
+
+async function resetConfig() {
+    await configStore.action.replace({
+        body: { theme: "dark", language: "en", notifications: true },
+    });
 }
 </script>
 
@@ -45,13 +49,13 @@ async function toggleNotifications() {
             <p>Singleton store using <code>model.one()</code> with <code>ActionOneMode</code></p>
         </div>
 
-        <div v-if="action.get.loading.value" class="loading" data-testid="loading">Loading...</div>
+        <div v-if="configStore.action.get.loading.value" class="loading" data-testid="loading">Loading...</div>
 
-        <div v-else-if="view.config.value" class="config-list" data-testid="config-content">
+        <div v-else-if="configStore.view.config.value" class="config-list" data-testid="config-content">
             <div class="config-item" data-testid="config-theme">
                 <div>
                     <strong>Theme</strong>
-                    <span class="value" data-testid="theme-value">{{ view.config.value.theme }}</span>
+                    <span class="value" data-testid="theme-value">{{ configStore.view.config.value.theme }}</span>
                 </div>
                 <button class="btn btn-sm" data-testid="toggle-theme" @click="toggleTheme">Toggle</button>
             </div>
@@ -70,7 +74,7 @@ async function toggleNotifications() {
                 <div>
                     <strong>Notifications</strong>
                     <span class="value" data-testid="notifications-value">{{
-                        view.config.value.notifications ? "on" : "off"
+                        configStore.view.config.value.notifications ? "on" : "off"
                     }}</span>
                 </div>
                 <button class="btn btn-sm" data-testid="toggle-notifications" @click="toggleNotifications">
@@ -78,9 +82,17 @@ async function toggleNotifications() {
                 </button>
             </div>
 
+            <div class="config-item" data-testid="config-reset">
+                <div>
+                    <strong>Reset</strong>
+                    <span class="value">restore defaults</span>
+                </div>
+                <button class="btn btn-sm" data-testid="reset-config" @click="resetConfig">Reset</button>
+            </div>
+
             <div class="detail" data-testid="raw-data">
                 <h3>Raw Data (view.config)</h3>
-                <pre>{{ JSON.stringify(view.config.value, null, 2) }}</pre>
+                <pre>{{ JSON.stringify(configStore.view.config.value, null, 2) }}</pre>
             </div>
 
             <!-- Action Status -->
@@ -89,22 +101,42 @@ async function toggleNotifications() {
                 <div class="monitor-grid">
                     <div class="monitor-item" data-testid="status-get">
                         <span class="monitor-label">get</span>
-                        <span class="monitor-state" :data-status="action.get.status.value">{{
-                            action.get.status.value
+                        <span class="monitor-state" :data-status="configStore.action.get.status.value">{{
+                            configStore.action.get.status.value
                         }}</span>
                         <span class="monitor-flags">
-                            <span v-if="action.get.loading.value" class="flag" data-flag="pending">pending</span>
-                            <span v-if="action.get.error.value" class="flag" data-flag="failed">error</span>
+                            <span v-if="configStore.action.get.loading.value" class="flag" data-flag="pending"
+                                >pending</span
+                            >
+                            <span v-if="configStore.action.get.error.value" class="flag" data-flag="failed">error</span>
                         </span>
                     </div>
                     <div class="monitor-item" data-testid="status-update">
                         <span class="monitor-label">update</span>
-                        <span class="monitor-state" :data-status="action.update.status.value">{{
-                            action.update.status.value
+                        <span class="monitor-state" :data-status="configStore.action.update.status.value">{{
+                            configStore.action.update.status.value
                         }}</span>
                         <span class="monitor-flags">
-                            <span v-if="action.update.loading.value" class="flag" data-flag="pending">pending</span>
-                            <span v-if="action.update.error.value" class="flag" data-flag="failed">error</span>
+                            <span v-if="configStore.action.update.loading.value" class="flag" data-flag="pending"
+                                >pending</span
+                            >
+                            <span v-if="configStore.action.update.error.value" class="flag" data-flag="failed"
+                                >error</span
+                            >
+                        </span>
+                    </div>
+                    <div class="monitor-item" data-testid="status-replace">
+                        <span class="monitor-label">replace</span>
+                        <span class="monitor-state" :data-status="configStore.action.replace.status.value">{{
+                            configStore.action.replace.status.value
+                        }}</span>
+                        <span class="monitor-flags">
+                            <span v-if="configStore.action.replace.loading.value" class="flag" data-flag="pending"
+                                >pending</span
+                            >
+                            <span v-if="configStore.action.replace.error.value" class="flag" data-flag="failed"
+                                >error</span
+                            >
                         </span>
                     </div>
                 </div>
@@ -117,6 +149,7 @@ async function toggleNotifications() {
                     <li><code>model.one(shape)</code> - Singleton state management</li>
                     <li><code>ActionOneMode.SET</code> - Replace entire value</li>
                     <li><code>ActionOneMode.PATCH</code> - Partial update (merge)</li>
+                    <li><code>api.put()</code> - Full replace via PUT method</li>
                     <li><code>action.get.status</code> - Reactive action status</li>
                     <li><code>action.get.loading</code> - Computed loading boolean</li>
                     <li><code>action.get.error</code> - Reactive error state</li>
