@@ -1,95 +1,130 @@
-import type { ConsolaInstance } from "consola";
-
+import type { BaseDefinition } from "./base";
 import type { Shape, ShapeType } from "./shape";
+
+// Config
 
 export interface RuntimeModelConfig {
     identifier?: string;
 }
+
+// Enums
 
 export enum ModelKind {
     OBJECT = "object",
     ARRAY = "array",
 }
 
-export interface ModelOneOptions<S extends Shape> {
+export enum ModelOneMode {
+    SET = "set",
+    RESET = "reset",
+    PATCH = "patch",
+}
+
+export enum ModelManyMode {
+    SET = "set",
+    RESET = "reset",
+    PATCH = "patch",
+    REMOVE = "remove",
+    ADD = "add",
+}
+
+// Definition Options
+
+export interface ModelOneDefinitionOptions<S extends Shape> {
     identifier?: keyof S;
     default?: S;
 }
 
-export interface ModelManyOptions<S extends Shape> {
+export interface ModelManyDefinitionOptions<S extends Shape> {
     identifier?: keyof S;
     default?: S[];
 }
 
-export interface ModelOneDefinition<S extends Shape> {
+// Definitions
+
+export interface ModelOneDefinition<S extends Shape> extends BaseDefinition {
     shape: ShapeType<S>;
     kind: ModelKind.OBJECT;
-    options?: ModelOneOptions<S>;
-    logger?: ConsolaInstance;
+    options?: ModelOneDefinitionOptions<S>;
 }
 
-export interface ModelManyDefinition<S extends Shape> {
+export interface ModelManyDefinition<S extends Shape> extends BaseDefinition {
     shape: ShapeType<S>;
     kind: ModelKind.ARRAY;
-    options?: ModelManyOptions<S>;
-    logger?: ConsolaInstance;
+    options?: ModelManyDefinitionOptions<S>;
 }
 
 export type ModelDefinition<S extends Shape> = ModelOneDefinition<S> | ModelManyDefinition<S>;
 
-export type Model = Record<string, ModelDefinition<any>>;
+export type ModelDefinitions = Record<string, ModelDefinition<any>>;
 
-export type ModelInstance<M extends Model, K extends keyof M> =
-    M[K] extends ModelOneDefinition<infer S> ? S | null : M[K] extends ModelManyDefinition<infer S> ? S[] : never;
+// Infer
 
-export type ModelShape<M extends Model, K extends keyof M> = M[K] extends ModelDefinition<infer S> ? S : never;
+export type ModelDefinitionInfer<MD extends ModelDefinitions, K extends keyof MD> =
+    MD[K] extends ModelOneDefinition<infer S> ? S | null : MD[K] extends ModelManyDefinition<infer S> ? S[] : never;
 
-export type ModelOneKey<M extends Model> = {
-    [K in keyof M]: M[K] extends ModelOneDefinition<infer _S> ? K : never;
-}[keyof M];
-
-export type ModelManyKey<M extends Model> = {
-    [K in keyof M]: M[K] extends ModelManyDefinition<infer _S> ? K : never;
-}[keyof M];
-
-export type ModelStateOf<M extends Model> = {
-    [K in keyof M]: ModelInstance<M, K>;
+export type ModelDefinitionInferTuple<MD extends ModelDefinitions, K extends readonly (keyof MD)[]> = {
+    [I in keyof K]: K[I] extends keyof MD ? ModelDefinitionInfer<MD, K[I]> : never;
 };
 
+export type ModelDefinitionsInfer<MD extends ModelDefinitions> = {
+    [K in keyof MD]: ModelDefinitionInfer<MD, K>;
+};
+
+// Factory
+
 export interface ModelFactory {
-    one<S extends Shape>(shape: ShapeType<S>, options?: ModelOneOptions<S>): ModelOneDefinition<S>;
-    many<S extends Shape>(shape: ShapeType<S>, options?: ModelManyOptions<S>): ModelManyDefinition<S>;
+    one<S extends Shape>(shape: ShapeType<S>, options?: ModelOneDefinitionOptions<S>): ModelOneDefinition<S>;
+    many<S extends Shape>(shape: ShapeType<S>, options?: ModelManyDefinitionOptions<S>): ModelManyDefinition<S>;
 }
 
-export interface MutationsOneOptions {
+// Commit Options
+
+export interface ModelOneCommitOptions {
     deep?: boolean;
 }
 
-export interface MutationsManyOptions {
+export interface ModelManyCommitOptions {
     by?: string;
     prepend?: boolean;
     unique?: boolean;
     deep?: boolean;
 }
 
-export interface MutationsOne<S extends Shape> {
+// Commit
+
+export interface ModelOneCommit<S extends Shape> {
     set: (value: S) => void;
     reset: () => void;
-    patch: (value: Partial<S>, options?: MutationsOneOptions) => void;
+    patch: (value: Partial<S>, options?: ModelOneCommitOptions) => void;
 }
 
-export interface MutationsMany<S extends Shape> {
+export interface ModelManyCommit<S extends Shape> {
     set: (value: S[]) => void;
     reset: () => void;
-    patch: (value: Partial<S> | Partial<S>[], options?: MutationsManyOptions) => void;
-    remove: (value: S | S[], options?: MutationsManyOptions) => void;
-    add: (value: S | S[], options?: MutationsManyOptions) => void;
+    patch: (value: Partial<S> | Partial<S>[], options?: ModelManyCommitOptions) => void;
+    remove: (value: S | S[], options?: ModelManyCommitOptions) => void;
+    add: (value: S | S[], options?: ModelManyCommitOptions) => void;
 }
 
-export type Mutations<M extends Model> = {
-    [K in keyof M]: M[K] extends ModelOneDefinition<infer S>
-        ? MutationsOne<S>
-        : M[K] extends ModelManyDefinition<infer S>
-          ? MutationsMany<S>
+// Call
+
+export type ModelOneCall<S extends Shape> = ModelOneCommit<S> & {
+    commit(mode: string, value?: unknown, options?: unknown): void;
+};
+
+export type ModelManyCall<S extends Shape> = ModelManyCommit<S> & {
+    commit(mode: string, value?: unknown, options?: unknown): void;
+};
+
+export type ModelCall<S extends Shape> = ModelOneCall<S> | ModelManyCall<S>;
+
+// Store Model
+
+export type StoreModel<MD extends ModelDefinitions> = {
+    [K in keyof MD]: MD[K] extends ModelOneDefinition<infer S>
+        ? ModelOneCall<S>
+        : MD[K] extends ModelManyDefinition<infer S>
+          ? ModelManyCall<S>
           : never;
 };

@@ -1,7 +1,11 @@
-import type { ConsolaInstance } from "consola";
 import type { ComputedRef, DeepReadonly, MaybeRefOrGetter, Ref } from "vue";
 
-import type { Model, ModelShape, MutationsOneOptions, MutationsManyOptions } from "./model";
+import type { BaseDefinition } from "./base";
+import type { ModelDefinitions, ModelOneCommitOptions, ModelManyCommitOptions, StoreModel } from "./model";
+import { ModelOneMode, ModelManyMode } from "./model";
+import type { ViewDefinitions, StoreView } from "./view";
+
+// Config
 
 export interface RuntimeActionConfig {
     endpoint?: string;
@@ -11,22 +15,7 @@ export interface RuntimeActionConfig {
     concurrent?: ActionConcurrent;
 }
 
-export const DEFINITION = Symbol("definition");
-export const AUTO = Symbol("auto");
-
-export enum ActionOneMode {
-    SET = "set",
-    RESET = "reset",
-    PATCH = "patch",
-}
-
-export enum ActionManyMode {
-    SET = "set",
-    RESET = "reset",
-    PATCH = "patch",
-    REMOVE = "remove",
-    ADD = "add",
-}
+// Enums
 
 export enum ActionStatus {
     IDLE = "idle",
@@ -51,191 +40,150 @@ export enum ActionApiMethod {
     DELETE = "DELETE",
 }
 
-export interface ActionApiError extends Error {
-    name: "ActionApiError";
-    status?: number;
-    statusText?: string;
-    data?: unknown;
-}
+// Api Request
 
-export interface ActionHandleError extends Error {
-    name: "ActionHandleError";
-    cause: Error;
-}
+export type ActionApiRequestValue<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>, T> =
+    | MaybeRefOrGetter<T>
+    | ((view: DeepReadonly<StoreView<MD, VD>>) => T);
 
-export interface ActionCommitError extends Error {
-    name: "ActionCommitError";
-    cause: Error;
-}
-
-export interface ActionConcurrentError extends Error {
-    name: "ActionConcurrentError";
-}
-
-export type ActionError = ActionApiError | ActionHandleError | ActionCommitError | ActionConcurrentError;
-
-export type ActionApiValue<V, T> = MaybeRefOrGetter<T> | ((view: DeepReadonly<V>) => T);
-
-export interface ActionApiDefinition<V> {
+export interface ActionApiRequest<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> {
     endpoint?: string;
-    url: ActionApiValue<V, string>;
-    method: ActionApiMethod;
-    headers?: ActionApiValue<V, Record<string, string>>;
-    query?: ActionApiValue<V, Record<string, unknown>>;
-    body?: ActionApiValue<V, unknown>;
-    timeout?: number;
+    url: ActionApiRequestValue<MD, VD, string>;
+    method: ActionApiRequestValue<MD, VD, ActionApiMethod>;
+    headers?: ActionApiRequestValue<MD, VD, Record<string, string>>;
+    query?: ActionApiRequestValue<MD, VD, Record<string, unknown>>;
+    body?: ActionApiRequestValue<MD, VD, unknown>;
+    timeout?: ActionApiRequestValue<MD, VD, number>;
     concurrent?: ActionConcurrent;
 }
 
-export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
+export type ActionApiRequestShortcut<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> = Omit<
+    ActionApiRequest<MD, VD>,
+    "method"
+>;
 
-export type ActionCommitValue<M extends Model, K extends keyof M, Mode> = Mode extends ActionOneMode.SET
-    ? ModelShape<M, K>
-    : Mode extends ActionOneMode.PATCH
-      ? DeepPartial<ModelShape<M, K>>
-      : Mode extends ActionOneMode.RESET
-        ? never
-        : Mode extends ActionManyMode.SET
-          ? ModelShape<M, K>[]
-          : Mode extends ActionManyMode.PATCH
-            ? DeepPartial<ModelShape<M, K>> | DeepPartial<ModelShape<M, K>>[]
-            : Mode extends ActionManyMode.REMOVE
-              ? ModelShape<M, K> | ModelShape<M, K>[]
-              : Mode extends ActionManyMode.ADD
-                ? ModelShape<M, K> | ModelShape<M, K>[]
-                : Mode extends ActionManyMode.RESET
-                  ? never
-                  : never;
+// Api Commit
 
-export type ActionCommitter<M extends Model> = {
-    <K extends keyof M, Mode extends ActionOneMode>(
-        model: K,
-        mode: Mode,
-        ...args: Mode extends ActionOneMode.RESET
-            ? []
-            : [value: ActionCommitValue<M, K, Mode>, options?: MutationsOneOptions]
-    ): void;
-    <K extends keyof M, Mode extends ActionManyMode>(
-        model: K,
-        mode: Mode,
-        ...args: Mode extends ActionManyMode.RESET
-            ? []
-            : [value: ActionCommitValue<M, K, Mode>, options?: MutationsManyOptions]
-    ): void;
+export interface ActionApiCommit<MD extends ModelDefinitions> {
+    model: keyof MD;
+    mode: ModelOneMode | ModelManyMode;
+    value?: (data: unknown) => unknown;
+    options?: ModelOneCommitOptions | ModelManyCommitOptions;
+}
+
+// Api Definition
+
+export interface ActionApiDefinition<
+    MD extends ModelDefinitions,
+    VD extends ViewDefinitions<MD>,
+> extends BaseDefinition {
+    request: ActionApiRequest<MD, VD>;
+    commit?: ActionApiCommit<MD>;
+}
+
+// Handler Definition
+
+export type ActionHandlerCallback<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>, R = void> = (context: {
+    model: StoreModel<MD>;
+    view: StoreView<MD, VD>;
+}) => Promise<R>;
+
+export interface ActionHandlerDefinition<
+    MD extends ModelDefinitions,
+    VD extends ViewDefinitions<MD>,
+    R = void,
+> extends BaseDefinition {
+    callback: ActionHandlerCallback<MD, VD, R>;
+}
+
+// Action Definition
+
+export type ActionDefinition<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> =
+    | ActionApiDefinition<MD, VD>
+    | ActionHandlerDefinition<MD, VD, unknown>;
+
+export type ActionDefinitions<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> = Record<
+    string,
+    ActionDefinition<MD, VD>
+>;
+
+// Store Action
+
+export type StoreAction<
+    MD extends ModelDefinitions,
+    VD extends ViewDefinitions<MD>,
+    AD extends ActionDefinitions<MD, VD>,
+> = {
+    [K in keyof AD]: ActionCall;
 };
 
-export interface ActionHandleContext<M extends Model, V, ApiResponse = unknown> {
-    api: <T = ApiResponse>() => Promise<T>;
-    view: DeepReadonly<V>;
-    commit: ActionCommitter<M>;
+// Factory
+
+export interface ActionApiFactory<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> {
+    (request: ActionApiRequest<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD>;
+    get(request: ActionApiRequestShortcut<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD>;
+    head(request: ActionApiRequestShortcut<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD>;
+    post(request: ActionApiRequestShortcut<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD>;
+    put(request: ActionApiRequestShortcut<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD>;
+    patch(request: ActionApiRequestShortcut<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD>;
+    delete(request: ActionApiRequestShortcut<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD>;
 }
 
-export interface ActionHandleContextNoApi<M extends Model, V> {
-    view: DeepReadonly<V>;
-    commit: ActionCommitter<M>;
+export interface ActionHandlerFactory<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> {
+    <R>(callback: ActionHandlerCallback<MD, VD, R>): ActionHandlerDefinition<MD, VD, R>;
 }
 
-export type ActionHandleCallback<M extends Model, V, R = void, ApiResponse = unknown> = (
-    context: ActionHandleContext<M, V, ApiResponse>,
-) => Promise<R>;
-
-export type ActionHandleCallbackNoApi<M extends Model, V, R = void> = (
-    context: ActionHandleContextNoApi<M, V>,
-) => Promise<R>;
-
-export type ActionHandleResolver<R = void> = (...args: unknown[]) => Promise<R>;
-
-export interface ActionDefinition<M extends Model, V, R = void> {
-    api?: ActionApiDefinition<V>;
-    handle?: ActionHandleCallback<M, V, R, unknown> | ActionHandleCallbackNoApi<M, V, R>;
-    commit?: {
-        model: keyof M;
-        mode: ActionOneMode | ActionManyMode;
-        value?: unknown;
-        options?: MutationsOneOptions | MutationsManyOptions;
-    };
-    logger?: ConsolaInstance;
+export interface ActionFactory<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> {
+    api: ActionApiFactory<MD, VD>;
+    handler: ActionHandlerFactory<MD, VD>;
 }
 
-export type ActionDefinitions<M extends Model, V> = Record<string, ActionDefinition<M, V, unknown>>;
+// Call Options
 
-export interface ActionCommitMethod<M extends Model, V, R> {
-    <K extends keyof M, Mode extends ActionOneMode>(
-        model: K,
-        mode: Mode,
-        ...args: Mode extends ActionOneMode.RESET
-            ? []
-            : [value?: ActionCommitValue<M, K, Mode> | typeof AUTO, options?: MutationsOneOptions]
-    ): ActionCommitChain<M, V, R>;
-    <K extends keyof M, Mode extends ActionManyMode>(
-        model: K,
-        mode: Mode,
-        ...args: Mode extends ActionManyMode.RESET
-            ? []
-            : [value?: ActionCommitValue<M, K, Mode> | typeof AUTO, options?: MutationsManyOptions]
-    ): ActionCommitChain<M, V, R>;
-}
-
-export interface ActionApiChain<M extends Model, V, ApiResponse> {
-    handle<R>(callback: ActionHandleCallback<M, V, R, ApiResponse>): ActionHandleChain<M, V, R>;
-    commit: ActionCommitMethod<M, V, ApiResponse>;
-    readonly [DEFINITION]: ActionDefinition<M, V, ApiResponse>;
-}
-
-export interface ActionHandleChain<M extends Model, V, R> {
-    commit: ActionCommitMethod<M, V, R>;
-    readonly [DEFINITION]: ActionDefinition<M, V, R>;
-}
-
-export interface ActionCommitChain<M extends Model, V, R> {
-    readonly [DEFINITION]: ActionDefinition<M, V, R>;
-}
-
-export type ActionApiShortcutDefinition<V> = Omit<ActionApiDefinition<V>, "method">;
-
-export interface ActionApiFactory<M extends Model, V> {
-    <A>(definition: ActionApiDefinition<V>): ActionApiChain<M, V, A>;
-    get<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A>;
-    head<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A>;
-    post<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A>;
-    put<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A>;
-    patch<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A>;
-    delete<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A>;
-}
-
-export interface ActionFactory<M extends Model, V> {
-    api: ActionApiFactory<M, V>;
-    handle<R>(callback: ActionHandleCallbackNoApi<M, V, R>): ActionHandleChain<M, V, R>;
-    commit: ActionCommitMethod<M, V, void>;
-}
-
-export interface ActionCallBind {
+export interface ActionCallBindOptions {
     status?: Ref<ActionStatus>;
-    error?: Ref<ActionError | null>;
+    error?: Ref<Error | null>;
 }
 
-export interface ActionCallCommit {
-    mode?: ActionOneMode | ActionManyMode;
+export interface ActionCallCommitOptions {
+    mode?: ModelOneMode | ModelManyMode;
 }
 
-export interface ActionCallPayload<V, T = unknown, R = T> {
-    headers?: Record<string, string> | ((view: DeepReadonly<V>) => Record<string, string>);
-    query?: Record<string, unknown> | ((view: DeepReadonly<V>) => Record<string, unknown>);
-    body?: unknown | ((view: DeepReadonly<V>) => unknown);
+export interface ActionResolvedApi {
+    url: string;
+    method: ActionApiMethod;
+    headers: Record<string, string>;
+    query: Record<string, unknown>;
+    body?: Record<string, unknown> | BodyInit | null;
+    timeout?: number;
+    signal: AbortSignal;
+}
+
+export interface ActionCallTransformerOptions {
+    request?: (api: ActionResolvedApi) => ActionResolvedApi;
+    response?: (data: unknown) => unknown;
+}
+
+export interface ActionCallOptions {
+    params?: Record<string, string>;
+    headers?: Record<string, string>;
+    query?: Record<string, unknown>;
+    body?: unknown;
     timeout?: number;
     signal?: AbortSignal;
-    transformer?: (response: T) => R;
+    transformer?: ActionCallTransformerOptions;
     concurrent?: ActionConcurrent;
-    bind?: ActionCallBind;
-    commit?: ActionCallCommit;
+    bind?: ActionCallBindOptions;
+    commit?: ActionCallCommitOptions;
 }
 
-export interface Action<V, T = void> {
-    (payload?: ActionCallPayload<V, T>): Promise<T>;
-    <R>(payload: ActionCallPayload<V, T, R>): Promise<R>;
+// Call
+
+export interface ActionCall<T = void> {
+    (options?: ActionCallOptions): Promise<T>;
     readonly loading: ComputedRef<boolean>;
     readonly status: Readonly<Ref<ActionStatus>>;
-    readonly error: Readonly<Ref<ActionError | null>>;
+    readonly error: Readonly<Ref<Error | null>>;
     readonly data: DeepReadonly<T> | null;
     reset: () => void;
 }
