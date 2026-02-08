@@ -27,6 +27,36 @@ interface StoreConfig<MD, VD, AD> {
 
 ---
 
+## Shape Types
+
+### ShapeRawDefinition
+
+```typescript
+type ShapeRawDefinition = z.ZodRawShape;
+```
+
+### ShapeDefinition
+
+```typescript
+type ShapeDefinition = z.ZodObject<ShapeRawDefinition>;
+```
+
+### ShapeCall
+
+```typescript
+type ShapeCall<T extends ShapeRawDefinition> = z.ZodObject<T> & {
+    defaults: (overrides?: Partial<z.infer<z.ZodObject<T>>>) => z.infer<z.ZodObject<T>>;
+};
+```
+
+### ShapeInfer
+
+```typescript
+type ShapeInfer<T extends z.ZodType<any>> = z.infer<T>;
+```
+
+---
+
 ## Model Types
 
 ### ModelFactory
@@ -114,7 +144,10 @@ interface ModelManyCall<S> {
 ```typescript
 interface ViewFactory<MD> {
     from<K extends keyof MD>(model: K): ViewFromDefinition<MD, K, ModelDefinitionInfer<MD, K>>;
-    from<K extends keyof MD, R>(model: K, resolver: (value: ModelDefinitionInfer<MD, K>) => R): ViewFromDefinition<MD, K, R>;
+    from<K extends keyof MD, R>(
+        model: K,
+        resolver: (value: ModelDefinitionInfer<MD, K>) => R,
+    ): ViewFromDefinition<MD, K, R>;
     merge<K extends readonly (keyof MD)[], R>(models: K, resolver: (...values) => R): ViewMergeDefinition<MD, K, R>;
 }
 ```
@@ -175,10 +208,7 @@ interface ActionApiCommit<MD> {
 ### ActionHandlerCallback
 
 ```typescript
-type ActionHandlerCallback<MD, VD, R> = (context: {
-    model: StoreModel<MD>;
-    view: StoreView<MD, VD>;
-}) => Promise<R>;
+type ActionHandlerCallback<MD, VD, R> = (context: { model: StoreModel<MD>; view: StoreView<MD, VD> }) => Promise<R>;
 ```
 
 ### ActionCallOptions

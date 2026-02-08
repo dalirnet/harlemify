@@ -116,6 +116,28 @@ const configShape = shape((factory) => {
 });
 ```
 
+## Defaults
+
+Generate a zero-value object from a shape, with optional partial overrides. Useful for initializing forms, resetting state, or providing placeholder data.
+
+```typescript
+const userShape = shape((factory) => ({
+    id: factory.number().meta({ identifier: true }),
+    name: factory.string(),
+    email: factory.email(),
+    active: factory.boolean(),
+}));
+
+userShape.defaults();
+// { id: 0, name: "", email: "", active: false }
+
+// With overrides
+userShape.defaults({ active: true, name: "John" });
+// { id: 0, name: "John", email: "", active: true }
+```
+
+Overrides are deep-merged via `defu`, so nested objects are merged rather than replaced.
+
 ## Custom Identifier
 
 Override the identifier at the model level if your shape doesn't use `id`:
