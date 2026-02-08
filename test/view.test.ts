@@ -4,7 +4,7 @@ import { createStore } from "@harlem/core";
 import { shape } from "../src/runtime/core/layers/shape";
 import { createModelFactory } from "../src/runtime/core/layers/model";
 import { createViewFactory } from "../src/runtime/core/layers/view";
-import { initializeState, createMutations } from "../src/runtime/core/utils/model";
+import { createStoreState, createStoreModel } from "../src/runtime/core/utils/store";
 import { createView } from "../src/runtime/core/utils/view";
 import type { ShapeInfer } from "../src/runtime/core/types/shape";
 
@@ -19,19 +19,12 @@ const UserShape = shape((factory) => {
 type User = ShapeInfer<typeof UserShape>;
 
 describe("createViewFactory", () => {
-    const modelFactory = createModelFactory();
-
-    const model = {
-        user: modelFactory.one(UserShape),
-        users: modelFactory.many(UserShape),
-    };
-
-    const viewFactory = createViewFactory({}, undefined, model);
+    const viewFactory = createViewFactory();
 
     it("from() creates single-source definition", () => {
         const definition = viewFactory.from("user");
 
-        expect(definition.sources).toEqual(["user"]);
+        expect(definition.model).toEqual(["user"]);
         expect(definition.resolver).toBeUndefined();
     });
 
@@ -42,7 +35,7 @@ describe("createViewFactory", () => {
 
         const definition = viewFactory.from("user", resolver);
 
-        expect(definition.sources).toEqual(["user"]);
+        expect(definition.model).toEqual(["user"]);
         expect(definition.resolver).toBe(resolver);
     });
 
@@ -56,7 +49,7 @@ describe("createViewFactory", () => {
 
         const definition = viewFactory.merge(["user", "users"], resolver);
 
-        expect(definition.sources).toEqual(["user", "users"]);
+        expect(definition.models).toEqual(["user", "users"]);
         expect(definition.resolver).toBe(resolver);
     });
 });
@@ -64,21 +57,24 @@ describe("createViewFactory", () => {
 describe("createView", () => {
     function setup() {
         const modelFactory = createModelFactory();
-        const model = {
+        const modelDefs = {
             user: modelFactory.one(UserShape),
             users: modelFactory.many(UserShape),
         };
 
         const viewFactory = createViewFactory();
 
-        const state = initializeState(model);
+        for (const [k, def] of Object.entries(modelDefs)) {
+            def.setKey(k);
+        }
+
+        const state = createStoreState(modelDefs);
         const source = createStore("test-view-" + Math.random(), state);
-        const mutations = createMutations(source, model);
+        const model = createStoreModel(modelDefs, source);
 
         return {
             source,
             model,
-            mutations,
             viewFactory,
         };
     }
@@ -86,82 +82,74 @@ describe("createView", () => {
     it("creates view from single source", () => {
         const { source, viewFactory } = setup();
 
-        const definitions = {
-            user: viewFactory.from("user"),
-        };
+        const definition = viewFactory.from("user");
+        definition.setKey("user");
+        const user = createView(definition, source);
 
-        const view = createView(source, definitions);
-
-        expect(view.user).toBeDefined();
-        expect(view.user.value).toBeNull();
+        expect(user).toBeDefined();
+        expect(user.value).toBeNull();
     });
 
     it("view reflects state changes", () => {
-        const { source, mutations, viewFactory } = setup();
+        const { source, model, viewFactory } = setup();
 
-        const definitions = {
-            user: viewFactory.from("user"),
-        };
-
-        const view = createView(source, definitions);
-        const user: User = {
+        const definition = viewFactory.from("user");
+        definition.setKey("user");
+        const user = createView(definition, source);
+        const userData: User = {
             id: 1,
             name: "Alice",
             email: "alice@test.com",
         };
 
-        mutations.user.set(user);
+        model.user.set(userData);
 
-        expect(view.user.value).toEqual(user);
+        expect(user.value).toEqual(userData);
     });
 
     it("view with resolver transforms data", () => {
-        const { source, mutations, viewFactory } = setup();
+        const { source, model, viewFactory } = setup();
 
-        const definitions = {
-            userName: viewFactory.from("user", (user: User | null) => {
-                return user?.name ?? "unknown";
-            }),
-        };
+        const definition = viewFactory.from("user", (user: User | null) => {
+            return user?.name ?? "unknown";
+        });
+        definition.setKey("userName");
+        const userName = createView(definition, source);
 
-        const view = createView(source, definitions);
+        expect(userName.value).toBe("unknown");
 
-        expect(view.userName.value).toBe("unknown");
-
-        mutations.user.set({
+        model.user.set({
             id: 1,
             name: "Alice",
             email: "alice@test.com",
         });
 
-        expect(view.userName.value).toBe("Alice");
+        expect(userName.value).toBe("Alice");
     });
 
     it("merge view combines multiple sources", () => {
-        const { source, mutations, viewFactory } = setup();
+        const { source, model, viewFactory } = setup();
 
-        const definitions = {
-            summary: viewFactory.merge(["user", "users"], (user: User | null, users: User[]) => {
-                return {
-                    current: user?.name ?? "none",
-                    total: users?.length ?? 0,
-                };
-            }),
-        };
+        const definition = viewFactory.merge(["user", "users"], (user: User | null, users: User[]) => {
+            return {
+                current: user?.name ?? "none",
+                total: users?.length ?? 0,
+            };
+        });
+        definition.setKey("summary");
+        const summary = createView(definition, source);
 
-        const view = createView(source, definitions);
-
-        expect(view.summary.value).toEqual({
+        expect(summary.value).toEqual({
             current: "none",
             total: 0,
         });
 
-        mutations.user.set({
+        model.user.set({
             id: 1,
             name: "Alice",
             email: "alice@test.com",
         });
-        mutations.users.set([
+        model.users.set([
             {
                 id: 1,
                 name: "Alice",
@@ -174,7 +162,7 @@ describe("createView", () => {
             },
         ]);
 
-        expect(view.summary.value).toEqual({
+        expect(summary.value).toEqual({
             current: "Alice",
             total: 2,
         });

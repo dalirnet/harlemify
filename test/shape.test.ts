@@ -1,16 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { ZodObject } from "zod";
+import { z, ZodObject } from "zod";
 
 import { shape } from "../src/runtime/core/layers/shape";
 import { resolveShape } from "../src/runtime/core/utils/shape";
 
 describe("shape", () => {
-    it("creates a zod object schema", () => {
+    it("creates a zod object schema from factory callback", () => {
         const schema = shape((factory) => {
             return {
                 id: factory.number(),
                 name: factory.string(),
             };
+        });
+
+        expect(schema).toBeInstanceOf(ZodObject);
+    });
+
+    it("creates a zod object schema from raw object", () => {
+        const schema = shape({
+            id: z.number(),
+            name: z.string(),
         });
 
         expect(schema).toBeInstanceOf(ZodObject);

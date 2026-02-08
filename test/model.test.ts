@@ -3,9 +3,8 @@ import { createStore } from "@harlem/core";
 
 import { shape } from "../src/runtime/core/layers/shape";
 import { createModelFactory } from "../src/runtime/core/layers/model";
-import { initializeState, createMutations, createCommitter } from "../src/runtime/core/utils/model";
-import { ModelKind } from "../src/runtime/core/types/model";
-import { ActionOneMode } from "../src/runtime/core/types/action";
+import { createStoreState, createStoreModel } from "../src/runtime/core/utils/store";
+import { ModelKind, ModelOneMode } from "../src/runtime/core/types/model";
 import type { ShapeInfer } from "../src/runtime/core/types/shape";
 
 const UserShape = shape((factory) => {
@@ -59,7 +58,7 @@ describe("createModelFactory", () => {
     });
 });
 
-describe("initializeState", () => {
+describe("createStoreState", () => {
     const factory = createModelFactory();
 
     it("returns null for one-models", () => {
@@ -67,7 +66,7 @@ describe("initializeState", () => {
             user: factory.one(UserShape),
         };
 
-        const state = initializeState(model);
+        const state = createStoreState(model);
 
         expect(state.user).toBeNull();
     });
@@ -77,7 +76,7 @@ describe("initializeState", () => {
             users: factory.many(UserShape),
         };
 
-        const state = initializeState(model);
+        const state = createStoreState(model);
 
         expect(state.users).toEqual([]);
     });
@@ -92,7 +91,7 @@ describe("initializeState", () => {
             user: factory.one(UserShape, { default: defaultUser }),
         };
 
-        const state = initializeState(model);
+        const state = createStoreState(model);
 
         expect(state.user).toEqual(defaultUser);
     });
@@ -109,7 +108,7 @@ describe("initializeState", () => {
             users: factory.many(UserShape, { default: defaultUsers }),
         };
 
-        const state = initializeState(model);
+        const state = createStoreState(model);
 
         expect(state.users).toEqual(defaultUsers);
     });
@@ -120,67 +119,71 @@ describe("initializeState", () => {
             list: factory.many(UserShape),
         };
 
-        const state = initializeState(model);
+        const state = createStoreState(model);
 
         expect(state.current).toBeNull();
         expect(state.list).toEqual([]);
     });
 });
 
-describe("createMutations", () => {
+describe("createStoreModel", () => {
     const factory = createModelFactory();
 
     describe("one mutations", () => {
         function setup() {
-            const model = {
+            const modelDefs = {
                 user: factory.one(UserShape),
             };
 
-            const state = initializeState(model);
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.setKey(k);
+            }
+
+            const state = createStoreState(modelDefs);
             const source = createStore("test-one-" + Math.random(), state);
-            const mutations = createMutations(source, model);
+            const model = createStoreModel(modelDefs, source);
 
             return {
                 source,
-                mutations,
+                model,
             };
         }
 
         it("set assigns value", () => {
-            const { source, mutations } = setup();
+            const { source, model } = setup();
             const user: User = {
                 id: 1,
                 name: "Alice",
                 email: "alice@test.com",
             };
 
-            mutations.user.set(user);
+            model.user.set(user);
 
             expect(source.state.user).toEqual(user);
         });
 
         it("reset restores to null", () => {
-            const { source, mutations } = setup();
-            mutations.user.set({
+            const { source, model } = setup();
+            model.user.set({
                 id: 1,
                 name: "Alice",
                 email: "alice@test.com",
             });
 
-            mutations.user.reset();
+            model.user.reset();
 
             expect(source.state.user).toBeNull();
         });
 
         it("patch merges shallow by default", () => {
-            const { source, mutations } = setup();
-            mutations.user.set({
+            const { source, model } = setup();
+            model.user.set({
                 id: 1,
                 name: "Alice",
                 email: "alice@test.com",
             });
 
-            mutations.user.patch({ name: "Bob" });
+            model.user.patch({ name: "Bob" });
 
             expect(source.state.user).toEqual({
                 id: 1,
@@ -200,31 +203,35 @@ describe("createMutations", () => {
                 };
             });
 
-            const model = {
+            const modelDefs = {
                 settings: factory.one(NestedShape),
             };
 
-            const state = initializeState(model);
-            const source = createStore("test-deep-" + Math.random(), state);
-            const mutations = createMutations(source, model);
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.setKey(k);
+            }
 
-            mutations.settings.set({
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-deep-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            model.settings.set({
                 id: 1,
                 config: {
                     theme: "dark",
                     notifications: true,
                 },
             });
-            mutations.settings.patch({ config: { theme: "light" } } as any, { deep: true });
+            model.settings.patch({ config: { theme: "light" } } as any, { deep: true });
 
             expect((source.state.settings as any).config.theme).toBe("light");
             expect((source.state.settings as any).config.notifications).toBe(true);
         });
 
         it("patch does nothing when value is null", () => {
-            const { source, mutations } = setup();
+            const { source, model } = setup();
 
-            mutations.user.patch({ name: "Bob" });
+            model.user.patch({ name: "Bob" });
 
             expect(source.state.user).toBeNull();
         });
@@ -232,22 +239,26 @@ describe("createMutations", () => {
 
     describe("many mutations", () => {
         function setup() {
-            const model = {
+            const modelDefs = {
                 users: factory.many(UserShape),
             };
 
-            const state = initializeState(model);
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.setKey(k);
+            }
+
+            const state = createStoreState(modelDefs);
             const source = createStore("test-many-" + Math.random(), state);
-            const mutations = createMutations(source, model);
+            const model = createStoreModel(modelDefs, source);
 
             return {
                 source,
-                mutations,
+                model,
             };
         }
 
         it("set assigns array", () => {
-            const { source, mutations } = setup();
+            const { source, model } = setup();
             const users: User[] = [
                 {
                     id: 1,
@@ -261,14 +272,14 @@ describe("createMutations", () => {
                 },
             ];
 
-            mutations.users.set(users);
+            model.users.set(users);
 
             expect(source.state.users).toEqual(users);
         });
 
         it("reset restores to empty array", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -276,14 +287,14 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.reset();
+            model.users.reset();
 
             expect(source.state.users).toEqual([]);
         });
 
         it("patch updates matching items by id", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -296,7 +307,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.patch({
+            model.users.patch({
                 id: 1,
                 name: "Alice Updated",
             } as Partial<User>);
@@ -306,8 +317,8 @@ describe("createMutations", () => {
         });
 
         it("patch updates multiple items", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -320,7 +331,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.patch([
+            model.users.patch([
                 {
                     id: 1,
                     name: "Alice2",
@@ -336,8 +347,8 @@ describe("createMutations", () => {
         });
 
         it("remove deletes matching items", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -350,7 +361,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.remove({
+            model.users.remove({
                 id: 1,
                 name: "Alice",
                 email: "alice@test.com",
@@ -361,8 +372,8 @@ describe("createMutations", () => {
         });
 
         it("remove deletes multiple items", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -380,7 +391,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.remove([
+            model.users.remove([
                 {
                     id: 1,
                     name: "Alice",
@@ -398,8 +409,8 @@ describe("createMutations", () => {
         });
 
         it("add appends items", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -407,7 +418,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.add({
+            model.users.add({
                 id: 2,
                 name: "Bob",
                 email: "bob@test.com",
@@ -418,8 +429,8 @@ describe("createMutations", () => {
         });
 
         it("add with prepend inserts at beginning", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -427,7 +438,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.add(
+            model.users.add(
                 {
                     id: 2,
                     name: "Bob",
@@ -441,8 +452,8 @@ describe("createMutations", () => {
         });
 
         it("add with unique skips duplicates", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -450,7 +461,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.add(
+            model.users.add(
                 {
                     id: 1,
                     name: "Alice Dup",
@@ -463,8 +474,8 @@ describe("createMutations", () => {
         });
 
         it("add with unique allows new items", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -472,7 +483,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.add(
+            model.users.add(
                 {
                     id: 2,
                     name: "Bob",
@@ -485,8 +496,8 @@ describe("createMutations", () => {
         });
 
         it("patch with custom by option matches by field", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -499,7 +510,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.patch(
+            model.users.patch(
                 {
                     email: "alice@test.com",
                     name: "Alice Updated",
@@ -512,8 +523,8 @@ describe("createMutations", () => {
         });
 
         it("remove with custom by option matches by field", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -526,7 +537,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.remove(
+            model.users.remove(
                 {
                     id: 999,
                     name: "irrelevant",
@@ -540,8 +551,8 @@ describe("createMutations", () => {
         });
 
         it("add with unique and custom by option", () => {
-            const { source, mutations } = setup();
-            mutations.users.set([
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
@@ -549,7 +560,7 @@ describe("createMutations", () => {
                 },
             ]);
 
-            mutations.users.add(
+            model.users.add(
                 {
                     id: 2,
                     name: "Alice Dup",
@@ -562,6 +573,80 @@ describe("createMutations", () => {
             );
 
             expect(source.state.users).toHaveLength(1);
+        });
+
+        it("patch with deep option uses defu", () => {
+            const NestedItemShape = shape((factory) => {
+                return {
+                    id: factory.number(),
+                    config: factory.object({
+                        theme: factory.string(),
+                        notifications: factory.boolean(),
+                    }),
+                };
+            });
+
+            const modelDefs = {
+                items: factory.many(NestedItemShape),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.setKey(k);
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-many-deep-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            model.items.set([
+                {
+                    id: 1,
+                    config: {
+                        theme: "dark",
+                        notifications: true,
+                    },
+                },
+            ]);
+
+            model.items.patch({ id: 1, config: { theme: "light" } } as any, { deep: true });
+
+            expect((source.state.items as any[])[0].config.theme).toBe("light");
+            expect((source.state.items as any[])[0].config.notifications).toBe(true);
+        });
+
+        it("uses custom identifier option", () => {
+            const modelDefs = {
+                users: factory.many(UserShape, { identifier: "email" }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.setKey(k);
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-custom-id-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            model.users.set([
+                {
+                    id: 1,
+                    name: "Alice",
+                    email: "alice@test.com",
+                },
+                {
+                    id: 2,
+                    name: "Bob",
+                    email: "bob@test.com",
+                },
+            ]);
+
+            model.users.patch({
+                email: "alice@test.com",
+                name: "Alice Updated",
+            } as Partial<User>);
+
+            expect((source.state.users as User[])[0].name).toBe("Alice Updated");
+            expect((source.state.users as User[])[1].name).toBe("Bob");
         });
     });
 
@@ -576,51 +661,55 @@ describe("createMutations", () => {
         type NoIdItem = ShapeInfer<typeof NoIdShape>;
 
         function setup() {
-            const model = {
+            const modelDefs = {
                 items: factory.many(NoIdShape),
             };
 
-            const state = initializeState(model);
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.setKey(k);
+            }
+
+            const state = createStoreState(modelDefs);
             const source = createStore("test-no-id-" + Math.random(), state);
-            const mutations = createMutations(source, model);
+            const model = createStoreModel(modelDefs, source);
 
             return {
                 source,
-                mutations,
+                model,
             };
         }
 
         it("set and reset work without identifier", () => {
-            const { source, mutations } = setup();
+            const { source, model } = setup();
             const items: NoIdItem[] = [
                 { name: "Alice", email: "alice@test.com" },
                 { name: "Bob", email: "bob@test.com" },
             ];
 
-            mutations.items.set(items);
+            model.items.set(items);
             expect(source.state.items).toEqual(items);
 
-            mutations.items.reset();
+            model.items.reset();
             expect(source.state.items).toEqual([]);
         });
 
         it("add works without identifier", () => {
-            const { source, mutations } = setup();
-            mutations.items.set([{ name: "Alice", email: "alice@test.com" }]);
+            const { source, model } = setup();
+            model.items.set([{ name: "Alice", email: "alice@test.com" }]);
 
-            mutations.items.add({ name: "Bob", email: "bob@test.com" });
+            model.items.add({ name: "Bob", email: "bob@test.com" });
 
             expect(source.state.items).toHaveLength(2);
         });
 
         it("patch matches by custom by option without identifier", () => {
-            const { source, mutations } = setup();
-            mutations.items.set([
+            const { source, model } = setup();
+            model.items.set([
                 { name: "Alice", email: "alice@test.com" },
                 { name: "Bob", email: "bob@test.com" },
             ]);
 
-            mutations.items.patch({ email: "alice@test.com", name: "Alice Updated" } as Partial<NoIdItem>, {
+            model.items.patch({ email: "alice@test.com", name: "Alice Updated" } as Partial<NoIdItem>, {
                 by: "email",
             });
 
@@ -629,69 +718,73 @@ describe("createMutations", () => {
         });
 
         it("remove matches by custom by option without identifier", () => {
-            const { source, mutations } = setup();
-            mutations.items.set([
+            const { source, model } = setup();
+            model.items.set([
                 { name: "Alice", email: "alice@test.com" },
                 { name: "Bob", email: "bob@test.com" },
             ]);
 
-            mutations.items.remove({ name: "Alice", email: "alice@test.com" }, { by: "email" });
+            model.items.remove({ name: "Alice", email: "alice@test.com" }, { by: "email" });
 
             expect(source.state.items).toHaveLength(1);
             expect((source.state.items as NoIdItem[])[0].name).toBe("Bob");
         });
 
         it("add with unique uses custom by option without identifier", () => {
-            const { source, mutations } = setup();
-            mutations.items.set([{ name: "Alice", email: "alice@test.com" }]);
+            const { source, model } = setup();
+            model.items.set([{ name: "Alice", email: "alice@test.com" }]);
 
-            mutations.items.add({ name: "Alice Dup", email: "alice@test.com" }, { unique: true, by: "email" });
+            model.items.add({ name: "Alice Dup", email: "alice@test.com" }, { unique: true, by: "email" });
 
             expect(source.state.items).toHaveLength(1);
         });
     });
-});
 
-describe("createCommitter", () => {
-    const factory = createModelFactory();
+    describe("commit method", () => {
+        it("commits value to state", () => {
+            const modelDefs = {
+                user: factory.one(UserShape),
+            };
 
-    it("delegates to executeCommit", () => {
-        const model = {
-            user: factory.one(UserShape),
-        };
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.setKey(k);
+            }
 
-        const state = initializeState(model);
-        const source = createStore("test-committer-" + Math.random(), state);
-        const mutations = createMutations(source, model);
-        const committer = createCommitter(mutations);
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-commit-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
 
-        const user: User = {
-            id: 1,
-            name: "Alice",
-            email: "alice@test.com",
-        };
-        committer("user", ActionOneMode.SET, user);
+            const user: User = {
+                id: 1,
+                name: "Alice",
+                email: "alice@test.com",
+            };
+            model.user.commit(ModelOneMode.SET, user);
 
-        expect(source.state.user).toEqual(user);
-    });
-
-    it("handles reset mode", () => {
-        const model = {
-            user: factory.one(UserShape),
-        };
-
-        const state = initializeState(model);
-        const source = createStore("test-committer-reset-" + Math.random(), state);
-        const mutations = createMutations(source, model);
-        const committer = createCommitter(mutations);
-
-        committer("user", ActionOneMode.SET, {
-            id: 1,
-            name: "Alice",
-            email: "alice@test.com",
+            expect(source.state.user).toEqual(user);
         });
-        committer("user", ActionOneMode.RESET);
 
-        expect(source.state.user).toBeNull();
+        it("handles reset mode", () => {
+            const modelDefs = {
+                user: factory.one(UserShape),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.setKey(k);
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-commit-reset-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            model.user.commit(ModelOneMode.SET, {
+                id: 1,
+                name: "Alice",
+                email: "alice@test.com",
+            });
+            model.user.commit(ModelOneMode.RESET);
+
+            expect(source.state.user).toBeNull();
+        });
     });
 });

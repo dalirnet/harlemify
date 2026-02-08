@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 
 import { useIsolatedActionStatus, useIsolatedActionError } from "../src/runtime/composables/action";
-import { type ActionApiError, ActionStatus } from "../src/runtime/core/types/action";
+import { ActionStatus } from "../src/runtime/core/types/action";
+import { ActionApiError } from "../src/runtime/core/utils/action";
 
 describe("useIsolatedActionStatus", () => {
     it("returns ref with IDLE status", () => {
@@ -40,9 +41,7 @@ describe("useIsolatedActionError", () => {
         const error1 = useIsolatedActionError();
         const error2 = useIsolatedActionError();
 
-        const apiError: ActionApiError = Object.assign(new Error("test"), {
-            name: "ActionApiError" as const,
-        });
+        const apiError = new ActionApiError(new Error("test"));
 
         error1.value = apiError;
 
@@ -52,13 +51,15 @@ describe("useIsolatedActionError", () => {
 
     it("is writable", () => {
         const error = useIsolatedActionError();
-        const apiError: ActionApiError = Object.assign(new Error("Not Found"), {
-            name: "ActionApiError" as const,
+        const cause = Object.assign(new Error("Not Found"), {
             status: 404,
+            statusText: "Not Found",
         });
+        const apiError = new ActionApiError(cause);
 
         error.value = apiError;
 
         expect(error.value).toEqual(apiError);
+        expect((error.value as ActionApiError).status).toBe(404);
     });
 });

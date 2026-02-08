@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createStore } from "../src/runtime/core/store";
 import { shape } from "../src/runtime/core/layers/shape";
-import { ActionOneMode, ActionManyMode, ActionStatus } from "../src/runtime/core/types/action";
+import { ModelOneMode, ModelManyMode } from "../src/runtime/core/types/model";
+import { ActionStatus } from "../src/runtime/core/types/action";
 import type { ShapeInfer } from "../src/runtime/core/types/shape";
 
-const mockFetch = globalThis["$fetch"] as unknown as ReturnType<typeof vi.fn>;
+const mockFetch = globalThis.$fetch;
 
 const UserShape = shape((factory) => {
     return {
@@ -56,26 +57,13 @@ describe("createStore", () => {
             },
             action: (a) => {
                 return {
-                    fetchUser: a.api.get({ url: "/users/1" }).commit("user", ActionOneMode.SET),
+                    fetchUser: a.api.get({ url: "/users/1" }, { model: "user", mode: ModelOneMode.SET }),
 
-                    fetchPosts: a.api.get({ url: "/posts" }).commit("posts", ActionManyMode.SET),
+                    fetchPosts: a.api.get({ url: "/posts" }, { model: "posts", mode: ModelManyMode.SET }),
 
-                    clearUser: a.commit("user", ActionOneMode.RESET),
-
-                    clearPosts: a.commit("posts", ActionManyMode.RESET),
-
-                    handleOnly: a.handle(async (_context) => {
+                    handleOnly: a.handler(async (_context) => {
                         return "handled";
                     }),
-
-                    fetchAndProcess: a.api
-                        .get({ url: "/users" })
-                        .handle(async ({ api }) => {
-                            const data = await api();
-
-                            return data;
-                        })
-                        .commit("user", ActionOneMode.SET),
                 };
             },
         });
@@ -89,7 +77,7 @@ describe("createStore", () => {
         expect(store.action).toBeDefined();
     });
 
-    describe("model committer", () => {
+    describe("model", () => {
         it("set on one-model", () => {
             const store = setup();
             const user: User = {
@@ -98,33 +86,33 @@ describe("createStore", () => {
                 email: "alice@test.com",
             };
 
-            store.model("user", ActionOneMode.SET, user);
+            store.model.user.set(user);
 
             expect(store.view.user.value).toEqual(user);
         });
 
         it("reset on one-model", () => {
             const store = setup();
-            store.model("user", ActionOneMode.SET, {
+            store.model.user.set({
                 id: 1,
                 name: "Alice",
                 email: "alice@test.com",
             });
 
-            store.model("user", ActionOneMode.RESET);
+            store.model.user.reset();
 
             expect(store.view.user.value).toBeNull();
         });
 
         it("patch on one-model", () => {
             const store = setup();
-            store.model("user", ActionOneMode.SET, {
+            store.model.user.set({
                 id: 1,
                 name: "Alice",
                 email: "alice@test.com",
             });
 
-            store.model("user", ActionOneMode.PATCH, { name: "Bob" });
+            store.model.user.patch({ name: "Bob" });
 
             expect(store.view.user.value).toEqual({
                 id: 1,
@@ -148,14 +136,14 @@ describe("createStore", () => {
                 },
             ];
 
-            store.model("posts", ActionManyMode.SET, posts);
+            store.model.posts.set(posts);
 
             expect(store.view.posts.value).toEqual(posts);
         });
 
         it("reset on many-model", () => {
             const store = setup();
-            store.model("posts", ActionManyMode.SET, [
+            store.model.posts.set([
                 {
                     id: 1,
                     title: "First",
@@ -163,14 +151,14 @@ describe("createStore", () => {
                 },
             ]);
 
-            store.model("posts", ActionManyMode.RESET);
+            store.model.posts.reset();
 
             expect(store.view.posts.value).toEqual([]);
         });
 
         it("add on many-model", () => {
             const store = setup();
-            store.model("posts", ActionManyMode.SET, [
+            store.model.posts.set([
                 {
                     id: 1,
                     title: "First",
@@ -178,7 +166,7 @@ describe("createStore", () => {
                 },
             ]);
 
-            store.model("posts", ActionManyMode.ADD, {
+            store.model.posts.add({
                 id: 2,
                 title: "Second",
                 body: "Content 2",
@@ -189,7 +177,7 @@ describe("createStore", () => {
 
         it("remove on many-model", () => {
             const store = setup();
-            store.model("posts", ActionManyMode.SET, [
+            store.model.posts.set([
                 {
                     id: 1,
                     title: "First",
@@ -202,7 +190,7 @@ describe("createStore", () => {
                 },
             ]);
 
-            store.model("posts", ActionManyMode.REMOVE, {
+            store.model.posts.remove({
                 id: 1,
                 title: "First",
                 body: "Content 1",
@@ -226,7 +214,7 @@ describe("createStore", () => {
 
             expect(store.view.userName.value).toBe("unknown");
 
-            store.model("user", ActionOneMode.SET, {
+            store.model.user.set({
                 id: 1,
                 name: "Alice",
                 email: "alice@test.com",
@@ -240,7 +228,7 @@ describe("createStore", () => {
 
             expect(store.view.postCount.value).toBe(0);
 
-            store.model("posts", ActionManyMode.SET, [
+            store.model.posts.set([
                 {
                     id: 1,
                     title: "First",
@@ -264,12 +252,12 @@ describe("createStore", () => {
                 total: 0,
             });
 
-            store.model("user", ActionOneMode.SET, {
+            store.model.user.set({
                 id: 1,
                 name: "Alice",
                 email: "alice@test.com",
             });
-            store.model("posts", ActionManyMode.SET, [
+            store.model.posts.set([
                 {
                     id: 1,
                     title: "First",
@@ -333,19 +321,6 @@ describe("createStore", () => {
             expect(store.view.postCount.value).toBe(2);
         });
 
-        it("commit-only action resets state", async () => {
-            const store = setup();
-            store.model("user", ActionOneMode.SET, {
-                id: 1,
-                name: "Alice",
-                email: "alice@test.com",
-            });
-
-            await store.action.clearUser();
-
-            expect(store.view.user.value).toBeNull();
-        });
-
         it("handle-only action executes", async () => {
             const store = setup();
 
@@ -353,20 +328,6 @@ describe("createStore", () => {
 
             expect(result).toBe("handled");
             expect(store.action.handleOnly.status.value).toBe(ActionStatus.SUCCESS);
-        });
-
-        it("api + handle + commit action processes and commits", async () => {
-            const store = setup();
-            const user: User = {
-                id: 1,
-                name: "Alice",
-                email: "alice@test.com",
-            };
-            mockFetch.mockResolvedValue(user);
-
-            await store.action.fetchAndProcess();
-
-            expect(store.view.user.value).toEqual(user);
         });
 
         it("failed action sets error status", async () => {
