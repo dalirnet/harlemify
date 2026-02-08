@@ -1,105 +1,88 @@
 import type { ConsolaInstance } from "consola";
 
-import { buildCommitMethod } from "../utils/action";
-
-import type { Model } from "../types/model";
+import type { ModelDefinitions } from "../types/model";
+import type { ViewDefinitions } from "../types/view";
 import {
     type RuntimeActionConfig,
+    type ActionApiRequest,
+    type ActionApiRequestShortcut,
+    type ActionApiCommit,
     type ActionApiDefinition,
-    type ActionApiShortcutDefinition,
-    type ActionDefinition,
-    type ActionApiChain,
-    type ActionHandleChain,
-    type ActionHandleCallback,
-    type ActionHandleCallbackNoApi,
+    type ActionHandlerCallback,
+    type ActionHandlerDefinition,
     type ActionFactory,
     ActionApiMethod,
-    DEFINITION,
 } from "../types/action";
 
-export function createActionFactory<M extends Model, V>(
+export function createActionFactory<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>>(
     config?: RuntimeActionConfig,
     logger?: ConsolaInstance,
-    _model?: M,
-    _view?: V,
-): ActionFactory<M, V> {
-    function apiCall<A>(apiDefinition: ActionApiDefinition<V>): ActionApiChain<M, V, A> {
-        apiDefinition = {
+): ActionFactory<MD, VD> {
+    function apiCall(request: ActionApiRequest<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD> {
+        const mergedRequest: ActionApiRequest<MD, VD> = {
             endpoint: config?.endpoint,
             headers: config?.headers,
             query: config?.query,
             timeout: config?.timeout,
             concurrent: config?.concurrent,
-            ...apiDefinition,
+            ...request,
         };
 
-        const actionDefinition: ActionDefinition<M, V, A> = {
-            api: apiDefinition,
-            logger,
-        };
+        let key = "";
 
         return {
-            handle<R>(callback: ActionHandleCallback<M, V, R, A>): ActionHandleChain<M, V, R> {
-                const handleDefinition: ActionDefinition<M, V, R> = {
-                    api: apiDefinition,
-                    handle: callback as ActionHandleCallback<M, V, R, unknown>,
-                    logger,
-                };
-
-                return {
-                    commit: buildCommitMethod(handleDefinition),
-                    get [DEFINITION]() {
-                        return handleDefinition;
-                    },
-                };
+            get key() {
+                return key;
             },
-            commit: buildCommitMethod(actionDefinition),
-            get [DEFINITION]() {
-                return actionDefinition;
+            setKey(value: string) {
+                key = value;
             },
+            request: mergedRequest,
+            commit,
+            logger,
         };
     }
 
-    function apiGet<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A> {
-        return apiCall({
-            ...definition,
-            method: ActionApiMethod.GET,
-        });
+    function apiGet(
+        request: ActionApiRequestShortcut<MD, VD>,
+        commit?: ActionApiCommit<MD>,
+    ): ActionApiDefinition<MD, VD> {
+        return apiCall({ ...request, method: ActionApiMethod.GET }, commit);
     }
 
-    function apiHead<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A> {
-        return apiCall({
-            ...definition,
-            method: ActionApiMethod.HEAD,
-        });
+    function apiHead(
+        request: ActionApiRequestShortcut<MD, VD>,
+        commit?: ActionApiCommit<MD>,
+    ): ActionApiDefinition<MD, VD> {
+        return apiCall({ ...request, method: ActionApiMethod.HEAD }, commit);
     }
 
-    function apiPost<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A> {
-        return apiCall({
-            ...definition,
-            method: ActionApiMethod.POST,
-        });
+    function apiPost(
+        request: ActionApiRequestShortcut<MD, VD>,
+        commit?: ActionApiCommit<MD>,
+    ): ActionApiDefinition<MD, VD> {
+        return apiCall({ ...request, method: ActionApiMethod.POST }, commit);
     }
 
-    function apiPut<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A> {
-        return apiCall({
-            ...definition,
-            method: ActionApiMethod.PUT,
-        });
+    function apiPut(
+        request: ActionApiRequestShortcut<MD, VD>,
+        commit?: ActionApiCommit<MD>,
+    ): ActionApiDefinition<MD, VD> {
+        return apiCall({ ...request, method: ActionApiMethod.PUT }, commit);
     }
 
-    function apiPatch<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A> {
-        return apiCall({
-            ...definition,
-            method: ActionApiMethod.PATCH,
-        });
+    function apiPatch(
+        request: ActionApiRequestShortcut<MD, VD>,
+        commit?: ActionApiCommit<MD>,
+    ): ActionApiDefinition<MD, VD> {
+        return apiCall({ ...request, method: ActionApiMethod.PATCH }, commit);
     }
 
-    function apiDelete<A>(definition: ActionApiShortcutDefinition<V>): ActionApiChain<M, V, A> {
-        return apiCall({
-            ...definition,
-            method: ActionApiMethod.DELETE,
-        });
+    function apiDelete(
+        request: ActionApiRequestShortcut<MD, VD>,
+        commit?: ActionApiCommit<MD>,
+    ): ActionApiDefinition<MD, VD> {
+        return apiCall({ ...request, method: ActionApiMethod.DELETE }, commit);
     }
 
     const api = Object.assign(apiCall, {
@@ -111,25 +94,23 @@ export function createActionFactory<M extends Model, V>(
         delete: apiDelete,
     });
 
-    function handle<R>(callback: ActionHandleCallbackNoApi<M, V, R>): ActionHandleChain<M, V, R> {
-        const definition: ActionDefinition<M, V, R> = {
-            handle: callback,
-            logger,
-        };
+    function handler<R>(callback: ActionHandlerCallback<MD, VD, R>): ActionHandlerDefinition<MD, VD, R> {
+        let key = "";
 
         return {
-            commit: buildCommitMethod(definition),
-            get [DEFINITION]() {
-                return definition;
+            get key() {
+                return key;
             },
+            setKey(value: string) {
+                key = value;
+            },
+            callback,
+            logger,
         };
     }
 
-    const commit = buildCommitMethod({ logger } as ActionDefinition<M, V, void>);
-
     return {
         api,
-        handle,
-        commit,
+        handler,
     };
 }

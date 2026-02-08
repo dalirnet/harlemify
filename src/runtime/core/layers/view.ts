@@ -1,42 +1,55 @@
 import type { ConsolaInstance } from "consola";
 
-import type { Model, ModelInstance } from "../types/model";
+import type { ModelDefinitions, ModelDefinitionInfer } from "../types/model";
 import type {
     RuntimeViewConfig,
-    ViewFromResolver,
-    ViewMergeResolver,
+    ViewFromDefinitionResolver,
+    ViewMergeDefinitionResolver,
     ViewFromDefinition,
     ViewMergeDefinition,
     ViewFactory,
 } from "../types/view";
 
-export function createViewFactory<M extends Model>(
+export function createViewFactory<MD extends ModelDefinitions>(
     config?: RuntimeViewConfig,
     logger?: ConsolaInstance,
-    _model?: M,
-): ViewFactory<M> {
-    function from<K extends keyof M, R = ModelInstance<M, K>>(
-        source: K,
-        resolver?: ViewFromResolver<M, K, R>,
-    ): ViewFromDefinition<M, K, R> {
+): ViewFactory<MD> {
+    function from<K extends keyof MD, R = ModelDefinitionInfer<MD, K>>(
+        model: K,
+        resolver?: ViewFromDefinitionResolver<MD, K, R>,
+    ): ViewFromDefinition<MD, K, R> {
+        let key = "";
         const definition = {
-            sources: [source] as const,
+            get key() {
+                return key;
+            },
+            setKey(value: string) {
+                key = value;
+            },
+            model: [model] as const,
             resolver,
             logger,
         };
 
-        return definition as ViewFromDefinition<M, K, R>;
+        return definition as ViewFromDefinition<MD, K, R>;
     }
 
-    function merge<K extends readonly (keyof M)[], R>(
-        sources: K,
-        resolver: ViewMergeResolver<M, K, R>,
-    ): ViewMergeDefinition<M, K, R> {
+    function merge<K extends readonly (keyof MD)[], R>(
+        models: K,
+        resolver: ViewMergeDefinitionResolver<MD, K, R>,
+    ): ViewMergeDefinition<MD, K, R> {
+        let key = "";
         return {
-            sources,
+            get key() {
+                return key;
+            },
+            setKey(value: string) {
+                key = value;
+            },
+            models,
             resolver,
             logger,
-        } as ViewMergeDefinition<M, K, R>;
+        } as ViewMergeDefinition<MD, K, R>;
     }
 
     return {
