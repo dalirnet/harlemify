@@ -1,6 +1,6 @@
 import { createStore, shape, ModelOneMode, ModelManyMode, type ShapeInfer } from "../../src/runtime";
 
-const userShape = shape((factory) => {
+export const userShape = shape((factory) => {
     return {
         id: factory.number().meta({
             identifier: true,

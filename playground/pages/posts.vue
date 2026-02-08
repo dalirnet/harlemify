@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ModelManyMode } from "../../src/runtime";
-import { postStore, type Post } from "../stores/post";
+import { postStore, postShape, type Post } from "../stores/post";
 
 const showModal = ref(false);
 const editing = ref<Post | null>(null);
-const form = ref({ title: "", body: "", userId: 1 });
+const form = ref(postShape.defaults());
 
 onMounted(() => postStore.action.list());
 
 function openCreate() {
     editing.value = null;
-    form.value = { title: "", body: "", userId: 1 };
+    form.value = postShape.defaults();
     showModal.value = true;
 }
 
@@ -18,7 +18,7 @@ function openEdit(post: Post) {
     editing.value = post;
     postStore.model.current.set(post);
     postStore.model.draft.set(post);
-    form.value = { title: post.title, body: post.body, userId: post.userId };
+    form.value = postShape.defaults({ title: post.title, body: post.body, userId: post.userId });
     showModal.value = true;
 }
 
@@ -39,7 +39,7 @@ async function save() {
         });
     } else {
         await postStore.action.create({
-            body: { id: Date.now(), ...form.value },
+            body: { ...form.value, id: Date.now() },
         });
     }
     postStore.model.draft.reset();
@@ -177,6 +177,7 @@ function resetSortAction() {
                 <li><code>action.sort.data</code> - Last successful result from action</li>
                 <li><code>action.sort.reset()</code> - Reset action state</li>
                 <li><code>action(&#123; body &#125;)</code> - Call-time payload with body data</li>
+                <li><code>shape.defaults()</code> - Auto-generate zero-value form data from shape</li>
             </ul>
         </div>
 

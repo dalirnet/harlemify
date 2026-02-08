@@ -1,6 +1,6 @@
 import { createStore, shape, ModelOneMode, type ShapeInfer } from "../../src/runtime";
 
-const configShape = shape((factory) => {
+export const configShape = shape((factory) => {
     return {
         theme: factory.enum(["light", "dark"]),
         language: factory.string(),

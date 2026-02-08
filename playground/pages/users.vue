@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { userStore, type User } from "../stores/user";
+import { userStore, userShape, type User } from "../stores/user";
 
 const showModal = ref(false);
 const editing = ref<User | null>(null);
-const form = ref({ name: "", email: "" });
+const form = ref(userShape.defaults());
 
 onMounted(() => userStore.action.list());
 
 function openCreate() {
     editing.value = null;
-    form.value = { name: "", email: "" };
+    form.value = userShape.defaults();
     showModal.value = true;
 }
 
 function openEdit(user: User) {
     editing.value = user;
-    form.value = { name: user.name, email: user.email };
+    form.value = userShape.defaults({ name: user.name, email: user.email });
     showModal.value = true;
 }
 
@@ -27,7 +27,7 @@ async function save() {
         });
     } else {
         await userStore.action.create({
-            body: { id: Date.now(), ...form.value },
+            body: { ...form.value, id: Date.now() },
         });
     }
     showModal.value = false;
@@ -209,6 +209,7 @@ function resetListAction() {
                 <li><code>commit(..., { by: "email" })</code> - Custom identifier field for patch</li>
                 <li><code>action.list.data</code> - Last successful result</li>
                 <li><code>action.list.reset()</code> - Reset action state to idle</li>
+                <li><code>shape.defaults()</code> - Auto-generate zero-value form data from shape</li>
             </ul>
         </div>
 

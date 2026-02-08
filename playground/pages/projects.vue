@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ActionConcurrent, useIsolatedActionStatus, useIsolatedActionError } from "../../src/runtime";
-import { projectStore, type Project, type ProjectMilestone } from "../stores/project";
+import { projectStore, projectShape, type Project, type ProjectMilestone } from "../stores/project";
 
 // Form state
 const showCreateModal = ref(false);
-const newProjectName = ref("");
-const newProjectDescription = ref("");
+const form = ref(projectShape.defaults());
 
 // Export result (action without memory)
 const exportResult = ref<any>(null);
@@ -35,12 +34,11 @@ onMounted(() => projectStore.action.list());
 async function handleCreate() {
     await projectStore.action.create({
         body: {
-            name: newProjectName.value,
-            description: newProjectDescription.value,
+            name: form.value.name,
+            description: form.value.description,
         },
     });
-    newProjectName.value = "";
-    newProjectDescription.value = "";
+    form.value = projectShape.defaults();
     showCreateModal.value = false;
 }
 
@@ -486,6 +484,7 @@ async function handleTriggerError() {
                     bind
                 </li>
                 <li><code>action.error</code> - Reactive error state with typed ActionError</li>
+                <li><code>shape.defaults()</code> - Auto-generate zero-value form data from shape</li>
             </ul>
         </div>
 
@@ -496,15 +495,11 @@ async function handleTriggerError() {
                 <form @submit.prevent="handleCreate">
                     <div class="form-group">
                         <label>Name</label>
-                        <input v-model="newProjectName" required placeholder="Project name" data-testid="input-name" >
+                        <input v-model="form.name" required placeholder="Project name" data-testid="input-name" >
                     </div>
                     <div class="form-group">
                         <label>Description</label>
-                        <input
-                            v-model="newProjectDescription"
-                            placeholder="Description"
-                            data-testid="input-description"
-                        >
+                        <input v-model="form.description" placeholder="Description" data-testid="input-description" >
                     </div>
                     <div class="modal-actions">
                         <button type="button" class="btn" data-testid="cancel-modal" @click="showCreateModal = false">

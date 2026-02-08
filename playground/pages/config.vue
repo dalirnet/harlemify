@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { configStore } from "../stores/config";
+import { configStore, configShape } from "../stores/config";
 
 const languageInput = ref("");
 
@@ -35,7 +35,7 @@ async function toggleNotifications() {
 
 async function resetConfig() {
     await configStore.action.replace({
-        body: { theme: "dark", language: "en", notifications: true },
+        body: configShape.defaults({ theme: "dark", language: "en", notifications: true }),
     });
 }
 </script>
@@ -154,6 +154,7 @@ async function resetConfig() {
                     <li><code>action.get.loading</code> - Computed loading boolean</li>
                     <li><code>action.get.error</code> - Reactive error state</li>
                     <li><code>view.theme</code> / <code>view.language</code> - Derived computed views</li>
+                    <li><code>shape.defaults(overrides)</code> - Auto-generate defaults with overrides for reset</li>
                 </ul>
             </div>
         </div>
