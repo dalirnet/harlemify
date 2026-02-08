@@ -564,6 +564,92 @@ describe("createMutations", () => {
             expect(source.state.users).toHaveLength(1);
         });
     });
+
+    describe("many mutations without identifier", () => {
+        const NoIdShape = shape((factory) => {
+            return {
+                name: factory.string(),
+                email: factory.string(),
+            };
+        });
+
+        type NoIdItem = ShapeInfer<typeof NoIdShape>;
+
+        function setup() {
+            const model = {
+                items: factory.many(NoIdShape),
+            };
+
+            const state = initializeState(model);
+            const source = createStore("test-no-id-" + Math.random(), state);
+            const mutations = createMutations(source, model);
+
+            return {
+                source,
+                mutations,
+            };
+        }
+
+        it("set and reset work without identifier", () => {
+            const { source, mutations } = setup();
+            const items: NoIdItem[] = [
+                { name: "Alice", email: "alice@test.com" },
+                { name: "Bob", email: "bob@test.com" },
+            ];
+
+            mutations.items.set(items);
+            expect(source.state.items).toEqual(items);
+
+            mutations.items.reset();
+            expect(source.state.items).toEqual([]);
+        });
+
+        it("add works without identifier", () => {
+            const { source, mutations } = setup();
+            mutations.items.set([{ name: "Alice", email: "alice@test.com" }]);
+
+            mutations.items.add({ name: "Bob", email: "bob@test.com" });
+
+            expect(source.state.items).toHaveLength(2);
+        });
+
+        it("patch matches by custom by option without identifier", () => {
+            const { source, mutations } = setup();
+            mutations.items.set([
+                { name: "Alice", email: "alice@test.com" },
+                { name: "Bob", email: "bob@test.com" },
+            ]);
+
+            mutations.items.patch({ email: "alice@test.com", name: "Alice Updated" } as Partial<NoIdItem>, {
+                by: "email",
+            });
+
+            expect((source.state.items as NoIdItem[])[0].name).toBe("Alice Updated");
+            expect((source.state.items as NoIdItem[])[1].name).toBe("Bob");
+        });
+
+        it("remove matches by custom by option without identifier", () => {
+            const { source, mutations } = setup();
+            mutations.items.set([
+                { name: "Alice", email: "alice@test.com" },
+                { name: "Bob", email: "bob@test.com" },
+            ]);
+
+            mutations.items.remove({ name: "Alice", email: "alice@test.com" }, { by: "email" });
+
+            expect(source.state.items).toHaveLength(1);
+            expect((source.state.items as NoIdItem[])[0].name).toBe("Bob");
+        });
+
+        it("add with unique uses custom by option without identifier", () => {
+            const { source, mutations } = setup();
+            mutations.items.set([{ name: "Alice", email: "alice@test.com" }]);
+
+            mutations.items.add({ name: "Alice Dup", email: "alice@test.com" }, { unique: true, by: "email" });
+
+            expect(source.state.items).toHaveLength(1);
+        });
+    });
 });
 
 describe("createCommitter", () => {
