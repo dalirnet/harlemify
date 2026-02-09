@@ -27,7 +27,18 @@ export type {
 export { ActionApiError, ActionHandlerError, ActionCommitError, ActionConcurrentError } from "./core/utils/error";
 
 // Composables
-export { useIsolatedActionStatus, useIsolatedActionError } from "./composables/action";
+export { useIsolatedActionStatus, useIsolatedActionError, useStoreAction } from "./composables/action";
+export type { UseStoreActionOptions, UseStoreAction } from "./composables/action";
+export { useStoreModel } from "./composables/model";
+export type { UseStoreModelOptions, UseStoreModel } from "./composables/model";
+export { useStoreView } from "./composables/view";
+export type {
+    UseStoreViewOptions,
+    UseStoreViewProxy,
+    UseStoreViewComputed,
+    UseStoreViewData,
+    UseStoreViewTrackOptions,
+} from "./composables/view";
 
 // Config
 export type { RuntimeConfig } from "./config";
