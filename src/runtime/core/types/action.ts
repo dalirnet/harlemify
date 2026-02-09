@@ -181,9 +181,8 @@ export interface ActionCallOptions {
 
 export interface ActionCall<T = void> {
     (options?: ActionCallOptions): Promise<T>;
-    readonly loading: ComputedRef<boolean>;
-    readonly status: Readonly<Ref<ActionStatus>>;
     readonly error: Readonly<Ref<Error | null>>;
-    readonly data: DeepReadonly<T> | null;
+    readonly status: Readonly<Ref<ActionStatus>>;
+    readonly loading: ComputedRef<boolean>;
     reset: () => void;
 }

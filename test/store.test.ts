@@ -5,7 +5,7 @@ import { ModelOneMode, ModelManyMode } from "../src/runtime/core/types/model";
 import { ActionStatus } from "../src/runtime/core/types/action";
 import type { ShapeInfer } from "../src/runtime/core/types/shape";
 
-const mockFetch = globalThis.$fetch;
+const mockFetch = (globalThis as any).$fetch;
 
 const UserShape = shape((factory) => {
     return {

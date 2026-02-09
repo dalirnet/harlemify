@@ -156,11 +156,10 @@ Every action has built-in reactive metadata:
 store.action.fetch.loading; // ComputedRef<boolean>
 store.action.fetch.status; // Readonly<Ref<ActionStatus>>
 store.action.fetch.error; // Readonly<Ref<Error | null>>
-store.action.fetch.data; // DeepReadonly<T> | null
 store.action.fetch.reset(); // Reset to idle
 ```
 
-> **Note:** `data`, `status`, and `error` persist after execution. Call `reset()` to clear them back to their initial values (`null`, `IDLE`, `null`).
+> **Note:** `status` and `error` persist after execution. Call `reset()` to clear them back to their initial values (`IDLE`, `null`).
 
 ### Template Usage
 

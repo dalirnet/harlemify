@@ -169,13 +169,12 @@ describe("createAction", () => {
             expect(action).toBeTypeOf("function");
         });
 
-        it("has loading, status, error, data, reset", () => {
+        it("has loading, status, error, reset", () => {
             const { action } = setup();
 
             expect(action.loading).toBeDefined();
             expect(action.status).toBeDefined();
             expect(action.error).toBeDefined();
-            expect(action.data).toBeNull();
             expect(action.reset).toBeTypeOf("function");
         });
 
@@ -237,7 +236,6 @@ describe("createAction", () => {
 
             expect(action.status.value).toBe(ActionStatus.IDLE);
             expect(action.error.value).toBeNull();
-            expect(action.data).toBeNull();
         });
     });
 

@@ -131,11 +131,6 @@ function resetSortAction() {
             <pre>{{ JSON.stringify(postStore.view.editor.value, null, 2) }}</pre>
         </div>
 
-        <div v-if="postStore.action.sort.data" class="detail" data-testid="sort-data">
-            <h3>action.sort.data (last sort result)</h3>
-            <p>{{ (postStore.action.sort.data as any)?.length }} items sorted</p>
-        </div>
-
         <!-- Action Status -->
         <div class="monitor-status" data-testid="action-status">
             <h3>Action Status</h3>
@@ -185,7 +180,7 @@ function resetSortAction() {
                     <code>action(&#123; commit: &#123; mode: ActionManyMode.ADD &#125; &#125;)</code> - Call-time
                     commit.mode override
                 </li>
-                <li><code>action.sort.data</code> - Last successful result from action</li>
+
                 <li><code>action.sort.reset()</code> - Reset action state</li>
                 <li><code>action(&#123; body &#125;)</code> - Call-time payload with body data</li>
                 <li><code>shape.defaults()</code> - Auto-generate zero-value form data from shape</li>
