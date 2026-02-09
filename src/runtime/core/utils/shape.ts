@@ -6,11 +6,12 @@ import type {
     ShapeDefinition,
     ShapeFieldDefinition,
     ShapeInfer,
-    ShapeMeta,
+    ShapeResolved,
     ShapeRawDefinition,
     ShapeType,
     ZodFieldDefinition,
 } from "../types/shape";
+import { isPlainObject, isEmptyRecord } from "./base";
 
 // Zero-value resolvers (primitives)
 
@@ -183,42 +184,111 @@ function resolveZeroValue(field: ShapeType<unknown>): unknown {
 
 // Exported functions
 
-export function resolveShape(shape: ShapeDefinition): ShapeMeta {
-    const meta: ShapeMeta = {
+export function resolveShape(shape: ShapeDefinition): ShapeResolved {
+    const resolved: ShapeResolved = {
         identifier: undefined,
         defaults: {},
         fields: [],
+        aliases: {},
     };
 
     for (const [key, field] of Object.entries(shape.shape)) {
-        meta.fields.push(key);
+        resolved.fields.push(key);
+
+        const fieldMeta = (
+            field as ShapeType<unknown> & { meta: () => ShapeFieldDefinition["meta"] | undefined }
+        ).meta();
+
+        if (fieldMeta?.identifier) {
+            resolved.identifier = key;
+        }
+
+        if (fieldMeta?.alias) {
+            resolved.aliases[key] = fieldMeta.alias as string;
+        }
 
         const fieldDefinition = (field as ShapeType<unknown> & { def?: ShapeFieldDefinition }).def;
 
-        if (fieldDefinition?.meta?.identifier) {
-            meta.identifier = key;
-        }
-
         if (fieldDefinition?.defaultValue !== undefined) {
             if (typeof fieldDefinition.defaultValue === "function") {
-                meta.defaults[key] = fieldDefinition.defaultValue();
+                resolved.defaults[key] = fieldDefinition.defaultValue();
 
                 continue;
             }
 
-            meta.defaults[key] = fieldDefinition.defaultValue;
+            resolved.defaults[key] = fieldDefinition.defaultValue;
         }
     }
 
-    if (!meta.identifier) {
-        if (meta.fields.includes("id")) {
-            meta.identifier = "id";
-        } else if (meta.fields.includes("_id")) {
-            meta.identifier = "_id";
+    if (!resolved.identifier) {
+        if (resolved.fields.includes("id")) {
+            resolved.identifier = "id";
+        } else if (resolved.fields.includes("_id")) {
+            resolved.identifier = "_id";
         }
     }
 
-    return meta;
+    return resolved;
+}
+
+// Alias resolvers
+
+function resolveAliasObject(data: Record<string, unknown>, mapping: Record<string, string>): Record<string, unknown> {
+    const output: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+        output[mapping[key] ?? key] = value;
+    }
+
+    return output;
+}
+
+export function resolveAliasInbound<T = unknown>(data: T, aliases?: Record<string, string>): T {
+    if (isEmptyRecord(aliases)) {
+        return data;
+    }
+
+    const reverse: Record<string, string> = {};
+    for (const [shapeKey, aliasKey] of Object.entries(aliases)) {
+        reverse[aliasKey] = shapeKey;
+    }
+
+    if (Array.isArray(data)) {
+        return data.map((item) => {
+            if (isPlainObject(item)) {
+                return resolveAliasObject(item, reverse);
+            }
+
+            return item;
+        }) as T;
+    }
+
+    if (isPlainObject(data)) {
+        return resolveAliasObject(data, reverse) as T;
+    }
+
+    return data;
+}
+
+export function resolveAliasOutbound<T = unknown>(data: T, aliases?: Record<string, string>): T {
+    if (isEmptyRecord(aliases)) {
+        return data;
+    }
+
+    if (Array.isArray(data)) {
+        return data.map((item) => {
+            if (isPlainObject(item)) {
+                return resolveAliasObject(item, aliases);
+            }
+
+            return item;
+        }) as T;
+    }
+
+    if (isPlainObject(data)) {
+        return resolveAliasObject(data, aliases) as T;
+    }
+
+    return data;
 }
 
 export function resolveDefaults<T extends ShapeDefinition>(
