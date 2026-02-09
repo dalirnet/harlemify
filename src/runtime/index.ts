@@ -24,7 +24,7 @@ export type {
     ActionCallCommitOptions,
     ActionResolvedApi,
 } from "./core/types/action";
-export { ActionApiError, ActionHandlerError, ActionCommitError, ActionConcurrentError } from "./core/utils/action";
+export { ActionApiError, ActionHandlerError, ActionCommitError, ActionConcurrentError } from "./core/utils/error";
 
 // Composables
 export { useIsolatedActionStatus, useIsolatedActionError } from "./composables/action";
