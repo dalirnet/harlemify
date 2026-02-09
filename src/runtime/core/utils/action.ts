@@ -7,7 +7,6 @@ import type { StoreView, ViewDefinitions } from "../types/view";
 import {
     type ActionApiCommit,
     type ActionApiDefinition,
-    type ActionApiRequest,
     type ActionCall,
     type ActionCallOptions,
     type ActionDefinition,
@@ -17,68 +16,22 @@ import {
     ActionStatus,
     ActionConcurrent,
 } from "../types/action";
-
-// Errors
-
-export class ActionApiError extends Error {
-    override name = "ActionApiError" as const;
-
-    declare status: number;
-    declare statusText: string;
-    declare data: unknown;
-
-    constructor(source: any) {
-        super(source.message || "API request failed");
-
-        this.status = source?.status ?? source?.response?.status ?? 500;
-        this.statusText = source?.statusText ?? source?.response?.statusText ?? "Internal Server Error";
-        this.data = source?.data ?? source?.response?._data ?? null;
-    }
-}
-
-export class ActionHandlerError extends Error {
-    override name = "ActionHandlerError" as const;
-
-    constructor(source: any) {
-        super(source.message || "Action handler failed");
-    }
-}
-
-export class ActionCommitError extends Error {
-    override name = "ActionCommitError" as const;
-
-    constructor(source: any) {
-        super(source.message || "Action commit failed");
-    }
-}
-
-export class ActionConcurrentError extends Error {
-    override name = "ActionConcurrentError" as const;
-
-    constructor() {
-        super("Action is already pending");
-    }
-}
-
-// Error Helpers
-
-function isError(error: unknown, ...types: (abstract new (...args: never[]) => Error)[]): error is Error {
-    return types.some((ErrorType) => error instanceof ErrorType);
-}
-
-function toError<T extends Error = Error>(error: unknown, ErrorType?: new (source: unknown) => T): T {
-    if (ErrorType) {
-        return new ErrorType(error);
-    }
-
-    return (error instanceof Error ? error : new Error(String(error))) as T;
-}
+import { trimStart, trimEnd, isEmptyRecord, isPlainObject } from "./base";
+import {
+    ActionApiError,
+    ActionHandlerError,
+    ActionCommitError,
+    ActionConcurrentError,
+    isError,
+    toError,
+} from "./error";
+import { resolveAliasInbound, resolveAliasOutbound } from "./shape";
 
 // Resolve Value
 
-function resolveValue<V, T>(value: unknown, view: DeepReadonly<V>, fallback?: T): T {
+function resolveValue<V, T>(value: unknown, view: V, fallback?: T): T {
     if (typeof value === "function") {
-        return (value as (view: DeepReadonly<V>) => T)(view) || (fallback as T);
+        return (value as (view: V) => T)(view) || (fallback as T);
     }
 
     return toValue(value as T) || (fallback as T);
@@ -87,12 +40,12 @@ function resolveValue<V, T>(value: unknown, view: DeepReadonly<V>, fallback?: T)
 // Resolve Api
 
 function resolveApiUrl<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>>(
-    request: ActionApiRequest<MD, VD>,
+    definition: ActionApiDefinition<MD, VD>,
+    view: StoreView<MD, VD>,
     options?: ActionCallOptions,
-    view?: DeepReadonly<StoreView<MD, VD>>,
 ): string {
-    const endpoint = (request.endpoint ?? "").replace(/\/+$/, "");
-    let path = resolveValue<StoreView<MD, VD>, string>(request.url, view as DeepReadonly<StoreView<MD, VD>>);
+    const endpoint = trimEnd(definition.request.endpoint ?? "", "/");
+    let path = resolveValue<StoreView<MD, VD>, string>(definition.request.url, view);
 
     if (options?.params) {
         for (const [key, value] of Object.entries(options.params)) {
@@ -101,83 +54,77 @@ function resolveApiUrl<MD extends ModelDefinitions, VD extends ViewDefinitions<M
     }
 
     if (endpoint) {
-        return `${endpoint}/${path.replace(/^\/+/, "")}`;
+        return `${endpoint}/${trimStart(path, "/")}`;
     }
 
     return path;
 }
 
 function resolveApiHeaders<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>>(
-    request: ActionApiRequest<MD, VD>,
+    definition: ActionApiDefinition<MD, VD>,
+    view: StoreView<MD, VD>,
     options?: ActionCallOptions,
-    view?: DeepReadonly<StoreView<MD, VD>>,
 ): Record<string, string> {
-    const initial = resolveValue<StoreView<MD, VD>, Record<string, string>>(
-        request.headers,
-        view as DeepReadonly<StoreView<MD, VD>>,
-        {},
-    );
+    const initial = resolveValue(definition.request.headers, view, {});
     const custom = options?.headers ?? {};
 
     return defu(custom, initial);
 }
 
 function resolveApiQuery<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>>(
-    request: ActionApiRequest<MD, VD>,
+    definition: ActionApiDefinition<MD, VD>,
+    view: StoreView<MD, VD>,
     options?: ActionCallOptions,
-    view?: DeepReadonly<StoreView<MD, VD>>,
 ): Record<string, unknown> {
-    const initial = resolveValue<StoreView<MD, VD>, Record<string, unknown>>(
-        request.query,
-        view as DeepReadonly<StoreView<MD, VD>>,
-        {},
-    );
+    const initial = resolveValue(definition.request.query, view, {});
     const custom = options?.query ?? {};
 
     return defu(custom, initial);
 }
 
 function resolveApiBody<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>>(
-    request: ActionApiRequest<MD, VD>,
+    definition: ActionApiDefinition<MD, VD>,
+    view: StoreView<MD, VD>,
+    target: ModelCall<Shape> | undefined,
     options?: ActionCallOptions,
-    view?: DeepReadonly<StoreView<MD, VD>>,
 ): Record<string, unknown> | BodyInit | null | undefined {
-    if (request.method === ActionApiMethod.GET || request.method === ActionApiMethod.HEAD) {
+    if (definition.request.method === ActionApiMethod.GET || definition.request.method === ActionApiMethod.HEAD) {
         return undefined;
     }
 
-    const initial = resolveValue<StoreView<MD, VD>, Record<string, unknown>>(
-        request.body,
-        view as DeepReadonly<StoreView<MD, VD>>,
-        {},
-    );
+    const initial = resolveValue(definition.request.body, view, {});
     const custom = options?.body ?? {};
 
-    return defu(custom as Record<string, unknown>, initial);
+    const body = defu(custom as Record<string, unknown>, initial);
+    if (!isPlainObject(body)) {
+        return body;
+    }
+
+    if (!isEmptyRecord(target?.aliases())) {
+        return resolveAliasOutbound(body, target.aliases());
+    }
+
+    return body;
 }
 
 function resolveApiMethod<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>>(
-    request: ActionApiRequest<MD, VD>,
-    view?: DeepReadonly<StoreView<MD, VD>>,
+    definition: ActionApiDefinition<MD, VD>,
+    view: StoreView<MD, VD>,
 ): ActionApiMethod {
-    return resolveValue<StoreView<MD, VD>, ActionApiMethod>(
-        request.method,
-        view as DeepReadonly<StoreView<MD, VD>>,
-        ActionApiMethod.GET,
-    );
+    return resolveValue<StoreView<MD, VD>, ActionApiMethod>(definition.request.method, view, ActionApiMethod.GET);
 }
 
 function resolveApiTimeout<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>>(
-    request: ActionApiRequest<MD, VD>,
+    definition: ActionApiDefinition<MD, VD>,
+    view: StoreView<MD, VD>,
     options?: ActionCallOptions,
-    view?: DeepReadonly<StoreView<MD, VD>>,
 ): number | undefined {
     if (options?.timeout) {
         return options.timeout;
     }
 
-    if (request.timeout) {
-        return resolveValue<StoreView<MD, VD>, number>(request.timeout, view as DeepReadonly<StoreView<MD, VD>>);
+    if (definition.request.timeout) {
+        return resolveValue<StoreView<MD, VD>, number>(definition.request.timeout, view);
     }
 
     return undefined;
@@ -194,21 +141,29 @@ function resolveApiSignal(options?: ActionCallOptions, abortController?: AbortCo
 // Resolve Commit
 
 function resolveCommitTarget<MD extends ModelDefinitions>(
-    commit: ActionApiCommit<MD>,
+    commit: ActionApiCommit<MD> | undefined,
     model: StoreModel<MD>,
-): ModelCall<Shape> {
-    return model[commit.model] as ModelCall<Shape>;
+): ModelCall<Shape> | undefined {
+    if (commit) {
+        return model[commit.model] as ModelCall<Shape>;
+    }
+
+    return undefined;
 }
 
 function resolveCommitMode<MD extends ModelDefinitions>(
-    commit: ActionApiCommit<MD>,
+    commit: ActionApiCommit<MD> | undefined,
     options?: ActionCallOptions,
-): ModelOneMode | ModelManyMode {
-    if (options?.commit?.mode) {
-        return options.commit.mode;
+): (ModelOneMode | ModelManyMode) | undefined {
+    if (commit) {
+        if (options?.commit?.mode) {
+            return options.commit.mode;
+        }
+
+        return commit.mode;
     }
 
-    return commit.mode;
+    return undefined;
 }
 
 function resolveCommitValue<MD extends ModelDefinitions>(commit: ActionApiCommit<MD>, data: unknown): unknown {
@@ -262,13 +217,14 @@ async function executeApi<MD extends ModelDefinitions, VD extends ViewDefinition
             api = options.transformer.request(api);
         }
 
-        const response = await $fetch(api.url, {
+        const response = await $fetch<R>(api.url, {
             method: api.method,
             headers: api.headers,
             query: api.query,
             body: api.body,
             timeout: api.timeout,
             signal: api.signal,
+            responseType: "json" as const,
         });
 
         definition.logger?.debug("Action API response received", {
@@ -330,23 +286,31 @@ async function executeHandler<MD extends ModelDefinitions, VD extends ViewDefini
 
 function executeCommit<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>>(
     definition: ActionApiDefinition<MD, VD>,
-    model: StoreModel<MD>,
+    target: ModelCall<Shape> | undefined,
+    mode: (ModelOneMode | ModelManyMode) | undefined,
     data: unknown,
-    options?: ActionCallOptions,
 ): void {
     if (!definition.commit) {
         return;
     }
 
+    if (!target || !mode) {
+        throw new ActionCommitError({
+            message: `Model "${definition.commit.model as string}" is not defined`,
+        });
+    }
+
     try {
         definition.logger?.debug("Action commit phase", {
             action: definition.key,
-            model: definition.commit.model as string,
-            mode: definition.commit.mode,
+            target,
+            mode,
         });
 
-        const target = resolveCommitTarget(definition.commit, model);
-        const mode = resolveCommitMode(definition.commit, options);
+        if (!isEmptyRecord(target.aliases())) {
+            data = resolveAliasInbound(data, target.aliases());
+        }
+
         const value = resolveCommitValue(definition.commit, data);
 
         target.commit(mode, value, definition.commit.options);
@@ -430,27 +394,32 @@ export function createAction<MD extends ModelDefinitions, VD extends ViewDefinit
                 let data: R;
 
                 if (isApiDefinition(definition)) {
-                    const resolvedApi = {
-                        url: resolveApiUrl(definition.request, options, view as DeepReadonly<StoreView<MD, VD>>),
-                        method: resolveApiMethod(definition.request, view as DeepReadonly<StoreView<MD, VD>>),
-                        headers: resolveApiHeaders(
-                            definition.request,
-                            options,
-                            view as DeepReadonly<StoreView<MD, VD>>,
-                        ),
-                        query: resolveApiQuery(definition.request, options, view as DeepReadonly<StoreView<MD, VD>>),
-                        body: resolveApiBody(definition.request, options, view as DeepReadonly<StoreView<MD, VD>>),
-                        timeout: resolveApiTimeout(
-                            definition.request,
-                            options,
-                            view as DeepReadonly<StoreView<MD, VD>>,
-                        ),
-                        signal: resolveApiSignal(options, abortController!),
-                    };
+                    const target = resolveCommitTarget(definition.commit, model);
+                    const mode = resolveCommitMode(definition.commit, options);
 
-                    data = await executeApi<MD, VD, R>(definition, resolvedApi, options);
+                    const url = resolveApiUrl(definition, view, options);
+                    const method = resolveApiMethod(definition, view);
+                    const headers = resolveApiHeaders(definition, view, options);
+                    const query = resolveApiQuery(definition, view, options);
+                    const body = resolveApiBody(definition, view, target, options);
+                    const timeout = resolveApiTimeout(definition, view, options);
+                    const signal = resolveApiSignal(options, abortController!);
 
-                    executeCommit(definition, model, data, options);
+                    data = await executeApi<MD, VD, R>(
+                        definition,
+                        {
+                            url,
+                            method,
+                            headers,
+                            query,
+                            body,
+                            timeout,
+                            signal,
+                        },
+                        options,
+                    );
+
+                    executeCommit(definition, target, mode, data);
                 } else {
                     data = await executeHandler(definition as ActionHandlerDefinition<MD, VD, R>, model, view);
                 }
