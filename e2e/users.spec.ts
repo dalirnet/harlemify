@@ -53,6 +53,14 @@ test.describe("users page", () => {
         await expect(page.getByTestId("user-count")).toHaveText("0 users");
     });
 
+    test("displays cloned sorted view", async ({ page }) => {
+        const sorted = page.getByTestId("cloned-sorted");
+        await expect(sorted).toBeVisible();
+        await expect(sorted).toContainText('"Bob Wilson"');
+        await expect(sorted).toContainText('"Jane Smith"');
+        await expect(sorted).toContainText('"John Doe"');
+    });
+
     test("displays merged summary view", async ({ page }) => {
         const summary = page.getByTestId("merged-summary");
         await expect(summary).toBeVisible();

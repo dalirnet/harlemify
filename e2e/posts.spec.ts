@@ -41,6 +41,14 @@ test.describe("posts page", () => {
         await expect(first.getByTestId("post-title")).toHaveText("First Post");
     });
 
+    test("displays cloned sorted view", async ({ page }) => {
+        const sorted = page.getByTestId("cloned-sorted");
+        await expect(sorted).toBeVisible();
+        await expect(sorted).toContainText('"First Post"');
+        await expect(sorted).toContainText('"Hello World"');
+        await expect(sorted).toContainText('"Second Post"');
+    });
+
     test("displays merged overview view", async ({ page }) => {
         const overview = page.getByTestId("merged-overview");
         await expect(overview).toBeVisible();

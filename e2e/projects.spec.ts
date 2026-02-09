@@ -47,6 +47,17 @@ test.describe("projects page", () => {
         await expect(page.getByTestId("status-check").locator(".monitor-state")).toHaveText("success");
     });
 
+    test("displays cloned sorted milestones view", async ({ page }) => {
+        await page.getByTestId("project-1").getByTestId("select-project").click();
+        await page.getByTestId("project-detail").waitFor();
+        await page.getByTestId("load-milestones").click();
+        await expect(page.getByTestId("status-milestones").locator(".monitor-state")).toHaveText("success");
+        const sorted = page.getByTestId("cloned-sorted-milestones");
+        await expect(sorted).toContainText('"Design mockups"');
+        await expect(sorted).toContainText('"Frontend development"');
+        await expect(sorted).toContainText('"Testing & QA"');
+    });
+
     test("loads milestones", async ({ page }) => {
         await page.getByTestId("project-1").getByTestId("select-project").click();
         await page.getByTestId("project-detail").waitFor();
