@@ -143,11 +143,6 @@ function resetListAction() {
             <pre>{{ JSON.stringify(userStore.view.summary.value, null, 2) }}</pre>
         </div>
 
-        <div v-if="userStore.action.list.data" class="detail" data-testid="action-data">
-            <h3>action.list.data (last successful result)</h3>
-            <pre>{{ JSON.stringify(userStore.action.list.data, null, 2)?.substring(0, 200) }}...</pre>
-        </div>
-
         <!-- Action Status -->
         <div class="monitor-status" data-testid="action-status">
             <h3>Action Status</h3>
@@ -218,7 +213,6 @@ function resetListAction() {
                 <li><code>commit("list", ActionManyMode.RESET)</code> - Standalone commit without api/handle</li>
                 <li><code>commit(..., { unique: true })</code> - Deduplicate on add</li>
                 <li><code>commit(..., { by: "email" })</code> - Custom identifier field for patch</li>
-                <li><code>action.list.data</code> - Last successful result</li>
                 <li><code>action.list.reset()</code> - Reset action state to idle</li>
                 <li><code>shape.defaults()</code> - Auto-generate zero-value form data from shape</li>
             </ul>

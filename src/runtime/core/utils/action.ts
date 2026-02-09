@@ -1,5 +1,5 @@
 import { defu } from "defu";
-import { type DeepReadonly, type Ref, ref, computed, readonly, toValue, nextTick } from "vue";
+import { type Ref, ref, computed, readonly, toValue, nextTick } from "vue";
 
 import { type StoreModel, type ModelDefinitions, type ModelCall, ModelOneMode, ModelManyMode } from "../types/model";
 import type { Shape } from "../types/shape";
@@ -341,8 +341,6 @@ export function createAction<MD extends ModelDefinitions, VD extends ViewDefinit
     let currentController: Promise<R> | null = null;
     let abortController: AbortController | null = null;
 
-    let globalData: R | null = null;
-
     const globalError = ref<Error | null>(null);
     const globalStatus = ref<ActionStatus>(ActionStatus.IDLE);
 
@@ -424,7 +422,6 @@ export function createAction<MD extends ModelDefinitions, VD extends ViewDefinit
                     data = await executeHandler(definition as ActionHandlerDefinition<MD, VD, R>, model, view);
                 }
 
-                globalData = data;
                 activeStatus.value = ActionStatus.SUCCESS;
 
                 definition.logger?.debug("Action success", {
@@ -447,22 +444,18 @@ export function createAction<MD extends ModelDefinitions, VD extends ViewDefinit
     }
 
     const action = Object.assign(execute, {
-        get loading() {
-            return loading;
-        },
         get error() {
             return readonly(globalError) as Readonly<Ref<Error | null>>;
         },
         get status() {
             return readonly(globalStatus) as Readonly<Ref<ActionStatus>>;
         },
-        get data() {
-            return globalData as DeepReadonly<R> | null;
+        get loading() {
+            return loading;
         },
         reset() {
             globalError.value = null;
             globalStatus.value = ActionStatus.IDLE;
-            globalData = null;
         },
     });
 
