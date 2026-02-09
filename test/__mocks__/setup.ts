@@ -1,9 +1,5 @@
 import { vi, beforeEach } from "vitest";
 
-declare global {
-    var $fetch: ReturnType<typeof vi.fn>;
-}
-
 vi.mock("#build/harlemify.config", () => {
     return {
         default: {
