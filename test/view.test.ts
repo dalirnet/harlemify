@@ -6,6 +6,7 @@ import { createModelFactory } from "../src/runtime/core/layers/model";
 import { createViewFactory } from "../src/runtime/core/layers/view";
 import { createStoreState, createStoreModel } from "../src/runtime/core/utils/store";
 import { createView } from "../src/runtime/core/utils/view";
+import { ViewClone } from "../src/runtime/core/types/view";
 import type { ShapeInfer } from "../src/runtime/core/types/shape";
 
 const UserShape = shape((factory) => {
@@ -39,6 +40,22 @@ describe("createViewFactory", () => {
         expect(definition.resolver).toBe(resolver);
     });
 
+    it("from() with options stores clone option", () => {
+        const resolver = (users: User[]) => users;
+
+        const definition = viewFactory.from("users", resolver, { clone: ViewClone.SHALLOW });
+
+        expect(definition.options?.clone).toBe(ViewClone.SHALLOW);
+    });
+
+    it("from() with deep clone option", () => {
+        const resolver = (users: User[]) => users;
+
+        const definition = viewFactory.from("users", resolver, { clone: ViewClone.DEEP });
+
+        expect(definition.options?.clone).toBe(ViewClone.DEEP);
+    });
+
     it("merge() creates multi-source definition", () => {
         const resolver = (user: User | null, users: User[]) => {
             return {
@@ -51,6 +68,14 @@ describe("createViewFactory", () => {
 
         expect(definition.models).toEqual(["user", "users"]);
         expect(definition.resolver).toBe(resolver);
+    });
+
+    it("merge() with options stores clone option", () => {
+        const resolver = (user: User | null, users: User[]) => ({ user, users });
+
+        const definition = viewFactory.merge(["user", "users"], resolver, { clone: ViewClone.SHALLOW });
+
+        expect(definition.options?.clone).toBe(ViewClone.SHALLOW);
     });
 });
 
@@ -165,6 +190,95 @@ describe("createView", () => {
         expect(summary.value).toEqual({
             current: "Alice",
             total: 2,
+        });
+    });
+
+    it("ViewClone.SHALLOW allows sorting without affecting state", () => {
+        const { source, model, viewFactory } = setup();
+
+        const users: User[] = [
+            { id: 2, name: "Bob", email: "bob@test.com" },
+            { id: 1, name: "Alice", email: "alice@test.com" },
+            { id: 3, name: "Charlie", email: "charlie@test.com" },
+        ];
+
+        model.users.set(users);
+
+        const definition = viewFactory.from(
+            "users",
+            (items: User[]) => {
+                return items.sort((a, b) => a.id - b.id);
+            },
+            { clone: ViewClone.SHALLOW },
+        );
+        definition.setKey("sorted");
+        const sorted = createView(definition, source);
+
+        expect(sorted.value).toEqual([
+            { id: 1, name: "Alice", email: "alice@test.com" },
+            { id: 2, name: "Bob", email: "bob@test.com" },
+            { id: 3, name: "Charlie", email: "charlie@test.com" },
+        ]);
+
+        const rawDefinition = viewFactory.from("users");
+        rawDefinition.setKey("raw");
+        const raw = createView(rawDefinition, source);
+
+        expect(raw.value).toEqual(users);
+    });
+
+    it("ViewClone.DEEP allows mutating nested properties without affecting state", () => {
+        const { source, model, viewFactory } = setup();
+
+        model.user.set({ id: 1, name: "Alice", email: "alice@test.com" });
+
+        const definition = viewFactory.from(
+            "user",
+            (user: User | null) => {
+                if (user) {
+                    user.name = "Modified";
+                }
+                return user;
+            },
+            { clone: ViewClone.DEEP },
+        );
+        definition.setKey("modified");
+        const modified = createView(definition, source);
+
+        expect(modified.value).toEqual({ id: 1, name: "Modified", email: "alice@test.com" });
+
+        const rawDefinition = viewFactory.from("user");
+        rawDefinition.setKey("rawUser");
+        const raw = createView(rawDefinition, source);
+
+        expect(raw.value).toEqual({ id: 1, name: "Alice", email: "alice@test.com" });
+    });
+
+    it("ViewClone.SHALLOW on merge view provides mutable copies", () => {
+        const { source, model, viewFactory } = setup();
+
+        model.users.set([
+            { id: 2, name: "Bob", email: "bob@test.com" },
+            { id: 1, name: "Alice", email: "alice@test.com" },
+        ]);
+        model.user.set({ id: 1, name: "Alice", email: "alice@test.com" });
+
+        const definition = viewFactory.merge(
+            ["user", "users"],
+            (user: User | null, users: User[]) => {
+                return {
+                    current: user?.name ?? "none",
+                    sorted: users.sort((a, b) => a.id - b.id).map((u) => u.name),
+                };
+            },
+            { clone: ViewClone.SHALLOW },
+        );
+        definition.setKey("mergedSorted");
+        const mergedSorted = createView(definition, source);
+
+        expect(mergedSorted.value).toEqual({
+            current: "Alice",
+            sorted: ["Alice", "Bob"],
         });
     });
 });
