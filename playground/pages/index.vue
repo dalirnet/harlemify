@@ -24,6 +24,12 @@
                 <span class="badge">handle + view.merge</span>
             </NuxtLink>
 
+            <NuxtLink to="/contacts" class="home-card">
+                <h2>Contacts</h2>
+                <p>Alias mapping with <code>meta({ alias })</code> — kebab-case API, snake_case store</p>
+                <span class="badge">alias + meta</span>
+            </NuxtLink>
+
             <NuxtLink to="/projects" class="home-card">
                 <h2>Projects</h2>
                 <p>Concurrent, transformer, signal, bind, error handling</p>

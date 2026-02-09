@@ -21,6 +21,14 @@ export interface Post {
     body: string;
 }
 
+// Contacts - demonstrating alias (kebab-case API keys)
+export interface Contact {
+    id: number;
+    "first-name": string;
+    "last-name": string;
+    email: string;
+}
+
 // Projects - demonstrating nested shape
 export interface ProjectMilestone {
     id: number;
@@ -78,6 +86,12 @@ const initialPosts: Post[] = [
     { id: 3, userId: 2, title: "Hello World", body: "Hello from Jane!" },
 ];
 
+const initialContacts: Contact[] = [
+    { id: 1, "first-name": "John", "last-name": "Doe", email: "john@example.com" },
+    { id: 2, "first-name": "Jane", "last-name": "Smith", email: "jane@example.com" },
+    { id: 3, "first-name": "Bob", "last-name": "Wilson", email: "bob@example.com" },
+];
+
 const initialProjects: Project[] = [
     {
         id: 1,
@@ -125,9 +139,11 @@ export const data = {
     config: { ...initialConfig } as Config,
     users: [...initialUsers] as User[],
     posts: [...initialPosts] as Post[],
+    contacts: [...initialContacts] as Contact[],
     projects: [...initialProjects] as Project[],
     nextUserId: 4,
     nextPostId: 4,
+    nextContactId: 4,
     nextProjectId: 3,
 };
 
@@ -137,6 +153,10 @@ export function getNextUserId() {
 
 export function getNextPostId() {
     return data.nextPostId++;
+}
+
+export function getNextContactId() {
+    return data.nextContactId++;
 }
 
 export function getNextProjectId() {
@@ -153,8 +173,10 @@ export function resetData() {
     data.config = deepClone(initialConfig);
     data.users = deepClone(initialUsers);
     data.posts = deepClone(initialPosts);
+    data.contacts = deepClone(initialContacts);
     data.projects = deepClone(initialProjects);
     data.nextUserId = 4;
     data.nextPostId = 4;
+    data.nextContactId = 4;
     data.nextProjectId = 3;
 }
