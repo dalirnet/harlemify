@@ -1,6 +1,7 @@
 import type { ConsolaInstance } from "consola";
 
 import type { ModelDefinitions, ModelDefinitionInfer } from "../types/model";
+import { wrapBaseDefinition } from "../utils/base";
 import type {
     RuntimeViewConfig,
     ViewDefinitionOptions,
@@ -20,14 +21,7 @@ export function createViewFactory<MD extends ModelDefinitions>(
         resolver?: ViewFromDefinitionResolver<MD, K, R>,
         options?: ViewDefinitionOptions,
     ): ViewFromDefinition<MD, K, R> {
-        let key = "";
-        const definition = {
-            get key() {
-                return key;
-            },
-            setKey(value: string) {
-                key = value;
-            },
+        return wrapBaseDefinition({
             model: [model] as const,
             resolver,
             options: {
@@ -35,9 +29,7 @@ export function createViewFactory<MD extends ModelDefinitions>(
                 ...options,
             },
             logger,
-        };
-
-        return definition as ViewFromDefinition<MD, K, R>;
+        });
     }
 
     function merge<K extends readonly (keyof MD)[], R>(
@@ -45,14 +37,7 @@ export function createViewFactory<MD extends ModelDefinitions>(
         resolver: ViewMergeDefinitionResolver<MD, K, R>,
         options?: ViewDefinitionOptions,
     ): ViewMergeDefinition<MD, K, R> {
-        let key = "";
-        return {
-            get key() {
-                return key;
-            },
-            setKey(value: string) {
-                key = value;
-            },
+        return wrapBaseDefinition({
             models,
             resolver,
             options: {
@@ -60,7 +45,7 @@ export function createViewFactory<MD extends ModelDefinitions>(
                 ...options,
             },
             logger,
-        } as ViewMergeDefinition<MD, K, R>;
+        });
     }
 
     return {

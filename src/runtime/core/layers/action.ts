@@ -2,6 +2,7 @@ import type { ConsolaInstance } from "consola";
 
 import type { ModelDefinitions } from "../types/model";
 import type { ViewDefinitions } from "../types/view";
+import { wrapBaseDefinition } from "../utils/base";
 import {
     type RuntimeActionConfig,
     type ActionApiRequest,
@@ -9,6 +10,7 @@ import {
     type ActionApiCommit,
     type ActionApiDefinition,
     type ActionHandlerCallback,
+    type ActionHandlerOptions,
     type ActionHandlerDefinition,
     type ActionFactory,
     ActionApiMethod,
@@ -19,28 +21,18 @@ export function createActionFactory<MD extends ModelDefinitions, VD extends View
     logger?: ConsolaInstance,
 ): ActionFactory<MD, VD> {
     function apiCall(request: ActionApiRequest<MD, VD>, commit?: ActionApiCommit<MD>): ActionApiDefinition<MD, VD> {
-        const mergedRequest: ActionApiRequest<MD, VD> = {
-            endpoint: config?.endpoint,
-            headers: config?.headers,
-            query: config?.query,
-            timeout: config?.timeout,
-            concurrent: config?.concurrent,
-            ...request,
-        };
-
-        let key = "";
-
-        return {
-            get key() {
-                return key;
+        return wrapBaseDefinition({
+            request: {
+                endpoint: config?.endpoint,
+                headers: config?.headers,
+                query: config?.query,
+                timeout: config?.timeout,
+                concurrent: config?.concurrent,
+                ...request,
             },
-            setKey(value: string) {
-                key = value;
-            },
-            request: mergedRequest,
             commit,
             logger,
-        };
+        });
     }
 
     function apiGet(
@@ -54,35 +46,65 @@ export function createActionFactory<MD extends ModelDefinitions, VD extends View
         request: ActionApiRequestShortcut<MD, VD>,
         commit?: ActionApiCommit<MD>,
     ): ActionApiDefinition<MD, VD> {
-        return apiCall({ ...request, method: ActionApiMethod.HEAD }, commit);
+        return apiCall(
+            {
+                ...request,
+                method: ActionApiMethod.HEAD,
+            },
+            commit,
+        );
     }
 
     function apiPost(
         request: ActionApiRequestShortcut<MD, VD>,
         commit?: ActionApiCommit<MD>,
     ): ActionApiDefinition<MD, VD> {
-        return apiCall({ ...request, method: ActionApiMethod.POST }, commit);
+        return apiCall(
+            {
+                ...request,
+                method: ActionApiMethod.POST,
+            },
+            commit,
+        );
     }
 
     function apiPut(
         request: ActionApiRequestShortcut<MD, VD>,
         commit?: ActionApiCommit<MD>,
     ): ActionApiDefinition<MD, VD> {
-        return apiCall({ ...request, method: ActionApiMethod.PUT }, commit);
+        return apiCall(
+            {
+                ...request,
+                method: ActionApiMethod.PUT,
+            },
+            commit,
+        );
     }
 
     function apiPatch(
         request: ActionApiRequestShortcut<MD, VD>,
         commit?: ActionApiCommit<MD>,
     ): ActionApiDefinition<MD, VD> {
-        return apiCall({ ...request, method: ActionApiMethod.PATCH }, commit);
+        return apiCall(
+            {
+                ...request,
+                method: ActionApiMethod.PATCH,
+            },
+            commit,
+        );
     }
 
     function apiDelete(
         request: ActionApiRequestShortcut<MD, VD>,
         commit?: ActionApiCommit<MD>,
     ): ActionApiDefinition<MD, VD> {
-        return apiCall({ ...request, method: ActionApiMethod.DELETE }, commit);
+        return apiCall(
+            {
+                ...request,
+                method: ActionApiMethod.DELETE,
+            },
+            commit,
+        );
     }
 
     const api = Object.assign(apiCall, {
@@ -94,19 +116,18 @@ export function createActionFactory<MD extends ModelDefinitions, VD extends View
         delete: apiDelete,
     });
 
-    function handler<R>(callback: ActionHandlerCallback<MD, VD, R>): ActionHandlerDefinition<MD, VD, R> {
-        let key = "";
-
-        return {
-            get key() {
-                return key;
-            },
-            setKey(value: string) {
-                key = value;
-            },
+    function handler<R>(
+        callback: ActionHandlerCallback<MD, VD, R>,
+        options?: ActionHandlerOptions,
+    ): ActionHandlerDefinition<MD, VD, R> {
+        return wrapBaseDefinition({
             callback,
+            options: {
+                concurrent: config?.concurrent,
+                ...options,
+            },
             logger,
-        };
+        });
     }
 
     return {
