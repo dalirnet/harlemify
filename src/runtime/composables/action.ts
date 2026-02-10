@@ -1,6 +1,11 @@
 import { type ComputedRef, type Ref, ref, computed } from "vue";
 
-import { ActionStatus, type ActionCall, type ActionCallOptions } from "../core/types/action";
+import {
+    ActionStatus,
+    type ActionCall,
+    type ActionCallOptions,
+    type ActionCallBaseOptions,
+} from "../core/types/action";
 
 // Options
 
@@ -29,7 +34,7 @@ export function useIsolatedActionStatus(): Ref<ActionStatus> {
 }
 
 export function useStoreAction<
-    A extends Record<string, ActionCall>,
+    A extends Record<string, ActionCall<any>>,
     K extends keyof A & string,
     T = Awaited<ReturnType<A[K]>>,
 >(store: { action: A }, key: K, options?: UseStoreActionOptions): UseStoreAction<T> {
@@ -68,13 +73,13 @@ export function useStoreAction<
 
     function execute(callOptions: Omit<ActionCallOptions, "bind"> = {}): Promise<T> {
         if (options?.isolated) {
-            (callOptions as ActionCallOptions).bind = {
+            (callOptions as ActionCallBaseOptions).bind = {
                 status: status as Ref<ActionStatus>,
                 error: error as Ref<Error | null>,
             };
         }
 
-        return action(callOptions);
+        return (action as (options?: ActionCallOptions) => Promise<T>)(callOptions);
     }
 
     return {

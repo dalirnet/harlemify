@@ -18,10 +18,16 @@ export type { ViewDefinitionOptions } from "./core/types/view";
 export { ActionStatus, ActionConcurrent, ActionApiMethod } from "./core/types/action";
 export type {
     ActionCall,
+    ActionApiCall,
+    ActionHandlerCall,
     ActionCallOptions,
+    ActionCallBaseOptions,
+    ActionApiCallOptions,
+    ActionHandlerCallOptions,
     ActionCallTransformerOptions,
     ActionCallBindOptions,
     ActionCallCommitOptions,
+    ActionHandlerOptions,
     ActionResolvedApi,
 } from "./core/types/action";
 export { ActionApiError, ActionHandlerError, ActionCommitError, ActionConcurrentError } from "./core/utils/error";
