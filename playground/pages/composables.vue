@@ -9,6 +9,7 @@ const { execute, status, loading, error, reset } = useStoreAction(todoStore, "li
 const isolatedAction = useStoreAction(todoStore, "list", { isolated: true });
 const deleteAction = useStoreAction(todoStore, "delete");
 const toggleAction = useStoreAction(todoStore, "toggle");
+const renameAction = useStoreAction(todoStore, "rename");
 
 // useStoreModel — destructured
 const { set: setCurrent, patch: patchCurrent, reset: resetCurrent } = useStoreModel(todoStore, "current");
@@ -63,8 +64,17 @@ async function deleteTodo(todo: Todo) {
 }
 
 async function toggleTodo(todo: Todo) {
+    await toggleAction.execute({ payload: todo });
+}
+
+async function renameTodo(todo: Todo) {
     setCurrent(todo);
-    await toggleAction.execute();
+    await renameAction.execute({ payload: todo.title + " (edited)" });
+}
+
+async function renameDefault(todo: Todo) {
+    setCurrent(todo);
+    await renameAction.execute();
 }
 
 // useStoreModel demos
@@ -153,6 +163,10 @@ function clearTrackLog() {
                     <button class="btn btn-sm" data-testid="select-todo" @click="selectTodo(todo)">Select</button>
                     <button class="btn btn-sm" data-testid="toggle-todo" @click="toggleTodo(todo)">
                         {{ todo.done ? "Undo" : "Done" }}
+                    </button>
+                    <button class="btn btn-sm" data-testid="rename-todo" @click="renameTodo(todo)">Rename</button>
+                    <button class="btn btn-sm" data-testid="rename-default" @click="renameDefault(todo)">
+                        Rename (default)
                     </button>
                     <button class="btn btn-sm btn-danger" data-testid="delete-todo" @click="deleteTodo(todo)">
                         Delete
@@ -403,6 +417,8 @@ function clearTrackLog() {
                     <code>useStoreAction(store, key, { isolated: true })</code> - Non-destructured:
                     <code>isolatedAction.execute()</code>
                 </li>
+                <li><code>handler(callback, { payload })</code> - Definition-level default payload</li>
+                <li><code>execute({ payload })</code> - Call-time payload override</li>
                 <li>
                     <code>useStoreModel(store, key)</code> - Destructured:
                     <code>{ set, patch, reset }</code>
