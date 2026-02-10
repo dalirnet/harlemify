@@ -4,7 +4,7 @@ import { createStore } from "@harlem/core";
 import { shape } from "../src/runtime/core/layers/shape";
 import { createModelFactory } from "../src/runtime/core/layers/model";
 import { createStoreState, createStoreModel } from "../src/runtime/core/utils/store";
-import { ModelKind, ModelOneMode } from "../src/runtime/core/types/model";
+import { ModelType, ModelManyKind, ModelOneMode } from "../src/runtime/core/types/model";
 import type { ShapeInfer } from "../src/runtime/core/types/shape";
 
 // Setup
@@ -27,7 +27,7 @@ describe("createModelFactory", () => {
     it("one() creates object definition", () => {
         const definition = factory.one(UserShape);
 
-        expect(definition.kind).toBe(ModelKind.OBJECT);
+        expect(definition.type).toBe(ModelType.ONE);
         expect(definition.shape).toBe(UserShape);
         expect(definition.options).toEqual({ identifier: undefined });
     });
@@ -50,7 +50,7 @@ describe("createModelFactory", () => {
     it("many() creates array definition", () => {
         const definition = factory.many(UserShape);
 
-        expect(definition.kind).toBe(ModelKind.ARRAY);
+        expect(definition.type).toBe(ModelType.MANY);
         expect(definition.shape).toBe(UserShape);
         expect(definition.options).toEqual({ identifier: undefined });
     });
@@ -59,6 +59,18 @@ describe("createModelFactory", () => {
         const definition = factory.many(UserShape, { identifier: "email" });
 
         expect(definition.options?.identifier).toBe("email");
+    });
+
+    it("many() accepts kind option", () => {
+        const definition = factory.many(UserShape, { kind: ModelManyKind.RECORD });
+
+        expect(definition.options?.kind).toBe("record");
+    });
+
+    it("many() defaults kind to undefined (list)", () => {
+        const definition = factory.many(UserShape);
+
+        expect(definition.options?.kind).toBeUndefined();
     });
 });
 
@@ -119,6 +131,16 @@ describe("createStoreState", () => {
         expect(state.users).toEqual(defaultUsers);
     });
 
+    it("returns empty object for record many-models", () => {
+        const model = {
+            grouped: factory.many(UserShape, { kind: ModelManyKind.RECORD }),
+        };
+
+        const state = createStoreState(model);
+
+        expect(state.grouped).toEqual({});
+    });
+
     it("handles mixed model types", () => {
         const model = {
             current: factory.one(UserShape),
@@ -144,7 +166,7 @@ describe("createStoreModel", () => {
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const state = createStoreState(modelDefs);
@@ -216,7 +238,7 @@ describe("createStoreModel", () => {
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const state = createStoreState(modelDefs);
@@ -252,7 +274,7 @@ describe("createStoreModel", () => {
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const state = createStoreState(modelDefs);
@@ -645,7 +667,7 @@ describe("createStoreModel", () => {
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const state = createStoreState(modelDefs);
@@ -674,7 +696,7 @@ describe("createStoreModel", () => {
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const state = createStoreState(modelDefs);
@@ -720,7 +742,7 @@ describe("createStoreModel", () => {
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const state = createStoreState(modelDefs);
@@ -801,7 +823,7 @@ describe("createStoreModel", () => {
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const state = createStoreState(modelDefs);
@@ -824,7 +846,7 @@ describe("createStoreModel", () => {
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const state = createStoreState(modelDefs);
@@ -839,6 +861,247 @@ describe("createStoreModel", () => {
             model.user.commit(ModelOneMode.RESET);
 
             expect(source.state.user).toBeNull();
+        });
+    });
+
+    describe("record mutations", () => {
+        function setup() {
+            const modelDefs = {
+                grouped: factory.many(UserShape, { kind: ModelManyKind.RECORD }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-record-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            return {
+                source,
+                model,
+            };
+        }
+
+        it("initializes with empty object", () => {
+            const { source } = setup();
+
+            expect(source.state.grouped).toEqual({});
+        });
+
+        it("set replaces entire record", () => {
+            const { source, model } = setup();
+            const grouped: Record<string, User[]> = {
+                "team-a": [
+                    { id: 1, name: "Alice", email: "alice@test.com" },
+                    { id: 2, name: "Bob", email: "bob@test.com" },
+                ],
+            };
+
+            model.grouped.set(grouped);
+
+            expect(source.state.grouped).toEqual(grouped);
+        });
+
+        it("set replaces with multiple keys", () => {
+            const { source, model } = setup();
+            const grouped: Record<string, User[]> = {
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+                "team-b": [{ id: 2, name: "Bob", email: "bob@test.com" }],
+            };
+
+            model.grouped.set(grouped);
+
+            expect(Object.keys(source.state.grouped as Record<string, User[]>)).toHaveLength(2);
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
+            expect((source.state.grouped as Record<string, User[]>)["team-b"]).toHaveLength(1);
+        });
+
+        it("set overwrites previous record", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+                "team-b": [{ id: 2, name: "Bob", email: "bob@test.com" }],
+            });
+
+            model.grouped.set({
+                "team-c": [{ id: 3, name: "Charlie", email: "charlie@test.com" }],
+            });
+
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toBeUndefined();
+            expect((source.state.grouped as Record<string, User[]>)["team-b"]).toBeUndefined();
+            expect((source.state.grouped as Record<string, User[]>)["team-c"]).toHaveLength(1);
+        });
+
+        it("reset clears entire record", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+                "team-b": [{ id: 2, name: "Bob", email: "bob@test.com" }],
+            });
+
+            model.grouped.reset();
+
+            expect(source.state.grouped).toEqual({});
+        });
+
+        it("patch merges keys into record", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+            });
+
+            model.grouped.patch({
+                "team-b": [{ id: 2, name: "Bob", email: "bob@test.com" }],
+            });
+
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
+            expect((source.state.grouped as Record<string, User[]>)["team-b"]).toHaveLength(1);
+        });
+
+        it("patch overwrites existing key", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+            });
+
+            model.grouped.patch({
+                "team-a": [{ id: 2, name: "Bob", email: "bob@test.com" }],
+            });
+
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
+            expect((source.state.grouped as Record<string, User[]>)["team-a"][0].name).toBe("Bob");
+        });
+
+        it("remove deletes key from record", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+                "team-b": [{ id: 2, name: "Bob", email: "bob@test.com" }],
+            });
+
+            model.grouped.remove("team-a");
+
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toBeUndefined();
+            expect((source.state.grouped as Record<string, User[]>)["team-b"]).toHaveLength(1);
+        });
+
+        it("remove does nothing for missing key", () => {
+            const { source, model } = setup();
+
+            model.grouped.remove("missing");
+
+            expect(source.state.grouped).toEqual({});
+        });
+
+        it("add adds key to record", () => {
+            const { source, model } = setup();
+
+            model.grouped.add("team-a", [{ id: 1, name: "Alice", email: "alice@test.com" }]);
+
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
+        });
+
+        it("add preserves existing keys", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+            });
+
+            model.grouped.add("team-b", [{ id: 2, name: "Bob", email: "bob@test.com" }]);
+
+            expect(Object.keys(source.state.grouped as Record<string, User[]>)).toHaveLength(2);
+        });
+
+        it("patch with deep option uses defu", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+            });
+
+            model.grouped.patch(
+                {
+                    "team-b": [{ id: 2, name: "Bob", email: "bob@test.com" }],
+                },
+                { deep: true },
+            );
+
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
+            expect((source.state.grouped as Record<string, User[]>)["team-a"][0].name).toBe("Alice");
+            expect((source.state.grouped as Record<string, User[]>)["team-b"]).toHaveLength(1);
+            expect((source.state.grouped as Record<string, User[]>)["team-b"][0].name).toBe("Bob");
+        });
+
+        it("add overwrites existing key", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+            });
+
+            model.grouped.add("team-a", [{ id: 2, name: "Bob", email: "bob@test.com" }]);
+
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
+            expect((source.state.grouped as Record<string, User[]>)["team-a"][0].name).toBe("Bob");
+        });
+
+        it("remove last key leaves empty object", () => {
+            const { source, model } = setup();
+            model.grouped.set({
+                "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
+            });
+
+            model.grouped.remove("team-a");
+
+            expect(source.state.grouped).toEqual({});
+        });
+
+        it("reset restores custom default", () => {
+            const modelDefs = {
+                grouped: factory.many(UserShape, {
+                    kind: ModelManyKind.RECORD,
+                    default: {
+                        "team-a": [{ id: 1, name: "Default", email: "default@test.com" }],
+                    },
+                }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-record-default-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            model.grouped.set({
+                "team-b": [{ id: 2, name: "Bob", email: "bob@test.com" }],
+            });
+
+            model.grouped.reset();
+
+            expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
+            expect((source.state.grouped as Record<string, User[]>)["team-a"][0].name).toBe("Default");
+        });
+
+        it("uses custom default", () => {
+            const modelDefs = {
+                grouped: factory.many(UserShape, {
+                    kind: ModelManyKind.RECORD,
+                    default: {
+                        "team-a": [{ id: 1, name: "Default", email: "default@test.com" }],
+                    },
+                }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+
+            expect((state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
+            expect((state.grouped as Record<string, User[]>)["team-a"][0].name).toBe("Default");
         });
     });
 });

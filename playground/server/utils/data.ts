@@ -63,6 +63,13 @@ export interface Project {
     meta: ProjectMeta;
 }
 
+// Teams - demonstrating record model (keyed collection)
+export interface TeamMember {
+    id: number;
+    name: string;
+    role: string;
+}
+
 // Initial data
 const initialConfig: Config = {
     id: 1,
@@ -147,6 +154,18 @@ const initialProjects: Project[] = [
     },
 ];
 
+const initialTeams: Record<string, TeamMember[]> = {
+    frontend: [
+        { id: 1, name: "Alice", role: "lead" },
+        { id: 2, name: "Bob", role: "developer" },
+    ],
+    backend: [
+        { id: 3, name: "Charlie", role: "lead" },
+        { id: 4, name: "Diana", role: "developer" },
+    ],
+    design: [{ id: 5, name: "Eve", role: "lead" }],
+};
+
 // Single exported data object containing all mutable state
 export const data = {
     config: { ...initialConfig } as Config,
@@ -160,6 +179,8 @@ export const data = {
     nextContactId: 4,
     nextTodoId: 4,
     nextProjectId: 3,
+    teams: JSON.parse(JSON.stringify(initialTeams)) as Record<string, TeamMember[]>,
+    nextTeamMemberId: 6,
 };
 
 export function getNextUserId() {
@@ -182,6 +203,10 @@ export function getNextProjectId() {
     return data.nextProjectId++;
 }
 
+export function getNextTeamMemberId() {
+    return data.nextTeamMemberId++;
+}
+
 // Deep clone utility
 function deepClone<T>(obj: T): T {
     return JSON.parse(JSON.stringify(obj));
@@ -200,4 +225,6 @@ export function resetData() {
     data.nextContactId = 4;
     data.nextTodoId = 4;
     data.nextProjectId = 3;
+    data.teams = deepClone(initialTeams);
+    data.nextTeamMemberId = 6;
 }

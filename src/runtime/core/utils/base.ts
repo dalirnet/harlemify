@@ -2,9 +2,7 @@ import type { BaseDefinition } from "../types/base";
 
 // Base Definition
 
-export function wrapBaseDefinition<T extends Omit<BaseDefinition, "key" | "setKey">>(
-    definition: T,
-): T & BaseDefinition {
+export function wrapBaseDefinition<T extends Omit<BaseDefinition, "key">>(definition: T): T & BaseDefinition {
     let key = "";
 
     return Object.defineProperties(definition, {
@@ -12,11 +10,7 @@ export function wrapBaseDefinition<T extends Omit<BaseDefinition, "key" | "setKe
             get() {
                 return key;
             },
-            enumerable: true,
-            configurable: true,
-        },
-        setKey: {
-            value(value: string) {
+            set(value: string) {
                 key = value;
             },
             enumerable: true,

@@ -10,14 +10,15 @@ import {
     type ModelOneDefinition,
     type ModelManyDefinition,
     type ModelFactory,
-    ModelKind,
+    ModelType,
+    ModelManyKind,
 } from "../types/model";
 
 export function createModelFactory(config?: RuntimeModelConfig, logger?: ConsolaInstance): ModelFactory {
     function one<S extends Shape>(shape: ShapeType<S>, options?: ModelOneDefinitionOptions<S>): ModelOneDefinition<S> {
         return wrapBaseDefinition({
             shape,
-            kind: ModelKind.OBJECT,
+            type: ModelType.ONE,
             options: {
                 identifier: config?.identifier,
                 ...options,
@@ -26,19 +27,20 @@ export function createModelFactory(config?: RuntimeModelConfig, logger?: Consola
         });
     }
 
-    function many<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>>(
-        shape: ShapeType<S>,
-        options?: ModelManyDefinitionOptions<S, I>,
-    ): ModelManyDefinition<S, I> {
+    function many<
+        S extends Shape,
+        I extends keyof S = ModelDefaultIdentifier<S>,
+        T extends ModelManyKind = ModelManyKind.LIST,
+    >(shape: ShapeType<S>, options?: ModelManyDefinitionOptions<S, I, T>): ModelManyDefinition<S, I, T> {
         return wrapBaseDefinition({
             shape,
-            kind: ModelKind.ARRAY,
+            type: ModelType.MANY,
             options: {
                 identifier: config?.identifier as I | undefined,
                 ...options,
             },
             logger,
-        });
+        }) as ModelManyDefinition<S, I, T>;
     }
 
     return {

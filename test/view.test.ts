@@ -96,7 +96,7 @@ describe("createView", () => {
         const viewFactory = createViewFactory();
 
         for (const [k, def] of Object.entries(modelDefs)) {
-            def.setKey(k);
+            def.key = k;
         }
 
         const state = createStoreState(modelDefs);
@@ -114,7 +114,7 @@ describe("createView", () => {
         const { source, viewFactory } = setup();
 
         const definition = viewFactory.from("user");
-        definition.setKey("user");
+        definition.key = "user";
         const user = createView(definition, source);
 
         expect(user).toBeDefined();
@@ -125,7 +125,7 @@ describe("createView", () => {
         const { source, model, viewFactory } = setup();
 
         const definition = viewFactory.from("user");
-        definition.setKey("user");
+        definition.key = "user";
         const user = createView(definition, source);
         const userData: User = {
             id: 1,
@@ -144,7 +144,7 @@ describe("createView", () => {
         const definition = viewFactory.from("user", (user: User | null) => {
             return user?.name ?? "unknown";
         });
-        definition.setKey("userName");
+        definition.key = "userName";
         const userName = createView(definition, source);
 
         expect(userName.value).toBe("unknown");
@@ -167,7 +167,7 @@ describe("createView", () => {
                 total: users?.length ?? 0,
             };
         });
-        definition.setKey("summary");
+        definition.key = "summary";
         const summary = createView(definition, source);
 
         expect(summary.value).toEqual({
@@ -217,7 +217,7 @@ describe("createView", () => {
             },
             { clone: ViewClone.SHALLOW },
         );
-        definition.setKey("sorted");
+        definition.key = "sorted";
         const sorted = createView(definition, source);
 
         expect(sorted.value).toEqual([
@@ -227,7 +227,7 @@ describe("createView", () => {
         ]);
 
         const rawDefinition = viewFactory.from("users");
-        rawDefinition.setKey("raw");
+        rawDefinition.key = "raw";
         const raw = createView(rawDefinition, source);
 
         expect(raw.value).toEqual(users);
@@ -248,13 +248,13 @@ describe("createView", () => {
             },
             { clone: ViewClone.DEEP },
         );
-        definition.setKey("modified");
+        definition.key = "modified";
         const modified = createView(definition, source);
 
         expect(modified.value).toEqual({ id: 1, name: "Modified", email: "alice@test.com" });
 
         const rawDefinition = viewFactory.from("user");
-        rawDefinition.setKey("rawUser");
+        rawDefinition.key = "rawUser";
         const raw = createView(rawDefinition, source);
 
         expect(raw.value).toEqual({ id: 1, name: "Alice", email: "alice@test.com" });
@@ -279,7 +279,7 @@ describe("createView", () => {
             },
             { clone: ViewClone.SHALLOW },
         );
-        definition.setKey("mergedSorted");
+        definition.key = "mergedSorted";
         const mergedSorted = createView(definition, source);
 
         expect(mergedSorted.value).toEqual({

@@ -7,7 +7,7 @@ export { shape } from "./core/layers/shape";
 export type { ShapeInfer } from "./core/types/shape";
 
 // Model
-export { ModelKind, ModelOneMode, ModelManyMode } from "./core/types/model";
+export { ModelType, ModelManyKind, ModelOneMode, ModelManyMode } from "./core/types/model";
 export type { ModelOneCommitOptions, ModelManyCommitOptions } from "./core/types/model";
 
 // View

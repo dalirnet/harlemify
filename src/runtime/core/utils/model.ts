@@ -12,9 +12,11 @@ import {
     type ModelOneCommitOptions,
     type ModelManyCommitOptions,
     type ModelOneCommit,
-    type ModelManyCommit,
+    type ModelManyListCommit,
+    type ModelManyRecordCommit,
     type ModelCall,
-    ModelKind,
+    ModelType,
+    ModelManyKind,
     ModelOneMode,
     ModelManyMode,
 } from "../types/model";
@@ -106,13 +108,13 @@ function createOneCommit<S extends Shape>(
     };
 }
 
-// Create Many Commit
+// Create Many List Commit
 
-function createManyCommit<S extends Shape>(
+function createManyListCommit<S extends Shape>(
     definition: ModelManyDefinition<S, any>,
     shape: ShapeResolved,
     source: SourceStore<BaseState>,
-): ModelManyCommit<S, any> {
+): ModelManyListCommit<S, any> {
     const identifier = resolveIdentifier(definition, shape);
 
     const setOperation: Mutation<S[]> = source.mutation(`${definition.key}:set`, (state, value: S[]) => {
@@ -133,8 +135,8 @@ function createManyCommit<S extends Shape>(
             const by = payload.options?.by ?? identifier;
 
             state[definition.key] = state[definition.key].map((item: S) => {
-                const found = items.find((p) => {
-                    return p[by] === item[by];
+                const found = items.find((partial) => {
+                    return partial[by] === item[by];
                 });
 
                 if (!found) {
@@ -262,27 +264,154 @@ function createManyCommit<S extends Shape>(
         patch,
         remove,
         add,
-    } as ModelManyCommit<S, any>;
+    } as ModelManyListCommit<S, any>;
+}
+
+// Create Many Record Commit
+
+function createManyRecordCommit<S extends Shape>(
+    definition: ModelManyDefinition<S, any>,
+    source: SourceStore<BaseState>,
+): ModelManyRecordCommit<S> {
+    const setOperation: Mutation<Record<string, S[]>> = source.mutation(
+        `${definition.key}:set`,
+        (state, value: Record<string, S[]>) => {
+            state[definition.key] = value;
+        },
+    );
+
+    const resetOperation: Mutation<undefined> = source.mutation(`${definition.key}:reset`, (state) => {
+        state[definition.key] = definition.options?.default ?? {};
+    });
+
+    const patchOperation: Mutation<{
+        value: Record<string, S[]>;
+        options?: ModelOneCommitOptions;
+    }> = source.mutation(
+        `${definition.key}:patch`,
+        (state, payload: { value: Record<string, S[]>; options?: ModelOneCommitOptions }) => {
+            if (payload.options?.deep) {
+                state[definition.key] = defu(payload.value, state[definition.key]) as Record<string, S[]>;
+
+                return;
+            }
+
+            state[definition.key] = {
+                ...state[definition.key],
+                ...payload.value,
+            };
+        },
+    );
+
+    const removeOperation: Mutation<string> = source.mutation(`${definition.key}:remove`, (state, key: string) => {
+        const record: Record<string, S[]> = {};
+        for (const entry of Object.keys(state[definition.key])) {
+            if (entry !== key) {
+                record[entry] = state[definition.key][entry];
+            }
+        }
+
+        state[definition.key] = record;
+    });
+
+    const addOperation: Mutation<{ key: string; value: S[] }> = source.mutation(
+        `${definition.key}:add`,
+        (state, payload: { key: string; value: S[] }) => {
+            state[definition.key] = {
+                ...state[definition.key],
+                [payload.key]: payload.value,
+            };
+        },
+    );
+
+    function set(value: Record<string, S[]>) {
+        definition.logger?.debug("Model mutation", {
+            model: definition.key,
+            mutation: "set",
+        });
+
+        setOperation(value);
+    }
+
+    function reset() {
+        definition.logger?.debug("Model mutation", {
+            model: definition.key,
+            mutation: "reset",
+        });
+
+        resetOperation();
+    }
+
+    function patch(value: Record<string, S[]>, options?: ModelOneCommitOptions) {
+        definition.logger?.debug("Model mutation", {
+            model: definition.key,
+            mutation: "patch",
+        });
+
+        patchOperation({ value, options });
+    }
+
+    function remove(key: string) {
+        definition.logger?.debug("Model mutation", {
+            model: definition.key,
+            mutation: "remove",
+        });
+
+        removeOperation(key);
+    }
+
+    function add(key: string, value: S[]) {
+        definition.logger?.debug("Model mutation", {
+            model: definition.key,
+            mutation: "add",
+        });
+
+        addOperation({ key, value });
+    }
+
+    return {
+        set,
+        reset,
+        patch,
+        remove,
+        add,
+    } as ModelManyRecordCommit<S>;
 }
 
 // Type Guards
 
 function isOneDefinition<S extends Shape>(definition: ModelDefinition<S>): definition is ModelOneDefinition<S> {
-    return definition.kind === ModelKind.OBJECT;
+    return definition.type === ModelType.ONE;
+}
+
+function isManyRecordDefinition<S extends Shape>(definition: ModelManyDefinition<S, any, any>): boolean {
+    return definition.options?.kind === ModelManyKind.RECORD;
 }
 
 // Resolve Commit
+
+function resolveManyCommit<S extends Shape>(
+    definition: ModelManyDefinition<S, any, any>,
+    shape: ShapeResolved,
+    source: SourceStore<BaseState>,
+): ModelManyListCommit<S, any> | ModelManyRecordCommit<S> {
+    if (isManyRecordDefinition(definition)) {
+        return createManyRecordCommit(definition, source);
+    }
+
+    return createManyListCommit(definition, shape, source);
+}
 
 function resolveCommit<S extends Shape>(
     definition: ModelDefinition<S>,
     shape: ShapeResolved,
     source: SourceStore<BaseState>,
-): ModelOneCommit<S> | ModelManyCommit<S, any> {
+): ModelOneCommit<S> | ModelManyListCommit<S, any> | ModelManyRecordCommit<S> {
     if (isOneDefinition(definition)) {
         return createOneCommit(definition, source);
     }
 
-    return createManyCommit(definition, shape, source);
+    return resolveManyCommit(definition, shape, source);
 }
 
 // Create Model
@@ -293,13 +422,13 @@ export function createModel<S extends Shape>(
 ): ModelCall<S> {
     definition.logger?.debug("Registering model", {
         model: definition.key,
-        kind: definition.kind,
+        type: definition.type,
     });
 
     const shape = resolveShape(definition.shape as ShapeDefinition);
     const commit = resolveCommit(definition, shape, source);
 
-    const model: ModelCall<S> = Object.assign(commit, {
+    const model = Object.assign(commit, {
         commit(mode: ModelOneMode | ModelManyMode, value?: unknown, options?: unknown) {
             const handler = commit[mode as keyof typeof commit] as (...args: unknown[]) => void;
             switch (mode) {
@@ -317,7 +446,7 @@ export function createModel<S extends Shape>(
         aliases() {
             return shape.aliases;
         },
-    });
+    }) as ModelCall<S>;
 
     return model;
 }

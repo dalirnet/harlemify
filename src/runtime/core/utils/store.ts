@@ -4,7 +4,13 @@ import { createModel } from "./model";
 import { createView } from "./view";
 import { createAction } from "./action";
 
-import { type ModelDefinitions, type ModelDefinitionsInfer, type StoreModel, ModelKind } from "../types/model";
+import {
+    type ModelDefinitions,
+    type ModelDefinitionsInfer,
+    type StoreModel,
+    ModelType,
+    ModelManyKind,
+} from "../types/model";
 import type { ViewDefinition, ViewDefinitions, StoreView } from "../types/view";
 import type { ActionDefinition, ActionDefinitions, StoreAction } from "../types/action";
 
@@ -12,8 +18,13 @@ import type { ActionDefinition, ActionDefinitions, StoreAction } from "../types/
 
 export function createStoreState<MD extends ModelDefinitions>(modelDefinitions: MD): ModelDefinitionsInfer<MD> {
     const output = {} as ModelDefinitionsInfer<MD>;
-    for (const [key, { options, kind }] of Object.entries(modelDefinitions)) {
-        (output as Record<string, unknown>)[key] = options?.default ?? (kind === ModelKind.OBJECT ? null : []);
+    for (const [key, { options, type }] of Object.entries(modelDefinitions)) {
+        if (type === ModelType.ONE) {
+            (output as Record<string, unknown>)[key] = options?.default ?? null;
+        } else {
+            const manyDefault = options?.kind === ModelManyKind.RECORD ? {} : [];
+            (output as Record<string, unknown>)[key] = options?.default ?? manyDefault;
+        }
     }
 
     return output;
@@ -27,7 +38,7 @@ export function createStoreModel<MD extends ModelDefinitions>(
 ): StoreModel<MD> {
     const output = {} as StoreModel<MD>;
     for (const [key, definition] of Object.entries(modelDefinitions)) {
-        definition.setKey(key);
+        definition.key = key;
 
         (output as Record<string, unknown>)[key] = createModel(definition, source);
     }
@@ -43,7 +54,7 @@ export function createStoreView<MD extends ModelDefinitions, VD extends ViewDefi
 ): StoreView<MD, VD> {
     const output = {} as StoreView<MD, VD>;
     for (const [key, definition] of Object.entries(viewDefinitions)) {
-        definition.setKey(key);
+        definition.key = key;
 
         (output as Record<string, unknown>)[key] = createView(definition as ViewDefinition<MD>, source);
     }
@@ -64,7 +75,7 @@ export function createStoreAction<
 ): StoreAction<MD, VD, AD> {
     const output = {} as StoreAction<MD, VD, AD>;
     for (const [key, definition] of Object.entries(actionDefinitions)) {
-        definition.setKey(key);
+        definition.key = key;
 
         (output as Record<string, unknown>)[key] = createAction<MD, VD, unknown>(definition, model, view);
     }

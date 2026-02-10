@@ -9,9 +9,14 @@ export interface RuntimeModelConfig {
 
 // Enums
 
-export enum ModelKind {
-    OBJECT = "object",
-    ARRAY = "array",
+export enum ModelType {
+    ONE = "one",
+    MANY = "many",
+}
+
+export enum ModelManyKind {
+    LIST = "list",
+    RECORD = "record",
 }
 
 export enum ModelOneMode {
@@ -41,29 +46,34 @@ export interface ModelOneDefinitionOptions<S extends Shape> {
     default?: S;
 }
 
-export interface ModelManyDefinitionOptions<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>> {
-    identifier?: I;
-    default?: S[];
-}
+export type ModelManyDefinitionOptions<
+    S extends Shape,
+    I extends keyof S = ModelDefaultIdentifier<S>,
+    T extends ModelManyKind = ModelManyKind.LIST,
+> = {
+    kind?: T;
+    default?: [T] extends [ModelManyKind.LIST] ? S[] : Record<string, S[]>;
+} & ([T] extends [ModelManyKind.LIST] ? { identifier?: I } : {});
 
 // Definitions
 
 export interface ModelOneDefinition<S extends Shape> extends BaseDefinition {
     shape: ShapeType<S>;
-    kind: ModelKind.OBJECT;
+    type: ModelType.ONE;
     options?: ModelOneDefinitionOptions<S>;
 }
 
 export interface ModelManyDefinition<
     S extends Shape,
     I extends keyof S = ModelDefaultIdentifier<S>,
+    T extends ModelManyKind = ModelManyKind.LIST,
 > extends BaseDefinition {
     shape: ShapeType<S>;
-    kind: ModelKind.ARRAY;
-    options?: ModelManyDefinitionOptions<S, I>;
+    type: ModelType.MANY;
+    options?: ModelManyDefinitionOptions<S, I, T>;
 }
 
-export type ModelDefinition<S extends Shape> = ModelOneDefinition<S> | ModelManyDefinition<S, any>;
+export type ModelDefinition<S extends Shape> = ModelOneDefinition<S> | ModelManyDefinition<S, any, any>;
 
 export type ModelDefinitions = Record<string, ModelDefinition<any>>;
 
@@ -72,8 +82,10 @@ export type ModelDefinitions = Record<string, ModelDefinition<any>>;
 export type ModelDefinitionInfer<MD extends ModelDefinitions, K extends keyof MD> =
     MD[K] extends ModelOneDefinition<infer S>
         ? S | null
-        : MD[K] extends ModelManyDefinition<infer S, any>
-          ? S[]
+        : MD[K] extends ModelManyDefinition<infer S, any, infer T>
+          ? [T] extends [ModelManyKind.LIST]
+              ? S[]
+              : Record<string, S[]>
           : never;
 
 export type ModelDefinitionInferTuple<MD extends ModelDefinitions, K extends readonly (keyof MD)[]> = {
@@ -88,10 +100,10 @@ export type ModelDefinitionsInfer<MD extends ModelDefinitions> = {
 
 export interface ModelFactory {
     one<S extends Shape>(shape: ShapeType<S>, options?: ModelOneDefinitionOptions<S>): ModelOneDefinition<S>;
-    many<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>>(
+    many<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>, T extends ModelManyKind = ModelManyKind.LIST>(
         shape: ShapeType<S>,
-        options?: ModelManyDefinitionOptions<S, I>,
-    ): ModelManyDefinition<S, I>;
+        options?: ModelManyDefinitionOptions<S, I, T>,
+    ): ModelManyDefinition<S, I, T>;
 }
 
 // Commit Options
@@ -115,13 +127,27 @@ export interface ModelOneCommit<S extends Shape> {
     patch: (value: Partial<S>, options?: ModelOneCommitOptions) => void;
 }
 
-export interface ModelManyCommit<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>> {
+export interface ModelManyListCommit<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>> {
     set: (value: S[]) => void;
     reset: () => void;
     patch: (value: Partial<S> | Partial<S>[], options?: ModelManyCommitOptions) => void;
     remove: (value: Pick<S, I> | Pick<S, I>[] | AtLeastOne<S> | AtLeastOne<S>[]) => void;
     add: (value: S | S[], options?: ModelManyCommitOptions) => void;
 }
+
+export interface ModelManyRecordCommit<S extends Shape> {
+    set: (value: Record<string, S[]>) => void;
+    reset: () => void;
+    patch: (value: Record<string, S[]>, options?: ModelOneCommitOptions) => void;
+    remove: (key: string) => void;
+    add: (key: string, value: S[]) => void;
+}
+
+export type ModelManyCommit<
+    S extends Shape,
+    I extends keyof S = ModelDefaultIdentifier<S>,
+    T extends ModelManyKind = ModelManyKind.LIST,
+> = [T] extends [ModelManyKind.LIST] ? ModelManyListCommit<S, I> : ModelManyRecordCommit<S>;
 
 // Call
 
@@ -130,19 +156,23 @@ export type ModelOneCall<S extends Shape> = ModelOneCommit<S> & {
     aliases(): Record<string, string>;
 };
 
-export type ModelManyCall<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>> = ModelManyCommit<S, I> & {
+export type ModelManyCall<
+    S extends Shape,
+    I extends keyof S = ModelDefaultIdentifier<S>,
+    T extends ModelManyKind = ModelManyKind.LIST,
+> = ModelManyCommit<S, I, T> & {
     commit(mode: string, value?: unknown, options?: unknown): void;
     aliases(): Record<string, string>;
 };
 
-export type ModelCall<S extends Shape> = ModelOneCall<S> | ModelManyCall<S, any>;
+export type ModelCall<S extends Shape> = ModelOneCall<S> | ModelManyCall<S, any, any>;
 
 // Store Model
 
 export type StoreModel<MD extends ModelDefinitions> = {
     [K in keyof MD]: MD[K] extends ModelOneDefinition<infer S>
         ? ModelOneCall<S>
-        : MD[K] extends ModelManyDefinition<infer S, infer I>
-          ? ModelManyCall<S, I>
+        : MD[K] extends ModelManyDefinition<infer S, infer I, infer T>
+          ? ModelManyCall<S, I, T>
           : never;
 };

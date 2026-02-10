@@ -36,6 +36,12 @@
                 <span class="badge">advanced + concurrent</span>
             </NuxtLink>
 
+            <NuxtLink to="/teams" class="home-card">
+                <h2>Teams</h2>
+                <p>Record model with <code>many(shape, { kind: "record" })</code></p>
+                <span class="badge">ModelManyKind.RECORD</span>
+            </NuxtLink>
+
             <NuxtLink to="/composables" class="home-card">
                 <h2>Composables</h2>
                 <p><code>useStoreAction</code>, <code>useStoreModel</code>, <code>useStoreView</code></p>

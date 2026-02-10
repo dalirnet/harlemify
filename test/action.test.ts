@@ -37,17 +37,16 @@ type User = ShapeInfer<typeof UserShape>;
 // Base Definition
 
 describe("wrapBaseDefinition", () => {
-    it("adds key and setKey to object", () => {
+    it("adds key getter/setter to object", () => {
         const definition = wrapBaseDefinition({ logger: undefined, callback: async () => {} });
 
         expect(definition.key).toBe("");
-        expect(definition.setKey).toBeTypeOf("function");
     });
 
-    it("setKey updates key", () => {
+    it("key setter updates key", () => {
         const definition = wrapBaseDefinition({ logger: undefined, callback: async () => {} });
 
-        definition.setKey("test-key");
+        definition.key = "test-key";
 
         expect(definition.key).toBe("test-key");
     });
@@ -59,13 +58,12 @@ describe("wrapBaseDefinition", () => {
         expect(definition.callback).toBe(callback);
     });
 
-    it("key and setKey are enumerable", () => {
+    it("key is enumerable", () => {
         const definition = wrapBaseDefinition({ logger: undefined, callback: async () => {} });
 
         const keys = Object.keys(definition);
 
         expect(keys).toContain("key");
-        expect(keys).toContain("setKey");
     });
 
     it("returns the same object reference", () => {
@@ -174,24 +172,24 @@ describe("createActionFactory", () => {
             expect(definition.options?.concurrent).toBe(ActionConcurrent.SKIP);
         });
 
-        it("has key and setKey from wrapBaseDefinition", () => {
+        it("has key getter/setter from wrapBaseDefinition", () => {
             const definition = factory.handler(async (_context) => {});
 
             expect(definition.key).toBe("");
 
-            definition.setKey("myHandler");
+            definition.key = "myHandler";
 
             expect(definition.key).toBe("myHandler");
         });
     });
 
     describe("api() base definition", () => {
-        it("has key and setKey from wrapBaseDefinition", () => {
+        it("has key getter/setter from wrapBaseDefinition", () => {
             const definition = factory.api.get({ url: "/users" });
 
             expect(definition.key).toBe("");
 
-            definition.setKey("fetchUsers");
+            definition.key = "fetchUsers";
 
             expect(definition.key).toBe("fetchUsers");
         });
@@ -220,10 +218,10 @@ describe("createAction", () => {
         const source = createStore("test-action-" + Math.random(), state);
 
         for (const [k, def] of Object.entries(modelDefs)) {
-            def.setKey(k);
+            def.key = k;
         }
         for (const [k, def] of Object.entries(viewDefs)) {
-            def.setKey(k);
+            def.key = k;
         }
 
         const model = createStoreModel(modelDefs, source);
@@ -233,7 +231,7 @@ describe("createAction", () => {
             get key() {
                 return key;
             },
-            setKey(value: string) {
+            set key(value: string) {
                 key = value;
             },
             ...partial,
@@ -515,16 +513,16 @@ describe("createAction", () => {
             const source = createStore("test-endpoint-" + Math.random(), state);
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
             for (const [k, def] of Object.entries(viewDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const model = createStoreModel(modelDefs, source);
             const view = createStoreView(viewDefs, source);
 
-            definition.setKey("fetchUsers");
+            definition.key = "fetchUsers";
             const action = createAction(definition, model, view);
 
             await action();
@@ -1163,10 +1161,10 @@ describe("createAction", () => {
             const source = createStore("test-alias-" + Math.random(), state);
 
             for (const [k, def] of Object.entries(modelDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
             for (const [k, def] of Object.entries(viewDefs)) {
-                def.setKey(k);
+                def.key = k;
             }
 
             const model = createStoreModel(modelDefs, source);
@@ -1176,7 +1174,7 @@ describe("createAction", () => {
                 get key() {
                     return key;
                 },
-                setKey(value: string) {
+                set key(value: string) {
                     key = value;
                 },
                 ...partial,

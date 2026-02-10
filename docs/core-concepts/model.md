@@ -5,8 +5,9 @@ Models define the state containers. The model factory provides `one` for single 
 ```typescript
 model({ one, many }) {
     return {
-        current: one(userShape),   // User | null
-        list: many(userShape),     // User[]
+        current: one(userShape),
+        list: many(userShape),
+        grouped: many(userShape, { kind: "record" }),
     };
 },
 ```
@@ -37,7 +38,7 @@ store.model.user.reset();
 
 > **Note:** `patch` on a `null` state does nothing silently. Set a value first before patching.
 
-## Many (Collection)
+## Many List
 
 `many(shape)` creates a collection initialized to `[]`:
 
@@ -49,7 +50,7 @@ many(userShape, { default: [defaultUser] }); // Custom default
 
 The `identifier` determines which field is used to match items in `patch` and `add` (with `unique`). If not set, it resolves from shape metadata or falls back to `id` / `_id`. The `remove` method matches by any provided field automatically.
 
-### Many Mutations
+### List Mutations
 
 ```typescript
 store.model.users.set(usersArray);
@@ -70,6 +71,34 @@ store.model.users.reset();
 | `patch`  | Update matching items by identifier              |
 | `remove` | Remove items matching by identifier or any field |
 | `reset`  | Reset to default (`[]` or custom default)        |
+
+## Many Record
+
+`many(shape, { kind: "record" })` creates a keyed collection initialized to `{}`:
+
+```typescript
+many(userShape, { kind: "record" });
+many(userShape, { kind: "record", default: { "team-a": [defaultUser] } });
+```
+
+### Record Mutations
+
+```typescript
+store.model.grouped.set({ "team-a": usersArray, "team-b": otherUsers });
+store.model.grouped.reset();
+store.model.grouped.patch({ "team-a": updatedUsers });
+store.model.grouped.patch({ "team-c": newUsers }, { deep: true });
+store.model.grouped.add("team-c", newUsers);
+store.model.grouped.remove("team-a");
+```
+
+| Method   | Description                                                      |
+| -------- | ---------------------------------------------------------------- |
+| `set`    | Replace the entire record                                        |
+| `reset`  | Clear the entire record to `{}` (or default)                     |
+| `patch`  | Merge keys into the record (or deep merge with `{ deep: true }`) |
+| `add`    | Add a key with its array value                                   |
+| `remove` | Remove a key from the record                                     |
 
 ## Next Steps
 

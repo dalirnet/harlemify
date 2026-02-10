@@ -1,4 +1,4 @@
-import { createStore, shape, ModelManyMode, ViewClone, type ShapeInfer } from "../../src/runtime";
+import { createStore, shape, ModelManyMode, ModelManyKind, ViewClone, type ShapeInfer } from "../../src/runtime";
 
 export const postShape = shape((factory) => {
     return {
@@ -20,6 +20,7 @@ export const postStore = createStore({
             current: one(postShape),
             draft: one(postShape),
             list: many(postShape),
+            byUser: many(postShape, { kind: ModelManyKind.RECORD }),
         };
     },
     view({ from, merge }) {
@@ -56,6 +57,10 @@ export const postStore = createStore({
                     isDirty: draft !== null && draft.title !== (current?.title ?? ""),
                     totalPosts: list.length,
                 };
+            }),
+            grouped: from("byUser"),
+            userPosts: from("byUser", (grouped) => {
+                return Object.keys(grouped).length;
             }),
         };
     },
@@ -95,6 +100,18 @@ export const postStore = createStore({
                 });
                 model.list.set(sorted);
                 return sorted;
+            }),
+            group: handler(async ({ model, view }) => {
+                const posts = view.posts.value;
+                const grouped: Record<string, Post[]> = {};
+                for (const post of posts) {
+                    const key = String(post.userId);
+                    if (!grouped[key]) {
+                        grouped[key] = [];
+                    }
+                    grouped[key].push(post);
+                }
+                model.byUser.set(grouped);
             }),
         };
     },

@@ -3,6 +3,8 @@ import type {
     ModelOneCall,
     ModelManyCall,
     ModelOneCommit,
+    ModelManyListCommit,
+    ModelManyRecordCommit,
     ModelManyCommit,
     StoreModel,
     ModelDefinitions,
@@ -25,7 +27,7 @@ type UseStoreModelOne<C extends ModelOneCommit<any>> = {
     patch: C["patch"];
 };
 
-type UseStoreModelMany<C extends ModelManyCommit<any, any>> = {
+type UseStoreModelMany<C extends ModelManyListCommit<any, any> | ModelManyRecordCommit<any>> = {
     set: C["set"];
     reset: C["reset"];
     patch: C["patch"];
@@ -34,15 +36,15 @@ type UseStoreModelMany<C extends ModelManyCommit<any, any>> = {
 };
 
 export type UseStoreModel<M extends ModelCall<any> = ModelCall<any>> =
-    M extends ModelManyCall<infer S, infer I>
-        ? UseStoreModelMany<ModelManyCommit<S, I>>
+    M extends ModelManyCall<infer S, infer I, infer T>
+        ? UseStoreModelMany<ModelManyCommit<S, I, T>>
         : M extends ModelOneCall<infer S>
           ? UseStoreModelOne<ModelOneCommit<S>>
           : never;
 
 // Helpers
 
-function isMany<S extends Shape>(model: ModelCall<S>): model is ModelManyCall<S> {
+function isMany<S extends Shape>(model: ModelCall<S>): model is ModelManyCall<S, any, any> {
     return "add" in model && typeof model.add === "function";
 }
 
