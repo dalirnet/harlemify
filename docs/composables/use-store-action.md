@@ -23,6 +23,19 @@ const { execute, status, loading, error, reset } = useStoreAction(userStore, "li
 </template>
 ```
 
+## Handler Payload
+
+Pass payload to [handler actions](../core-concepts/action.md#payload) via `execute()`:
+
+```typescript
+const toggleAction = useStoreAction(todoStore, "toggle");
+await toggleAction.execute({ payload: todo });
+
+const renameAction = useStoreAction(todoStore, "rename");
+await renameAction.execute();                      // uses definition default
+await renameAction.execute({ payload: "Custom" }); // overrides default
+```
+
 ## Isolated Mode
 
 By default, the composable shares status/error with the store's global action refs. Use `isolated: true` to create independent tracking:
@@ -67,29 +80,14 @@ const sidebarAction = useStoreAction(userStore, "list", { isolated: true });
 
 ### Isolated Error Tracking
 
-```vue
-<script setup lang="ts">
-import { useStoreAction } from "@diphyx/harlemify";
-import { userStore } from "~/stores/user";
+Errors are also tracked independently per isolated instance:
 
+```typescript
 const createAction = useStoreAction(userStore, "create", { isolated: true });
 
-async function handleCreate(userData: unknown) {
-    try {
-        await createAction.execute({ body: userData });
-    } catch {
-        // Error is captured in createAction.error
-    }
-}
-</script>
+await createAction.execute({ body: userData });
 
-<template>
-    <form @submit.prevent="handleCreate(formData)">
-        <!-- form fields -->
-        <p v-if="createAction.error.value">{{ createAction.error.value.message }}</p>
-        <button type="submit">Create</button>
-    </form>
-</template>
+createAction.error.value; // Error | null — only reflects this instance
 ```
 
 > For manual control over isolated refs without this composable, see [Isolated Status](../advanced/isolated-status.md).

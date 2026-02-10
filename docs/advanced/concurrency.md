@@ -15,7 +15,9 @@ Control what happens when an action is called while it's already pending.
 
 ### At Definition Time
 
-Set a default concurrency strategy in the action's API request:
+Set a default concurrency strategy in the action definition:
+
+**API actions** — via the request config:
 
 ```typescript
 action({ api }) {
@@ -31,14 +33,34 @@ action({ api }) {
 },
 ```
 
+**Handler actions** — via the options argument:
+
+```typescript
+action({ handler }) {
+    return {
+        sync: handler(
+            async ({ model, payload }) => {
+                // ...
+            },
+            { concurrent: ActionConcurrent.SKIP },
+        ),
+    };
+},
+```
+
 ### At Call Time
 
-Override the concurrency strategy per call:
+Override the concurrency strategy per call (works for both API and handler actions):
 
 ```typescript
 await store.action.search({
     query: { q: "john" },
     concurrent: ActionConcurrent.CANCEL,
+});
+
+await store.action.sync({
+    payload: data,
+    concurrent: ActionConcurrent.ALLOW,
 });
 ```
 
@@ -127,6 +149,8 @@ await store.action.log({ concurrent: ActionConcurrent.ALLOW });
 await store.action.log({ concurrent: ActionConcurrent.ALLOW });
 // Both execute independently
 ```
+
+> For manual cancellation with `AbortSignal`, see [Request Cancellation](cancellation.md).
 
 ## Error Handling
 

@@ -11,6 +11,15 @@ action({ api, handler }) {
 },
 ```
 
+## When to Use API vs Handler
+
+| Use `api` when... | Use `handler` when... |
+| --- | --- |
+| Making a standard JSON HTTP request | Running custom async logic |
+| Auto-committing the response to a single model | Mutating multiple models in one call |
+| Using built-in alias mapping | Making non-JSON requests (blobs, streams) |
+| Using request/response transformers | Combining API calls with local state updates |
+
 ## API Actions
 
 Make HTTP requests and optionally commit the response to a model:
@@ -78,7 +87,19 @@ The second argument defines how to commit the response:
 
 ## Handler Actions
 
-Custom logic with direct access to model and view:
+Custom async logic with direct access to model, view, and payload. Use handlers when you need to mutate multiple models, transform data locally, or make non-JSON HTTP requests.
+
+The callback receives a single context object with three properties:
+
+```typescript
+handler(async ({ model, view, payload }) => {
+    // model  — StoreModel: typed access to all model mutations
+    // view   — StoreView: typed access to all view computed values
+    // payload — unknown: call-time or default input data
+});
+```
+
+You can destructure only what you need:
 
 ```typescript
 handler(async ({ model, view }) => {
@@ -98,6 +119,56 @@ handler(async ({ model, view }) => {
     return result;
 });
 ```
+
+### Payload
+
+Handlers receive a `payload` in the callback context. Payload can be passed at call time and/or set as a default at definition time.
+
+#### Call-time payload
+
+Pass data directly when calling the action:
+
+```typescript
+action({ handler }) {
+    return {
+        toggle: handler(async ({ model, payload }) => {
+            const todo = payload as Todo;
+            model.current.set({ ...todo, done: !todo.done });
+        }),
+    };
+},
+```
+
+```typescript
+await store.action.toggle({ payload: todo });
+```
+
+#### Definition-level default payload
+
+Set a default payload value that is used when no call-time payload is provided:
+
+```typescript
+action({ handler }) {
+    return {
+        rename: handler(
+            async ({ model, view, payload }) => {
+                const title = payload as string;
+                const current = view.item.value;
+                if (!current) return;
+                model.current.set({ ...current, title });
+            },
+            { payload: "Untitled" },
+        ),
+    };
+},
+```
+
+```typescript
+await store.action.rename();                      // payload is "Untitled"
+await store.action.rename({ payload: "My Title" }); // payload is "My Title"
+```
+
+> **Note:** Call-time payload always overrides the definition-level default. When neither is provided, `payload` is `undefined`.
 
 ## Execution Lifecycle
 
