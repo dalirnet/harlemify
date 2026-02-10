@@ -369,11 +369,7 @@ describe("createStoreModel", () => {
                 },
             ]);
 
-            model.users.remove({
-                id: 1,
-                name: "Alice",
-                email: "alice@test.com",
-            });
+            model.users.remove({ id: 1 });
 
             expect(source.state.users).toHaveLength(1);
             expect((source.state.users as User[])[0].id).toBe(2);
@@ -399,11 +395,45 @@ describe("createStoreModel", () => {
                 },
             ]);
 
-            model.users.remove([
+            model.users.remove([{ id: 1 }, { id: 3 }]);
+
+            expect(source.state.users).toHaveLength(1);
+            expect((source.state.users as User[])[0].id).toBe(2);
+        });
+
+        it("remove accepts identifier-only object", () => {
+            const { source, model } = setup();
+            model.users.set([
                 {
                     id: 1,
                     name: "Alice",
                     email: "alice@test.com",
+                },
+                {
+                    id: 2,
+                    name: "Bob",
+                    email: "bob@test.com",
+                },
+            ]);
+
+            model.users.remove({ id: 1 });
+
+            expect(source.state.users).toHaveLength(1);
+            expect((source.state.users as User[])[0].id).toBe(2);
+        });
+
+        it("remove accepts multiple identifier-only objects", () => {
+            const { source, model } = setup();
+            model.users.set([
+                {
+                    id: 1,
+                    name: "Alice",
+                    email: "alice@test.com",
+                },
+                {
+                    id: 2,
+                    name: "Bob",
+                    email: "bob@test.com",
                 },
                 {
                     id: 3,
@@ -411,6 +441,8 @@ describe("createStoreModel", () => {
                     email: "charlie@test.com",
                 },
             ]);
+
+            model.users.remove([{ id: 1 }, { id: 3 }]);
 
             expect(source.state.users).toHaveLength(1);
             expect((source.state.users as User[])[0].id).toBe(2);
@@ -530,7 +562,7 @@ describe("createStoreModel", () => {
             expect((source.state.users as User[])[1].name).toBe("Bob");
         });
 
-        it("remove with custom by option matches by field", () => {
+        it("remove matches by any field", () => {
             const { source, model } = setup();
             model.users.set([
                 {
@@ -545,17 +577,31 @@ describe("createStoreModel", () => {
                 },
             ]);
 
-            model.users.remove(
-                {
-                    id: 999,
-                    name: "irrelevant",
-                    email: "alice@test.com",
-                },
-                { by: "email" },
-            );
+            model.users.remove({ email: "alice@test.com" });
 
             expect(source.state.users).toHaveLength(1);
             expect((source.state.users as User[])[0].name).toBe("Bob");
+        });
+
+        it("remove matches by multiple fields", () => {
+            const { source, model } = setup();
+            model.users.set([
+                {
+                    id: 1,
+                    name: "Alice",
+                    email: "alice@test.com",
+                },
+                {
+                    id: 2,
+                    name: "Alice",
+                    email: "bob@test.com",
+                },
+            ]);
+
+            model.users.remove({ name: "Alice", email: "alice@test.com" });
+
+            expect(source.state.users).toHaveLength(1);
+            expect((source.state.users as User[])[0].email).toBe("bob@test.com");
         });
 
         it("add with unique and custom by option", () => {
@@ -725,14 +771,14 @@ describe("createStoreModel", () => {
             expect((source.state.items as NoIdItem[])[1].name).toBe("Bob");
         });
 
-        it("remove matches by custom by option without identifier", () => {
+        it("remove matches by field without identifier", () => {
             const { source, model } = setup();
             model.items.set([
                 { name: "Alice", email: "alice@test.com" },
                 { name: "Bob", email: "bob@test.com" },
             ]);
 
-            model.items.remove({ name: "Alice", email: "alice@test.com" }, { by: "email" });
+            model.items.remove({ email: "alice@test.com" });
 
             expect(source.state.items).toHaveLength(1);
             expect((source.state.items as NoIdItem[])[0].name).toBe("Bob");

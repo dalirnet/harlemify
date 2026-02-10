@@ -25,7 +25,7 @@ type UseStoreModelOne<C extends ModelOneCommit<any>> = {
     patch: C["patch"];
 };
 
-type UseStoreModelMany<C extends ModelManyCommit<any>> = {
+type UseStoreModelMany<C extends ModelManyCommit<any, any>> = {
     set: C["set"];
     reset: C["reset"];
     patch: C["patch"];
@@ -34,8 +34,8 @@ type UseStoreModelMany<C extends ModelManyCommit<any>> = {
 };
 
 export type UseStoreModel<M extends ModelCall<any> = ModelCall<any>> =
-    M extends ModelManyCall<infer S>
-        ? UseStoreModelMany<ModelManyCommit<S>>
+    M extends ModelManyCall<infer S, infer I>
+        ? UseStoreModelMany<ModelManyCommit<S, I>>
         : M extends ModelOneCall<infer S>
           ? UseStoreModelOne<ModelOneCommit<S>>
           : never;

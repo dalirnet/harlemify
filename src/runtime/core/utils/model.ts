@@ -1,6 +1,7 @@
 import { defu } from "defu";
 import type { Store as SourceStore, BaseState, Mutation } from "@harlem/core";
 
+import { ensureArray } from "./base";
 import { resolveShape } from "./shape";
 
 import type { ShapeDefinition, Shape, ShapeResolved } from "../types/shape";
@@ -21,7 +22,7 @@ import {
 // Resolve Identifier
 
 function resolveIdentifier<S extends Shape>(
-    definition: ModelOneDefinition<S> | ModelManyDefinition<S>,
+    definition: ModelOneDefinition<S> | ModelManyDefinition<S, any>,
     shape: ShapeResolved,
 ): string {
     if (definition.options?.identifier) {
@@ -108,10 +109,10 @@ function createOneCommit<S extends Shape>(
 // Create Many Commit
 
 function createManyCommit<S extends Shape>(
-    definition: ModelManyDefinition<S>,
+    definition: ModelManyDefinition<S, any>,
     shape: ShapeResolved,
     source: SourceStore<BaseState>,
-): ModelManyCommit<S> {
+): ModelManyCommit<S, any> {
     const identifier = resolveIdentifier(definition, shape);
 
     const setOperation: Mutation<S[]> = source.mutation(`${definition.key}:set`, (state, value: S[]) => {
@@ -128,7 +129,7 @@ function createManyCommit<S extends Shape>(
     }> = source.mutation(
         `${definition.key}:patch`,
         (state, payload: { value: Partial<S> | Partial<S>[]; options?: ModelManyCommitOptions }) => {
-            const items = Array.isArray(payload.value) ? payload.value : [payload.value];
+            const items = ensureArray(payload.value);
             const by = payload.options?.by ?? identifier;
 
             state[definition.key] = state[definition.key].map((item: S) => {
@@ -152,23 +153,22 @@ function createManyCommit<S extends Shape>(
         },
     );
 
-    const removeOperation: Mutation<{
-        value: S | S[];
-        options?: ModelManyCommitOptions;
-    }> = source.mutation(
+    const removeOperation: Mutation<Partial<S> | Partial<S>[]> = source.mutation(
         `${definition.key}:remove`,
-        (state, payload: { value: S | S[]; options?: ModelManyCommitOptions }) => {
-            const items = Array.isArray(payload.value) ? payload.value : [payload.value];
-            const by = payload.options?.by ?? identifier;
-
-            const ids = new Set(
-                items.map((item) => {
-                    return item[by];
-                }),
-            );
+        (state, value: Partial<S> | Partial<S>[]) => {
+            const items = ensureArray(value);
 
             state[definition.key] = state[definition.key].filter((item: S) => {
-                return !ids.has(item[by]);
+                return !items.some((match) => {
+                    let keys = Object.keys(match);
+                    if (identifier in match) {
+                        keys = [identifier];
+                    }
+
+                    return keys.every((key) => {
+                        return item[key] === match[key];
+                    });
+                });
             });
         },
     );
@@ -179,7 +179,7 @@ function createManyCommit<S extends Shape>(
     }> = source.mutation(
         `${definition.key}:add`,
         (state, payload: { value: S | S[]; options?: ModelManyCommitOptions }) => {
-            let items = Array.isArray(payload.value) ? payload.value : [payload.value];
+            let items = ensureArray(payload.value);
 
             if (payload.options?.unique) {
                 const by = payload.options.by ?? identifier;
@@ -235,16 +235,13 @@ function createManyCommit<S extends Shape>(
         });
     }
 
-    function remove(value: S | S[], options?: ModelManyCommitOptions) {
+    function remove(value: Partial<S> | Partial<S>[]) {
         definition.logger?.debug("Model mutation", {
             model: definition.key,
             mutation: "remove",
         });
 
-        removeOperation({
-            value,
-            options,
-        });
+        removeOperation(value);
     }
 
     function add(value: S | S[], options?: ModelManyCommitOptions) {
@@ -265,7 +262,7 @@ function createManyCommit<S extends Shape>(
         patch,
         remove,
         add,
-    };
+    } as ModelManyCommit<S, any>;
 }
 
 // Type Guards
@@ -280,7 +277,7 @@ function resolveCommit<S extends Shape>(
     definition: ModelDefinition<S>,
     shape: ShapeResolved,
     source: SourceStore<BaseState>,
-): ModelOneCommit<S> | ModelManyCommit<S> {
+): ModelOneCommit<S> | ModelManyCommit<S, any> {
     if (isOneDefinition(definition)) {
         return createOneCommit(definition, source);
     }

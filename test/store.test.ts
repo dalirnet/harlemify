@@ -199,11 +199,7 @@ describe("createStore", () => {
                 },
             ]);
 
-            store.model.posts.remove({
-                id: 1,
-                title: "First",
-                body: "Content 1",
-            });
+            store.model.posts.remove({ id: 1 });
 
             expect(store.view.posts.value).toHaveLength(1);
             expect((store.view.posts.value as Post[])[0].id).toBe(2);

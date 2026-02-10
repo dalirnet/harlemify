@@ -16,8 +16,8 @@ model({ one, many }) {
 `one(shape)` creates a state container initialized to `null`:
 
 ```typescript
-one(userShape)
-one(userShape, { default: { id: 0, name: "" } }) // Custom default
+one(userShape);
+one(userShape, { default: { id: 0, name: "" } }); // Custom default
 ```
 
 ### One Mutations
@@ -29,11 +29,11 @@ store.model.user.patch({ meta: { role: "admin" } }, { deep: true });
 store.model.user.reset();
 ```
 
-| Method  | Description                                 |
-| ------- | ------------------------------------------- |
-| `set`   | Replace the entire value                    |
+| Method  | Description                                   |
+| ------- | --------------------------------------------- |
+| `set`   | Replace the entire value                      |
 | `patch` | Shallow merge (or deep with `{ deep: true }`) |
-| `reset` | Reset to default (`null` or custom default) |
+| `reset` | Reset to default (`null` or custom default)   |
 
 > **Note:** `patch` on a `null` state does nothing silently. Set a value first before patching.
 
@@ -42,12 +42,12 @@ store.model.user.reset();
 `many(shape)` creates a collection initialized to `[]`:
 
 ```typescript
-many(userShape)
-many(userShape, { identifier: "uuid" })       // Override identifier field
-many(userShape, { default: [defaultUser] })   // Custom default
+many(userShape);
+many(userShape, { identifier: "uuid" }); // Override identifier field
+many(userShape, { default: [defaultUser] }); // Custom default
 ```
 
-The `identifier` determines which field is used to match items in `patch`, `remove`, and `add` (with `unique`). If not set, it resolves from shape metadata or falls back to `id` / `_id`.
+The `identifier` determines which field is used to match items in `patch` and `add` (with `unique`). If not set, it resolves from shape metadata or falls back to `id` / `_id`. The `remove` method matches by any provided field automatically.
 
 ### Many Mutations
 
@@ -57,18 +57,19 @@ store.model.users.add(newUser);
 store.model.users.add(newUser, { prepend: true, unique: true });
 store.model.users.patch({ id: 1, name: "Updated" });
 store.model.users.patch({ email: "new@test.com" }, { by: "email", deep: true });
-store.model.users.remove({ id: 1, name: "Alice", email: "a@b.c" });
-store.model.users.remove(user, { by: "email" });
+store.model.users.remove({ id: 1 });
+store.model.users.remove([{ id: 1 }, { id: 2 }]);
+store.model.users.remove({ email: "alice@test.com" });
 store.model.users.reset();
 ```
 
-| Method   | Description                               |
-| -------- | ----------------------------------------- |
-| `set`    | Replace the entire array                  |
-| `add`    | Append (or prepend) items                 |
-| `patch`  | Update matching items by identifier       |
-| `remove` | Remove matching items by identifier       |
-| `reset`  | Reset to default (`[]` or custom default) |
+| Method   | Description                                      |
+| -------- | ------------------------------------------------ |
+| `set`    | Replace the entire array                         |
+| `add`    | Append (or prepend) items                        |
+| `patch`  | Update matching items by identifier              |
+| `remove` | Remove items matching by identifier or any field |
+| `reset`  | Reset to default (`[]` or custom default)        |
 
 ## Next Steps
 

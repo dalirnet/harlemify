@@ -35,6 +35,12 @@ export function trimEnd(value: string, char: string): string {
     return value.replace(new RegExp(`${char}+$`), "");
 }
 
+// Array
+
+export function ensureArray<T>(value: T | T[]): T[] {
+    return Array.isArray(value) ? value : [value];
+}
+
 // Object
 
 export function isObject(value: unknown): value is object {

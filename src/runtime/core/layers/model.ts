@@ -4,6 +4,7 @@ import type { Shape, ShapeType } from "../types/shape";
 import { wrapBaseDefinition } from "../utils/base";
 import {
     type RuntimeModelConfig,
+    type ModelDefaultIdentifier,
     type ModelOneDefinitionOptions,
     type ModelManyDefinitionOptions,
     type ModelOneDefinition,
@@ -25,15 +26,15 @@ export function createModelFactory(config?: RuntimeModelConfig, logger?: Consola
         });
     }
 
-    function many<S extends Shape>(
+    function many<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>>(
         shape: ShapeType<S>,
-        options?: ModelManyDefinitionOptions<S>,
-    ): ModelManyDefinition<S> {
+        options?: ModelManyDefinitionOptions<S, I>,
+    ): ModelManyDefinition<S, I> {
         return wrapBaseDefinition({
             shape,
             kind: ModelKind.ARRAY,
             options: {
-                identifier: config?.identifier,
+                identifier: config?.identifier as I | undefined,
                 ...options,
             },
             logger,
