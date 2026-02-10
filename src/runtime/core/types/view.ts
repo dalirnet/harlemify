@@ -3,17 +3,17 @@ import type { ComputedRef } from "vue";
 import type { BaseDefinition } from "./base";
 import type { ModelDefinitions, ModelDefinitionInfer, ModelDefinitionInferTuple } from "./model";
 
+// Config
+
+export interface RuntimeViewConfig {
+    clone?: ViewClone;
+}
+
 // Enums
 
 export enum ViewClone {
     SHALLOW = "shallow",
     DEEP = "deep",
-}
-
-// Config
-
-export interface RuntimeViewConfig {
-    clone?: ViewClone;
 }
 
 // Options

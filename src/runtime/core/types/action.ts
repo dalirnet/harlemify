@@ -81,11 +81,19 @@ export interface ActionApiDefinition<
     commit?: ActionApiCommit<MD>;
 }
 
+// Handler Options
+
+export interface ActionHandlerOptions {
+    payload?: unknown;
+    concurrent?: ActionConcurrent;
+}
+
 // Handler Definition
 
 export type ActionHandlerCallback<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>, R = void> = (context: {
     model: StoreModel<MD>;
     view: StoreView<MD, VD>;
+    payload: unknown;
 }) => Promise<R>;
 
 export interface ActionHandlerDefinition<
@@ -94,6 +102,7 @@ export interface ActionHandlerDefinition<
     R = void,
 > extends BaseDefinition {
     callback: ActionHandlerCallback<MD, VD, R>;
+    options?: ActionHandlerOptions;
 }
 
 // Action Definition
@@ -106,16 +115,6 @@ export type ActionDefinitions<MD extends ModelDefinitions, VD extends ViewDefini
     string,
     ActionDefinition<MD, VD>
 >;
-
-// Store Action
-
-export type StoreAction<
-    MD extends ModelDefinitions,
-    VD extends ViewDefinitions<MD>,
-    AD extends ActionDefinitions<MD, VD>,
-> = {
-    [K in keyof AD]: ActionCall;
-};
 
 // Factory
 
@@ -130,7 +129,7 @@ export interface ActionApiFactory<MD extends ModelDefinitions, VD extends ViewDe
 }
 
 export interface ActionHandlerFactory<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> {
-    <R>(callback: ActionHandlerCallback<MD, VD, R>): ActionHandlerDefinition<MD, VD, R>;
+    <R>(callback: ActionHandlerCallback<MD, VD, R>, options?: ActionHandlerOptions): ActionHandlerDefinition<MD, VD, R>;
 }
 
 export interface ActionFactory<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> {
@@ -145,9 +144,12 @@ export interface ActionCallBindOptions {
     error?: Ref<Error | null>;
 }
 
-export interface ActionCallCommitOptions {
-    mode?: ModelOneMode | ModelManyMode;
+export interface ActionCallBaseOptions {
+    concurrent?: ActionConcurrent;
+    bind?: ActionCallBindOptions;
 }
+
+// Api Call Options
 
 export interface ActionResolvedApi {
     url: string;
@@ -164,7 +166,11 @@ export interface ActionCallTransformerOptions {
     response?: (data: unknown) => unknown;
 }
 
-export interface ActionCallOptions {
+export interface ActionCallCommitOptions {
+    mode?: ModelOneMode | ModelManyMode;
+}
+
+export interface ActionApiCallOptions extends ActionCallBaseOptions {
     params?: Record<string, string>;
     headers?: Record<string, string>;
     query?: Record<string, unknown>;
@@ -172,17 +178,54 @@ export interface ActionCallOptions {
     timeout?: number;
     signal?: AbortSignal;
     transformer?: ActionCallTransformerOptions;
-    concurrent?: ActionConcurrent;
-    bind?: ActionCallBindOptions;
     commit?: ActionCallCommitOptions;
 }
 
+// Handler Call Options
+
+export interface ActionResolvedHandler<MD extends ModelDefinitions, VD extends ViewDefinitions<MD>> {
+    model: StoreModel<MD>;
+    view: StoreView<MD, VD>;
+    payload: unknown;
+}
+
+export interface ActionHandlerCallOptions extends ActionCallBaseOptions {
+    payload?: unknown;
+}
+
+// Action Call Options
+
+export type ActionCallOptions = ActionApiCallOptions | ActionHandlerCallOptions;
+
 // Call
 
-export interface ActionCall<T = void> {
-    (options?: ActionCallOptions): Promise<T>;
+export interface ActionCallBase {
     readonly error: Readonly<Ref<Error | null>>;
     readonly status: Readonly<Ref<ActionStatus>>;
     readonly loading: ComputedRef<boolean>;
     reset: () => void;
 }
+
+export interface ActionApiCall<T = void> extends ActionCallBase {
+    (options?: ActionApiCallOptions): Promise<T>;
+}
+
+export interface ActionHandlerCall<T = void> extends ActionCallBase {
+    (options?: ActionHandlerCallOptions): Promise<T>;
+}
+
+export type ActionCall<T = void> = ActionApiCall<T> | ActionHandlerCall<T>;
+
+// Store Action
+
+export type StoreAction<
+    MD extends ModelDefinitions,
+    VD extends ViewDefinitions<MD>,
+    AD extends ActionDefinitions<MD, VD>,
+> = {
+    [K in keyof AD]: AD[K] extends ActionApiDefinition<MD, VD>
+        ? ActionApiCall
+        : AD[K] extends ActionHandlerDefinition<MD, VD, infer R>
+          ? ActionHandlerCall<R>
+          : never;
+};
