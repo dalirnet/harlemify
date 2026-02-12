@@ -97,7 +97,25 @@ action({ api }) {
 },
 ```
 
-## Step 5: Create the Store
+## Step 5: Define Compose (Optional)
+
+Compose orchestrates existing actions and model mutations. Use it when you need to call multiple actions together or build workflows:
+
+```typescript
+compose({ model, action }) {
+    return {
+        loadAll: async () => {
+            await action.list();
+        },
+        clearAll: () => {
+            model.current.reset();
+            model.list.reset();
+        },
+    };
+},
+```
+
+## Step 6: Create the Store
 
 Combine all layers into `createStore`:
 
@@ -107,10 +125,11 @@ export const userStore = createStore({
     model({ one, many }) { ... },
     view({ from, merge }) { ... },
     action({ api }) { ... },
+    compose({ model, action }) { ... }, // optional
 });
 ```
 
-## Step 6: Use in Component
+## Step 7: Use in Component
 
 ```vue
 <script setup lang="ts">

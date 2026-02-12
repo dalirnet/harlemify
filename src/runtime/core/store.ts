@@ -8,17 +8,20 @@ import { createViewFactory } from "./layers/view";
 import { createActionFactory } from "./layers/action";
 
 import { createStoreState, createStoreModel, createStoreView, createStoreAction } from "./utils/store";
+import { createStoreCompose } from "./utils/compose";
 
 import type { ModelDefinitions } from "./types/model";
 import type { ViewDefinitions } from "./types/view";
 import type { ActionDefinitions } from "./types/action";
+import type { ComposeDefinitions } from "./types/compose";
 import type { Store, StoreConfig } from "./types/store";
 
 export function createStore<
     MD extends ModelDefinitions,
     VD extends ViewDefinitions<MD>,
     AD extends ActionDefinitions<MD, VD>,
->(config: StoreConfig<MD, VD, AD>): Store<MD, VD, AD> {
+    CD extends ComposeDefinitions = ComposeDefinitions,
+>(config: StoreConfig<MD, VD, AD, CD>): Store<MD, VD, AD, CD> {
     const logger = createConsola({
         level: runtimeConfig.logger,
         defaults: {
@@ -43,11 +46,14 @@ export function createStore<
     const view = createStoreView<MD, VD>(viewDefinitions, source);
     const action = createStoreAction<MD, VD, AD>(actionDefinitions, model, view);
 
+    const compose = createStoreCompose(config.compose, { model, view, action }, logger);
+
     logger.info("Store created");
 
     return {
         model,
         view,
         action,
-    };
+        compose,
+    } as Store<MD, VD, AD, CD>;
 }

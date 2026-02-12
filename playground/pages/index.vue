@@ -42,9 +42,18 @@
                 <span class="badge">ModelManyKind.RECORD</span>
             </NuxtLink>
 
+            <NuxtLink to="/dashboard" class="home-card">
+                <h2>Dashboard</h2>
+                <p><code>compose()</code> — orchestrate actions, models, typed args</p>
+                <span class="badge">compose</span>
+            </NuxtLink>
+
             <NuxtLink to="/composables" class="home-card">
                 <h2>Composables</h2>
-                <p><code>useStoreAction</code>, <code>useStoreModel</code>, <code>useStoreView</code></p>
+                <p>
+                    <code>useStoreAction</code>, <code>useStoreModel</code>, <code>useStoreView</code>,
+                    <code>useStoreCompose</code>
+                </p>
                 <span class="badge">composables</span>
             </NuxtLink>
         </div>

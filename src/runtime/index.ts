@@ -32,6 +32,17 @@ export type {
 } from "./core/types/action";
 export { ActionApiError, ActionHandlerError, ActionCommitError, ActionConcurrentError } from "./core/utils/error";
 
+// Compose
+export type {
+    ComposeCallback,
+    ComposeCall,
+    ComposeDefinitions,
+    ComposeContext,
+    StoreCompose,
+} from "./core/types/compose";
+export { useStoreCompose } from "./composables/compose";
+export type { UseStoreCompose } from "./composables/compose";
+
 // Composables
 export { useIsolatedActionStatus, useIsolatedActionError, useStoreAction } from "./composables/action";
 export type { UseStoreActionOptions, UseStoreAction } from "./composables/action";

@@ -38,6 +38,17 @@ const { data } = useStoreView(store, "user", { proxy: false });
 data.value; // User | null — standard ComputedRef
 ```
 
+## [useStoreCompose](use-store-compose.md)
+
+Reactive compose execution with `active` tracking and typed arguments.
+
+```typescript
+const { execute, active } = useStoreCompose(store, "loadAll");
+
+const quickAdd = useStoreCompose(store, "quickAdd");
+await quickAdd.execute("John", "john@example.com"); // typed args
+```
+
 ## Destructuring
 
 Use standard JS destructuring to rename and avoid conflicts:

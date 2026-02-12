@@ -7,6 +7,7 @@ import { ModelOneMode } from "../src/runtime/core/types/model";
 import { ActionStatus } from "../src/runtime/core/types/action";
 import { ActionApiError } from "../src/runtime/core/utils/error";
 import { useStoreAction, useIsolatedActionStatus, useIsolatedActionError } from "../src/runtime/composables/action";
+import { useStoreCompose } from "../src/runtime/composables/compose";
 import { useStoreModel } from "../src/runtime/composables/model";
 import { useStoreView } from "../src/runtime/composables/view";
 
@@ -628,5 +629,90 @@ describe("useStoreView", () => {
 
             vi.useRealTimers();
         });
+    });
+});
+
+// Compose
+
+describe("useStoreCompose", () => {
+    function composeSetup() {
+        return createStore({
+            name: "test-composable-compose-" + Math.random(),
+            model: (m) => {
+                return {
+                    user: m.one(UserShape),
+                };
+            },
+            view: (v) => {
+                return {
+                    user: v.from("user"),
+                };
+            },
+            action: (a) => {
+                return {
+                    setUser: a.handler(({ model }) => {
+                        model.user.set({ id: 1, name: "FromAction" });
+                    }),
+                };
+            },
+            compose: ({ action }) => {
+                return {
+                    refresh: async () => {
+                        await action.setUser();
+                    },
+                    fail: () => {
+                        throw new Error("compose-fail");
+                    },
+                };
+            },
+        });
+    }
+
+    it("throws if compose key not found", () => {
+        const store = composeSetup();
+
+        expect(() => useStoreCompose(store, "nonexistent" as any)).toThrow('Compose "nonexistent" not found in store');
+    });
+
+    it("returns execute and active", () => {
+        const store = composeSetup();
+        const { execute, active } = useStoreCompose(store, "refresh");
+
+        expect(execute).toBeTypeOf("function");
+        expect(active.value).toBe(false);
+    });
+
+    it("execute calls the compose action", async () => {
+        const store = composeSetup();
+        const { execute } = useStoreCompose(store, "refresh");
+
+        await execute();
+
+        expect(store.view.user.value).toEqual({ id: 1, name: "FromAction" });
+    });
+
+    it("active is false after completion", async () => {
+        const store = composeSetup();
+        const { execute, active } = useStoreCompose(store, "refresh");
+
+        await execute();
+
+        expect(active.value).toBe(false);
+    });
+
+    it("execute throws on failure", async () => {
+        const store = composeSetup();
+        const { execute } = useStoreCompose(store, "fail");
+
+        await expect(execute()).rejects.toThrow();
+    });
+
+    it("active is false after failure", async () => {
+        const store = composeSetup();
+        const { execute, active } = useStoreCompose(store, "fail");
+
+        await expect(execute()).rejects.toThrow();
+
+        expect(active.value).toBe(false);
     });
 });

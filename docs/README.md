@@ -12,9 +12,10 @@ Define your data **shape** once with Zod — get typed **models**, computed **vi
 ```
 Shape (Zod)
 └── createStore()
-    ├── Model  → State
-    ├── View   → Computed
-    └── Action → Async
+    ├── Model   → State
+    ├── View    → Computed
+    ├── Action  → Async
+    └── Compose → Orchestration (optional)
 ```
 
 Every action tracks `loading`, `status`, and `error` automatically. Every model mutation is fully typed from the shape. Every view is a reactive `ComputedRef`.
@@ -56,6 +57,6 @@ await execute();
 ## Docs
 
 - **Getting Started** — [Installation](getting-started/README.md) · [Your First Store](getting-started/first-store.md)
-- **Core Concepts** — [Shape](core-concepts/shape.md) · [Model](core-concepts/model.md) · [View](core-concepts/view.md) · [Action](core-concepts/action.md)
-- **Composables** — [useStoreAction](composables/use-store-action.md) · [useStoreModel](composables/use-store-model.md) · [useStoreView](composables/use-store-view.md)
+- **Core Concepts** — [Shape](core-concepts/shape.md) · [Model](core-concepts/model.md) · [View](core-concepts/view.md) · [Action](core-concepts/action.md) · [Compose](core-concepts/compose.md)
+- **Composables** — [useStoreAction](composables/use-store-action.md) · [useStoreModel](composables/use-store-model.md) · [useStoreView](composables/use-store-view.md) · [useStoreCompose](composables/use-store-compose.md)
 - **Advanced** — [Concurrency](advanced/concurrency.md) · [Cancellation](advanced/cancellation.md) · [Logging](advanced/logging.md) · [Isolated Status](advanced/isolated-status.md)

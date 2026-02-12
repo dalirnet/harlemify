@@ -298,5 +298,6 @@ try {
 
 ## Next Steps
 
+- [Compose](compose.md) - Orchestrate multiple actions and model mutations
 - [Concurrency](../advanced/concurrency.md) - Control concurrent action execution
 - [Cancellation](../advanced/cancellation.md) - Cancel in-flight requests

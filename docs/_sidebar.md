@@ -8,11 +8,13 @@
     - [Model](core-concepts/model.md)
     - [View](core-concepts/view.md)
     - [Action](core-concepts/action.md)
+    - [Compose](core-concepts/compose.md)
 - Composables
     - [Overview](composables/README.md)
     - [useStoreAction](composables/use-store-action.md)
     - [useStoreModel](composables/use-store-model.md)
     - [useStoreView](composables/use-store-view.md)
+    - [useStoreCompose](composables/use-store-compose.md)
 - Advanced
     - [Concurrency](advanced/concurrency.md)
     - [Cancellation](advanced/cancellation.md)

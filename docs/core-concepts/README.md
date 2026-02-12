@@ -4,28 +4,30 @@ Harlemify stores are built from four layers, each defined by a factory function 
 
 ```
 Shape (Zod)
-└── createStore({ name, model, view, action })
-    ├── Model  → State
+└── createStore({ name, model, view, action, compose? })
+    ├── Model   → State
     │   ├── one()
     │   └── many()
-    ├── View   → Computed
+    ├── View    → Computed
     │   ├── from()
     │   └── merge()
-    └── Action → Async
-        ├── api()
-        └── handler()
+    ├── Action  → Async
+    │   ├── api()
+    │   └── handler()
+    └── Compose → Orchestration (optional)
 ```
 
 ## Concepts
 
-Every store splits into three layers with a clear responsibility:
+Every store splits into layers with a clear responsibility:
 
 - **Shape** — Data schema defined with Zod. Types everything in the store.
 - **Model** — Mutable state. Changed only through typed commits.
 - **View** — Read-only computed data derived from models.
 - **Action** — Async operations. Fetches data and commits it to models.
+- **Compose** — Orchestration functions that combine actions, models, and views.
 
-Data flows one way: **Action → Model → View**.
+Data flows one way: **Action → Model → View**. Compose sits on top, orchestrating all three.
 
 ## [Shape](shape.md)
 
@@ -86,3 +88,22 @@ action({ api, handler }) {
 ```
 
 Every action tracks `loading`, `status`, `error`, and `data` automatically.
+
+## [Compose](compose.md)
+
+Optional orchestration layer. Compose functions receive fully typed `{ model, view, action }` and can call sibling actions, mutate models, and read views. Each compose function tracks an `active` ref while executing.
+
+```typescript
+compose({ model, view, action }) {
+    return {
+        loadAll: async () => {
+            await action.fetchUsers();
+            await action.fetchTodos();
+        },
+        resetAll: () => {
+            model.users.reset();
+            model.todos.reset();
+        },
+    };
+},
+```
