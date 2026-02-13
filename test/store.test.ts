@@ -84,6 +84,89 @@ describe("createStore", () => {
         expect(store.action).toBeDefined();
     });
 
+    it("initializes eagerly by default", () => {
+        let modelCalled = false;
+        createStore({
+            name: "test-eager-default-" + Math.random(),
+            model: (m) => {
+                modelCalled = true;
+                return { user: m.one(UserShape) };
+            },
+            view: (v) => ({ user: v.from("user") }),
+            action: (a) => ({}),
+        });
+
+        expect(modelCalled).toBe(true);
+    });
+
+    it("defers initialization when lazy is true", () => {
+        let modelCalled = false;
+        const store = createStore({
+            name: "test-lazy-" + Math.random(),
+            model: (m) => {
+                modelCalled = true;
+                return { user: m.one(UserShape) };
+            },
+            view: (v) => ({ user: v.from("user") }),
+            action: (a) => ({}),
+            lazy: true,
+        });
+
+        expect(modelCalled).toBe(false);
+
+        // First access triggers initialization
+        store.model;
+
+        expect(modelCalled).toBe(true);
+    });
+
+    it("lazy factory can use external context for model default", () => {
+        let contextReady = false;
+
+        const store = createStore({
+            name: "test-lazy-context-" + Math.random(),
+            model: (m) => {
+                if (!contextReady) {
+                    throw new Error("Context not ready");
+                }
+                return {
+                    user: m.one(UserShape, {
+                        default: { id: 1, name: "FromContext", email: "ctx@test.com" },
+                    }),
+                };
+            },
+            view: (v) => ({ user: v.from("user") }),
+            action: (a) => ({}),
+            lazy: true,
+        });
+
+        // Simulate Nuxt becoming ready
+        contextReady = true;
+
+        // First access triggers factory — context is now ready
+        expect(store.view.user.value).toEqual({ id: 1, name: "FromContext", email: "ctx@test.com" });
+    });
+
+    it("initializes only once on multiple accesses (lazy)", () => {
+        let initCount = 0;
+        const store = createStore({
+            name: "test-lazy-once-" + Math.random(),
+            model: (m) => {
+                initCount++;
+                return { user: m.one(UserShape) };
+            },
+            view: (v) => ({ user: v.from("user") }),
+            action: (a) => ({}),
+            lazy: true,
+        });
+
+        store.model;
+        store.view;
+        store.action;
+
+        expect(initCount).toBe(1);
+    });
+
     // Model
 
     describe("model", () => {

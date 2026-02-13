@@ -4,7 +4,7 @@ Harlemify stores are built from four layers, each defined by a factory function 
 
 ```
 Shape (Zod)
-└── createStore({ name, model, view, action, compose? })
+└── createStore({ name, model, view, action, compose?, lazy? })
     ├── Model   → State
     │   ├── one()
     │   └── many()
@@ -107,3 +107,5 @@ compose({ model, view, action }) {
     };
 },
 ```
+
+> **Note:** By default, stores are created eagerly at module evaluation time. Set `lazy: true` to defer initialization until first access — useful when model defaults depend on Nuxt composables. See [Lazy Store](../advanced/lazy-store.md).

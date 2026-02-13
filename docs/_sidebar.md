@@ -18,5 +18,6 @@
 - Advanced
     - [Concurrency](advanced/concurrency.md)
     - [Cancellation](advanced/cancellation.md)
-    - [Debug Logging](advanced/logging.md)
     - [Isolated Status](advanced/isolated-status.md)
+    - [Lazy Store](advanced/lazy-store.md)
+    - [Debug Logging](advanced/logging.md)

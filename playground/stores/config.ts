@@ -12,6 +12,7 @@ export type Config = ShapeInfer<typeof configShape>;
 
 export const configStore = createStore({
     name: "config",
+    lazy: true,
     model({ one }) {
         return {
             config: one(configShape, {

@@ -16,6 +16,7 @@ export interface StoreConfig<
     view: (factory: ViewFactory<MD>) => VD;
     action: (factory: ActionFactory<MD, VD>) => AD;
     compose?: (context: ComposeContext<MD, VD, AD>) => CD;
+    lazy?: boolean;
 }
 
 // Store

@@ -193,6 +193,7 @@ async function silentUpdate() {
                     <li><code>silent: true</code> - Skip both pre and post hooks</li>
                     <li><code>silent: ModelSilent.POST</code> - Skip only post hook</li>
                     <li><code>pure: true</code> - Reset to fallback value instead of custom default</li>
+                    <li><code>lazy: true</code> - Defer store initialization until first access</li>
                 </ul>
             </div>
         </div>

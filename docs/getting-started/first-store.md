@@ -126,6 +126,7 @@ export const userStore = createStore({
     view({ from, merge }) { ... },
     action({ api }) { ... },
     compose({ model, action }) { ... }, // optional
+    lazy: true, // optional — defer initialization until first access
 });
 ```
 
