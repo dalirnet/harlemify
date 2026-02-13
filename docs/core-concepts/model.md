@@ -18,7 +18,8 @@ model({ one, many }) {
 
 ```typescript
 one(userShape);
-one(userShape, { default: { id: 0, name: "" } }); // Custom default
+one(userShape, { default: { id: 0, name: "" } }); // Static default
+one(userShape, { default: () => ({ id: 0, name: "" }) }); // Function default
 ```
 
 ### One Mutations
@@ -45,7 +46,8 @@ store.model.user.reset();
 ```typescript
 many(userShape);
 many(userShape, { identifier: "uuid" }); // Override identifier field
-many(userShape, { default: [defaultUser] }); // Custom default
+many(userShape, { default: [defaultUser] }); // Static default
+many(userShape, { default: () => [defaultUser] }); // Function default
 ```
 
 The `identifier` determines which field is used to match items in `patch` and `add` (with `unique`). If not set, it resolves from shape metadata or falls back to `id` / `_id`. The `remove` method matches by any provided field automatically.
@@ -78,7 +80,8 @@ store.model.users.reset();
 
 ```typescript
 many(userShape, { kind: "record" });
-many(userShape, { kind: "record", default: { "team-a": [defaultUser] } });
+many(userShape, { kind: "record", default: { "team-a": [defaultUser] } }); // Static default
+many(userShape, { kind: "record", default: () => ({ "team-a": [defaultUser] }) }); // Function default
 ```
 
 ### Record Mutations
@@ -99,6 +102,52 @@ store.model.grouped.remove("team-a");
 | `patch`  | Merge keys into the record (or deep merge with `{ deep: true }`)            |
 | `add`    | Add a key with its array value                                              |
 | `remove` | Remove a key from the record                                                |
+
+## Function Default
+
+Instead of a static value, `default` can be a sync function that returns a fresh value each time. The function is called at store creation and again on every `reset()`:
+
+```typescript
+model({ one, many }) {
+    return {
+        config: one(configShape, {
+            default: () => ({ theme: "dark", language: "en" }),
+        }),
+        users: many(userShape, {
+            default: () => [createDefaultUser()],
+        }),
+        grouped: many(userShape, {
+            kind: "record",
+            default: () => ({ "team-a": [createDefaultUser()] }),
+        }),
+    };
+},
+```
+
+This is useful when defaults contain mutable objects — a function ensures each reset gets a fresh copy rather than sharing the same reference. Combined with [Lazy Store](../advanced/lazy-store.md), function defaults can also depend on Nuxt composables:
+
+```typescript
+export const configStore = createStore({
+    name: "config",
+    lazy: true,
+    model({ one }) {
+        const route = useRoute();
+
+        return {
+            config: one(configShape, {
+                default: () => ({ theme: route.query.theme ?? "dark" }),
+            }),
+        };
+    },
+});
+```
+
+| Form                    | Behavior                                           |
+| ----------------------- | -------------------------------------------------- |
+| `default: value`        | Static — same reference on every reset             |
+| `default: () => value`  | Function — called fresh on creation and each reset |
+| `reset()`               | Restores to default (static or function)           |
+| `reset({ pure: true })` | Ignores default, resets to type fallback           |
 
 ## Pre/Post Hooks
 
@@ -133,15 +182,14 @@ Hooks are optional.
 
 ## Pure Reset
 
-By default, `reset()` restores to the custom `default` value (or the type fallback: `null`, `[]`, `{}`). Use `{ pure: true }` to reset to the type fallback instead — ignoring any custom default.
+By default, `reset()` restores to the custom `default` value (or the type fallback: `null`, `[]`, `{}`). Use `{ pure: true }` to reset to the type fallback instead — ignoring any custom default. This works with both static and function defaults:
 
 ```typescript
-// With a custom default
 const store = createStore({
     model({ one, many }) {
         return {
             token: one(tokenShape, {
-                default: { payload: "initial-value" },
+                default: () => ({ payload: "initial-value" }),
             }),
             users: many(userShape, {
                 default: [defaultUser],
@@ -154,7 +202,7 @@ const store = createStore({
     },
 });
 
-store.model.token.reset(); // { payload: "initial-value" }
+store.model.token.reset(); // { payload: "initial-value" } — function called
 store.model.token.reset({ pure: true }); // null
 
 store.model.users.reset(); // [defaultUser]

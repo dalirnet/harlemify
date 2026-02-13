@@ -16,6 +16,11 @@ export const configStore = createStore({
     model({ one }) {
         return {
             config: one(configShape, {
+                default: () => ({
+                    theme: "dark" as const,
+                    language: "en",
+                    notifications: true,
+                }),
                 pre() {
                     console.log("[config] pre hook");
                 },
@@ -44,6 +49,9 @@ export const configStore = createStore({
             get: api.get({ url: "/config" }, { model: "config", mode: ModelOneMode.SET }),
             update: api.patch({ url: "/config" }, { model: "config", mode: ModelOneMode.PATCH }),
             replace: api.put({ url: "/config" }, { model: "config", mode: ModelOneMode.SET }),
+            defaultReset: handler(async ({ model }) => {
+                model.config.reset();
+            }),
             pureReset: handler(async ({ model }) => {
                 model.config.reset({ pure: true });
             }),

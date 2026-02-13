@@ -5,6 +5,7 @@ test.describe("config page", () => {
         await page.request.post("/api/_reset");
         await page.goto("/config");
         await page.getByTestId("config-content").waitFor();
+        await expect(page.getByTestId("status-get").locator(".monitor-state")).toHaveText("success");
     });
 
     test("lazy store loads and displays config", async ({ page }) => {
@@ -49,14 +50,31 @@ test.describe("config page", () => {
         await expect(page.getByTestId("notifications-value")).toHaveText("on");
     });
 
+    test("default reset restores function default values", async ({ page }) => {
+        await page.getByTestId("toggle-theme").click();
+        await expect(page.getByTestId("theme-value")).toHaveText("light");
+        await page.getByTestId("default-reset").click();
+        await expect(page.getByTestId("theme-value")).toHaveText("dark");
+        await expect(page.getByTestId("notifications-value")).toHaveText("on");
+    });
+
     test("pure reset clears config to null", async ({ page }) => {
         await page.getByTestId("pure-reset").click();
-        await expect(page.getByTestId("no-data")).toBeVisible();
+        await page.getByTestId("no-data").waitFor();
+    });
+
+    test("default reset restores after pure reset", async ({ page }) => {
+        await page.getByTestId("pure-reset").click();
+        await page.getByTestId("no-data").waitFor();
+        await page.getByTestId("restore-default").click();
+        await page.getByTestId("config-content").waitFor();
+        await expect(page.getByTestId("theme-value")).toHaveText("dark");
+        await expect(page.getByTestId("notifications-value")).toHaveText("on");
     });
 
     test("silent reset clears config without hooks", async ({ page }) => {
         await page.getByTestId("silent-reset").click();
-        await expect(page.getByTestId("no-data")).toBeVisible();
+        await page.getByTestId("no-data").waitFor();
     });
 
     test("silent update patches language without post hook", async ({ page }) => {
@@ -76,5 +94,9 @@ test.describe("config page", () => {
 
     test("lazy store feature is listed", async ({ page }) => {
         await expect(page.getByTestId("feature-info")).toContainText("lazy: true");
+    });
+
+    test("function default feature is listed", async ({ page }) => {
+        await expect(page.getByTestId("feature-info")).toContainText("default: () => (...)");
     });
 });

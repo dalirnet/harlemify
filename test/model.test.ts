@@ -149,6 +149,47 @@ describe("createStoreState", () => {
         expect(state.users).toEqual(defaultUsers);
     });
 
+    it("uses function default for one-model", () => {
+        const model = {
+            user: factory.one(UserShape, {
+                default: () => ({ id: 1, name: "fn-default", email: "fn@test.com" }),
+            }),
+        };
+
+        const state = createStoreState(model);
+
+        expect(state.user).toEqual({ id: 1, name: "fn-default", email: "fn@test.com" });
+    });
+
+    it("uses function default for many-model", () => {
+        const model = {
+            users: factory.many(UserShape, {
+                default: () => [{ id: 1, name: "fn-default", email: "fn@test.com" }],
+            }),
+        };
+
+        const state = createStoreState(model);
+
+        expect(state.users).toEqual([{ id: 1, name: "fn-default", email: "fn@test.com" }]);
+    });
+
+    it("uses function default for record many-model", () => {
+        const model = {
+            grouped: factory.many(UserShape, {
+                kind: ModelManyKind.RECORD,
+                default: () => ({
+                    "team-a": [{ id: 1, name: "fn-default", email: "fn@test.com" }],
+                }),
+            }),
+        };
+
+        const state = createStoreState(model);
+
+        expect(state.grouped).toEqual({
+            "team-a": [{ id: 1, name: "fn-default", email: "fn@test.com" }],
+        });
+    });
+
     it("returns empty object for record many-models", () => {
         const model = {
             grouped: factory.many(UserShape, { kind: ModelManyKind.RECORD }),
@@ -1376,6 +1417,96 @@ describe("createStoreModel", () => {
             expect(source.state.user).toBeNull();
             expect(pre).not.toHaveBeenCalled();
             expect(post).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("function default reset", () => {
+        it("one-model reset calls function default for fresh value", () => {
+            let callCount = 0;
+            const modelDefs = {
+                user: factory.one(UserShape, {
+                    default: () => {
+                        callCount++;
+                        return { id: callCount, name: "fn-default", email: "fn@test.com" };
+                    },
+                }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-fn-default-one-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            expect(source.state.user).toEqual({ id: 1, name: "fn-default", email: "fn@test.com" });
+
+            model.user.set({ id: 99, name: "Alice", email: "alice@test.com" });
+            model.user.reset();
+
+            expect(source.state.user).toEqual({ id: 2, name: "fn-default", email: "fn@test.com" });
+        });
+
+        it("many-model reset calls function default for fresh value", () => {
+            let callCount = 0;
+            const modelDefs = {
+                users: factory.many(UserShape, {
+                    default: () => {
+                        callCount++;
+                        return [{ id: callCount, name: "fn-default", email: "fn@test.com" }];
+                    },
+                }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-fn-default-many-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            expect(source.state.users).toEqual([{ id: 1, name: "fn-default", email: "fn@test.com" }]);
+
+            model.users.set([{ id: 99, name: "Alice", email: "alice@test.com" }]);
+            model.users.reset();
+
+            expect(source.state.users).toEqual([{ id: 2, name: "fn-default", email: "fn@test.com" }]);
+        });
+
+        it("record many-model reset calls function default for fresh value", () => {
+            let callCount = 0;
+            const modelDefs = {
+                grouped: factory.many(UserShape, {
+                    kind: ModelManyKind.RECORD,
+                    default: () => {
+                        callCount++;
+                        return {
+                            "team-a": [{ id: callCount, name: "fn-default", email: "fn@test.com" }],
+                        };
+                    },
+                }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-fn-default-record-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            expect(source.state.grouped).toEqual({
+                "team-a": [{ id: 1, name: "fn-default", email: "fn@test.com" }],
+            });
+
+            model.grouped.set({ "team-b": [{ id: 99, name: "Alice", email: "alice@test.com" }] });
+            model.grouped.reset();
+
+            expect(source.state.grouped).toEqual({
+                "team-a": [{ id: 2, name: "fn-default", email: "fn@test.com" }],
+            });
         });
     });
 

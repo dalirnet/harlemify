@@ -43,13 +43,14 @@ const userShape = shape((factory) => ({
 
 ## [Model](model.md)
 
-State containers using `one(shape)` for single items and `many(shape)` for collections. Each model key exposes typed mutation methods (`set`, `patch`, `reset`, `add`, `remove`).
+State containers using `one(shape)` for single items and `many(shape)` for collections. Each model key exposes typed mutation methods (`set`, `patch`, `reset`, `add`, `remove`). Defaults can be static values or functions that return a fresh value on each reset.
 
 ```typescript
 model({ one, many }) {
     return {
-        current: one(userShape),   // User | null
-        list: many(userShape),     // User[]
+        current: one(userShape),                                  // User | null
+        list: many(userShape),                                    // User[]
+        config: one(configShape, { default: () => ({ ... }) }),   // Function default
     };
 },
 ```

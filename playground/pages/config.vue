@@ -10,7 +10,9 @@ watch(
     (val) => {
         if (val) {
             languageInput.value = val.language;
-            document.documentElement.setAttribute("data-theme", val.theme);
+            if (import.meta.client) {
+                document.documentElement.setAttribute("data-theme", val.theme);
+            }
         }
     },
     { immediate: true },
@@ -96,6 +98,16 @@ async function silentUpdate() {
                     <span class="value">restore defaults</span>
                 </div>
                 <button class="btn btn-sm" data-testid="reset-config" @click="resetConfig">Reset</button>
+            </div>
+
+            <div class="config-item" data-testid="config-default-reset">
+                <div>
+                    <strong>Default Reset</strong>
+                    <span class="value">reset to function default</span>
+                </div>
+                <button class="btn btn-sm" data-testid="default-reset" @click="configStore.action.defaultReset()">
+                    Default Reset
+                </button>
             </div>
 
             <div class="config-item" data-testid="config-pure-reset">
@@ -194,11 +206,22 @@ async function silentUpdate() {
                     <li><code>silent: ModelSilent.POST</code> - Skip only post hook</li>
                     <li><code>pure: true</code> - Reset to fallback value instead of custom default</li>
                     <li><code>lazy: true</code> - Defer store initialization until first access</li>
+                    <li><code>default: () => (...)</code> - Function default for fresh values on reset</li>
                 </ul>
             </div>
         </div>
 
-        <div v-else class="loading" data-testid="no-data">No config available</div>
+        <div v-else class="loading" data-testid="no-data">
+            No config available
+            <button
+                class="btn btn-sm"
+                data-testid="restore-default"
+                @click="configStore.action.defaultReset()"
+                style="margin-top: 12px"
+            >
+                Restore Default
+            </button>
+        </div>
     </div>
 </template>
 

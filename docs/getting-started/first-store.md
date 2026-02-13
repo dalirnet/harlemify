@@ -27,7 +27,7 @@ The `identifier: true` meta marks the primary key field used for matching items 
 
 ## Step 2: Define Models
 
-Models define the state containers. Use `one` for single items and `many` for collections:
+Models define the state containers. Use `one` for single items and `many` for collections. Optionally provide a static or [function default](../core-concepts/model.md#function-default) for initial and reset values:
 
 ```typescript
 model({ one, many }) {

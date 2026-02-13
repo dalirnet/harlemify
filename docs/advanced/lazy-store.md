@@ -41,7 +41,7 @@ export const configStore = createStore({
 
         return {
             config: one(configShape, {
-                default: { theme: route.query.theme ?? "dark" },
+                default: () => ({ theme: route.query.theme ?? "dark" }),
             }),
         };
     },

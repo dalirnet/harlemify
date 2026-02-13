@@ -1,6 +1,6 @@
 import type { createStore as createSourceStore } from "@harlem/core";
 
-import { createModel } from "./model";
+import { createModel, resolveDefault } from "./model";
 import { createView } from "./view";
 import { createAction } from "./action";
 
@@ -16,15 +16,19 @@ import type { ActionDefinition, ActionDefinitions, StoreAction } from "../types/
 
 // Store State
 
+function createState(definition: ModelDefinitions[string]): unknown {
+    let fallback: unknown = null;
+    if (definition.type !== ModelType.ONE) {
+        fallback = definition.options?.kind === ModelManyKind.RECORD ? {} : [];
+    }
+
+    return resolveDefault(definition.options, fallback);
+}
+
 export function createStoreState<MD extends ModelDefinitions>(modelDefinitions: MD): ModelDefinitionsInfer<MD> {
     const output = {} as ModelDefinitionsInfer<MD>;
-    for (const [key, { options, type }] of Object.entries(modelDefinitions)) {
-        if (type === ModelType.ONE) {
-            (output as Record<string, unknown>)[key] = options?.default ?? null;
-        } else {
-            const manyDefault = options?.kind === ModelManyKind.RECORD ? {} : [];
-            (output as Record<string, unknown>)[key] = options?.default ?? manyDefault;
-        }
+    for (const [key, definition] of Object.entries(modelDefinitions)) {
+        (output as Record<string, unknown>)[key] = createState(definition);
     }
 
     return output;

@@ -22,6 +22,22 @@ import {
     ModelSilent,
 } from "../types/model";
 
+// Resolve Default
+
+export function resolveDefault<T>(definition: { default?: unknown } | undefined, fallback: T, pure?: boolean): T {
+    if (!pure) {
+        if (typeof definition?.default === "function") {
+            return definition.default() ?? fallback;
+        }
+
+        if (definition?.default !== undefined) {
+            return definition.default as T;
+        }
+    }
+
+    return fallback;
+}
+
 // Hooks Helper
 
 function callHook<S extends Shape>(
@@ -85,7 +101,7 @@ function createOneCommit<S extends Shape>(
     const resetOperation: Mutation<{
         options?: ModelOneCommitOptions;
     }> = source.mutation(`${definition.key}:reset`, (state, payload: { options?: ModelOneCommitOptions }) => {
-        state[definition.key] = payload.options?.pure ? null : (definition.options?.default ?? null);
+        state[definition.key] = resolveDefault(definition.options, null, payload.options?.pure);
     });
 
     const patchOperation: Mutation<{
@@ -140,7 +156,7 @@ function createManyListCommit<S extends Shape>(
     const resetOperation: Mutation<{
         options?: ModelManyCommitOptions;
     }> = source.mutation(`${definition.key}:reset`, (state, payload: { options?: ModelManyCommitOptions }) => {
-        state[definition.key] = payload.options?.pure ? [] : (definition.options?.default ?? []);
+        state[definition.key] = resolveDefault(definition.options, [], payload.options?.pure);
     });
 
     const patchOperation: Mutation<{
@@ -260,7 +276,7 @@ function createManyRecordCommit<S extends Shape>(
     const resetOperation: Mutation<{
         options?: ModelOneCommitOptions;
     }> = source.mutation(`${definition.key}:reset`, (state, payload: { options?: ModelOneCommitOptions }) => {
-        state[definition.key] = payload.options?.pure ? {} : (definition.options?.default ?? {});
+        state[definition.key] = resolveDefault(definition.options, {}, payload.options?.pure);
     });
 
     const patchOperation: Mutation<{
