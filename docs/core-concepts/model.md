@@ -30,11 +30,11 @@ store.model.user.patch({ meta: { role: "admin" } }, { deep: true });
 store.model.user.reset();
 ```
 
-| Method  | Description                                   |
-| ------- | --------------------------------------------- |
-| `set`   | Replace the entire value                      |
-| `patch` | Shallow merge (or deep with `{ deep: true }`) |
-| `reset` | Reset to default (`null` or custom default)   |
+| Method  | Description                                                                  |
+| ------- | ---------------------------------------------------------------------------- |
+| `set`   | Replace the entire value                                                     |
+| `patch` | Shallow merge (or deep with `{ deep: true }`)                                |
+| `reset` | Reset to default (`null` or custom default), or `null` with `{ pure: true }` |
 
 > **Note:** `patch` on a `null` state does nothing silently. Set a value first before patching.
 
@@ -64,13 +64,13 @@ store.model.users.remove({ email: "alice@test.com" });
 store.model.users.reset();
 ```
 
-| Method   | Description                                      |
-| -------- | ------------------------------------------------ |
-| `set`    | Replace the entire array                         |
-| `add`    | Append (or prepend) items                        |
-| `patch`  | Update matching items by identifier              |
-| `remove` | Remove items matching by identifier or any field |
-| `reset`  | Reset to default (`[]` or custom default)        |
+| Method   | Description                                                              |
+| -------- | ------------------------------------------------------------------------ |
+| `set`    | Replace the entire array                                                 |
+| `add`    | Append (or prepend) items                                                |
+| `patch`  | Update matching items by identifier                                      |
+| `remove` | Remove items matching by identifier or any field                         |
+| `reset`  | Reset to default (`[]` or custom default), or `[]` with `{ pure: true }` |
 
 ## Many Record
 
@@ -92,13 +92,13 @@ store.model.grouped.add("team-c", newUsers);
 store.model.grouped.remove("team-a");
 ```
 
-| Method   | Description                                                      |
-| -------- | ---------------------------------------------------------------- |
-| `set`    | Replace the entire record                                        |
-| `reset`  | Clear the entire record to `{}` (or default)                     |
-| `patch`  | Merge keys into the record (or deep merge with `{ deep: true }`) |
-| `add`    | Add a key with its array value                                   |
-| `remove` | Remove a key from the record                                     |
+| Method   | Description                                                                 |
+| -------- | --------------------------------------------------------------------------- |
+| `set`    | Replace the entire record                                                   |
+| `reset`  | Clear the entire record to `{}` (or default), or `{}` with `{ pure: true }` |
+| `patch`  | Merge keys into the record (or deep merge with `{ deep: true }`)            |
+| `add`    | Add a key with its array value                                              |
+| `remove` | Remove a key from the record                                                |
 
 ## Pre/Post Hooks
 
@@ -131,6 +131,39 @@ Hooks are optional.
 
 > **Note:** Hooks are safe and cannot control the flow of the mutation. A `pre` hook is simply called before the mutation, not a guard that can prevent it. Even if a hook throws, the error is caught and logged, and the mutation proceeds normally.
 
+## Pure Reset
+
+By default, `reset()` restores to the custom `default` value (or the type fallback: `null`, `[]`, `{}`). Use `{ pure: true }` to reset to the type fallback instead — ignoring any custom default.
+
+```typescript
+// With a custom default
+const store = createStore({
+    model({ one, many }) {
+        return {
+            token: one(tokenShape, {
+                default: { payload: "initial-value" },
+            }),
+            users: many(userShape, {
+                default: [defaultUser],
+            }),
+            grouped: many(userShape, {
+                kind: "record",
+                default: { "team-a": [defaultUser] },
+            }),
+        };
+    },
+});
+
+store.model.token.reset(); // { payload: "initial-value" }
+store.model.token.reset({ pure: true }); // null
+
+store.model.users.reset(); // [defaultUser]
+store.model.users.reset({ pure: true }); // []
+
+store.model.grouped.reset(); // { "team-a": [defaultUser] }
+store.model.grouped.reset({ pure: true }); // {}
+```
+
 ## Silent Option
 
 Use `silent` to skip hooks on specific mutations. This is useful when you want to avoid side effects like cookie sync, analytics, or logging for certain operations.
@@ -139,9 +172,9 @@ Use `silent` to skip hooks on specific mutations. This is useful when you want t
 import { ModelSilent } from "@diphyx/harlemify";
 ```
 
-| Value                | Effect                 |
-| -------------------- | ---------------------- |
-| `silent: true`       | Skip both pre and post |
+| Value                      | Effect                 |
+| -------------------------- | ---------------------- |
+| `silent: true`             | Skip both pre and post |
 | `silent: ModelSilent.PRE`  | Skip only pre          |
 | `silent: ModelSilent.POST` | Skip only post         |
 

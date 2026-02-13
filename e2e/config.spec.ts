@@ -49,6 +49,11 @@ test.describe("config page", () => {
         await expect(page.getByTestId("notifications-value")).toHaveText("on");
     });
 
+    test("pure reset clears config to null", async ({ page }) => {
+        await page.getByTestId("pure-reset").click();
+        await expect(page.getByTestId("no-data")).toBeVisible();
+    });
+
     test("silent reset clears config without hooks", async ({ page }) => {
         await page.getByTestId("silent-reset").click();
         await expect(page.getByTestId("no-data")).toBeVisible();

@@ -83,6 +83,9 @@ function resetAll() {
 
         <div class="toolbar" style="margin-top: 12px">
             <button class="btn btn-sm" data-testid="reset-all" @click="resetAll">Reset All</button>
+            <button class="btn btn-sm" data-testid="pure-reset-teams" @click="teamStore.action.pureReset()">
+                Pure Reset
+            </button>
             <button class="btn btn-sm" data-testid="reload" @click="teamStore.action.load()">Reload</button>
         </div>
 

@@ -1313,6 +1313,72 @@ describe("createStoreModel", () => {
         });
     });
 
+    describe("one pure reset", () => {
+        function setup() {
+            const defaultUser: User = { id: 99, name: "Default", email: "default@test.com" };
+            const modelDefs = {
+                user: factory.one(UserShape, { default: defaultUser }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-one-pure-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            return { source, model, defaultUser };
+        }
+
+        it("reset without pure restores custom default", () => {
+            const { source, model, defaultUser } = setup();
+            model.user.set({ id: 1, name: "Alice", email: "alice@test.com" });
+
+            model.user.reset();
+
+            expect(source.state.user).toEqual(defaultUser);
+        });
+
+        it("reset with pure gives null", () => {
+            const { source, model } = setup();
+            model.user.set({ id: 1, name: "Alice", email: "alice@test.com" });
+
+            model.user.reset({ pure: true });
+
+            expect(source.state.user).toBeNull();
+        });
+
+        it("pure works together with silent", () => {
+            const pre = vi.fn();
+            const post = vi.fn();
+            const modelDefs = {
+                user: factory.one(UserShape, {
+                    default: { id: 99, name: "Default", email: "default@test.com" },
+                    pre,
+                    post,
+                }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-one-pure-silent-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+            model.user.set({ id: 1, name: "Alice", email: "alice@test.com" });
+            pre.mockClear();
+            post.mockClear();
+
+            model.user.reset({ pure: true, silent: true });
+
+            expect(source.state.user).toBeNull();
+            expect(pre).not.toHaveBeenCalled();
+            expect(post).not.toHaveBeenCalled();
+        });
+    });
+
     describe("many list pre/post hooks", () => {
         function setup(hooks: { pre?: () => void; post?: () => void }) {
             const modelDefs = {
@@ -1503,6 +1569,42 @@ describe("createStoreModel", () => {
 
             expect(pre).toHaveBeenCalledOnce();
             expect(post).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("many list pure reset", () => {
+        function setup() {
+            const defaultUsers: User[] = [{ id: 99, name: "Default", email: "default@test.com" }];
+            const modelDefs = {
+                users: factory.many(UserShape, { default: defaultUsers }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-many-pure-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            return { source, model, defaultUsers };
+        }
+
+        it("reset without pure restores custom default", () => {
+            const { source, model, defaultUsers } = setup();
+            model.users.set([{ id: 1, name: "Alice", email: "alice@test.com" }]);
+
+            model.users.reset();
+
+            expect(source.state.users).toEqual(defaultUsers);
+        });
+
+        it("reset with pure gives empty array", () => {
+            const { source, model } = setup();
+
+            model.users.reset({ pure: true });
+
+            expect(source.state.users).toEqual([]);
         });
     });
 
@@ -1705,6 +1807,44 @@ describe("createStoreModel", () => {
 
             expect(pre).toHaveBeenCalledOnce();
             expect(post).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("many record pure reset", () => {
+        function setup() {
+            const defaultGroups: Record<string, User[]> = {
+                "team-a": [{ id: 99, name: "Default", email: "default@test.com" }],
+            };
+            const modelDefs = {
+                grouped: factory.many(UserShape, { kind: ModelManyKind.RECORD, default: defaultGroups }),
+            };
+
+            for (const [k, def] of Object.entries(modelDefs)) {
+                def.key = k;
+            }
+
+            const state = createStoreState(modelDefs);
+            const source = createStore("test-record-pure-" + Math.random(), state);
+            const model = createStoreModel(modelDefs, source);
+
+            return { source, model, defaultGroups };
+        }
+
+        it("reset without pure restores custom default", () => {
+            const { source, model, defaultGroups } = setup();
+            model.grouped.set({ "team-b": [{ id: 1, name: "Alice", email: "alice@test.com" }] });
+
+            model.grouped.reset();
+
+            expect(source.state.grouped).toEqual(defaultGroups);
+        });
+
+        it("reset with pure gives empty object", () => {
+            const { source, model } = setup();
+
+            model.grouped.reset({ pure: true });
+
+            expect(source.state.grouped).toEqual({});
         });
     });
 });

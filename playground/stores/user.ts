@@ -89,6 +89,9 @@ export const userStore = createStore({
             clear: handler(async ({ model }) => {
                 model.list.reset({ silent: true });
             }),
+            pureReset: handler(async ({ model }) => {
+                model.list.reset({ pure: true });
+            }),
             silentAdd: handler<User>(async ({ model, payload }) => {
                 model.list.add(payload, { silent: ModelSilent.PRE });
             }),

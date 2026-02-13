@@ -291,18 +291,10 @@ export function resolveAliasOutbound<T = unknown>(data: T, aliases?: Record<stri
     return data;
 }
 
-export function resolveDefaults<T extends ShapeDefinition>(
-    shape: T,
-    overrides?: Partial<ShapeInfer<T>>,
-): ShapeInfer<T> {
+export function resolveZeroValues<T extends ShapeDefinition>(shape: T): ShapeInfer<T> {
     const output: Record<string, unknown> = {};
-
     for (const [key, field] of Object.entries(shape.shape)) {
         output[key] = resolveZeroValue(field as ShapeType<unknown>);
-    }
-
-    if (overrides) {
-        return defu(overrides, output) as ShapeInfer<T>;
     }
 
     return output as ShapeInfer<T>;
@@ -313,7 +305,13 @@ export function createShape<T extends ShapeRawDefinition>(definition: T): ShapeC
 
     const shape = Object.assign(object, {
         defaults(overrides?: Partial<ShapeInfer<typeof object>>) {
-            return resolveDefaults(object, overrides);
+            const zero = resolveZeroValues(object);
+
+            if (overrides) {
+                return defu(overrides, zero) as ShapeInfer<typeof object>;
+            }
+
+            return zero;
         },
     });
 

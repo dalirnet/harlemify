@@ -82,8 +82,10 @@ function createOneCommit<S extends Shape>(
         state[definition.key] = value;
     });
 
-    const resetOperation: Mutation<undefined> = source.mutation(`${definition.key}:reset`, (state) => {
-        state[definition.key] = definition.options?.default ?? null;
+    const resetOperation: Mutation<{
+        options?: ModelOneCommitOptions;
+    }> = source.mutation(`${definition.key}:reset`, (state, payload: { options?: ModelOneCommitOptions }) => {
+        state[definition.key] = payload.options?.pure ? null : (definition.options?.default ?? null);
     });
 
     const patchOperation: Mutation<{
@@ -113,8 +115,8 @@ function createOneCommit<S extends Shape>(
         set(value: S, options?: ModelOneCommitOptions) {
             wrapOperation(definition, "set", () => setOperation(value), options?.silent);
         },
-        reset(options?: ModelOneCommitOptions) {
-            wrapOperation(definition, "reset", () => resetOperation(), options?.silent);
+        reset(options?: Pick<ModelOneCommitOptions, "pure" | "silent">) {
+            wrapOperation(definition, "reset", () => resetOperation({ options }), options?.silent);
         },
         patch(value: Partial<S>, options?: ModelOneCommitOptions) {
             wrapOperation(definition, "patch", () => patchOperation({ value, options }), options?.silent);
@@ -135,8 +137,10 @@ function createManyListCommit<S extends Shape>(
         state[definition.key] = value;
     });
 
-    const resetOperation: Mutation<undefined> = source.mutation(`${definition.key}:reset`, (state) => {
-        state[definition.key] = definition.options?.default ?? [];
+    const resetOperation: Mutation<{
+        options?: ModelManyCommitOptions;
+    }> = source.mutation(`${definition.key}:reset`, (state, payload: { options?: ModelManyCommitOptions }) => {
+        state[definition.key] = payload.options?.pure ? [] : (definition.options?.default ?? []);
     });
 
     const patchOperation: Mutation<{
@@ -225,8 +229,8 @@ function createManyListCommit<S extends Shape>(
         set(value: S[], options?: ModelManyCommitOptions) {
             wrapOperation(definition, "set", () => setOperation(value), options?.silent);
         },
-        reset(options?: ModelManyCommitOptions) {
-            wrapOperation(definition, "reset", () => resetOperation(), options?.silent);
+        reset(options?: Pick<ModelManyCommitOptions, "pure" | "silent">) {
+            wrapOperation(definition, "reset", () => resetOperation({ options }), options?.silent);
         },
         patch(value: Partial<S> | Partial<S>[], options?: ModelManyCommitOptions) {
             wrapOperation(definition, "patch", () => patchOperation({ value, options }), options?.silent);
@@ -253,8 +257,10 @@ function createManyRecordCommit<S extends Shape>(
         },
     );
 
-    const resetOperation: Mutation<undefined> = source.mutation(`${definition.key}:reset`, (state) => {
-        state[definition.key] = definition.options?.default ?? {};
+    const resetOperation: Mutation<{
+        options?: ModelOneCommitOptions;
+    }> = source.mutation(`${definition.key}:reset`, (state, payload: { options?: ModelOneCommitOptions }) => {
+        state[definition.key] = payload.options?.pure ? {} : (definition.options?.default ?? {});
     });
 
     const patchOperation: Mutation<{
@@ -301,8 +307,8 @@ function createManyRecordCommit<S extends Shape>(
         set(value: Record<string, S[]>, options?: ModelOneCommitOptions) {
             wrapOperation(definition, "set", () => setOperation(value), options?.silent);
         },
-        reset(options?: ModelOneCommitOptions) {
-            wrapOperation(definition, "reset", () => resetOperation(), options?.silent);
+        reset(options?: Pick<ModelOneCommitOptions, "pure" | "silent">) {
+            wrapOperation(definition, "reset", () => resetOperation({ options }), options?.silent);
         },
         patch(value: Record<string, S[]>, options?: ModelOneCommitOptions) {
             wrapOperation(definition, "patch", () => patchOperation({ value, options }), options?.silent);

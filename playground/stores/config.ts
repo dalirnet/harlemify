@@ -43,8 +43,11 @@ export const configStore = createStore({
             get: api.get({ url: "/config" }, { model: "config", mode: ModelOneMode.SET }),
             update: api.patch({ url: "/config" }, { model: "config", mode: ModelOneMode.PATCH }),
             replace: api.put({ url: "/config" }, { model: "config", mode: ModelOneMode.SET }),
+            pureReset: handler(async ({ model }) => {
+                model.config.reset({ pure: true });
+            }),
             silentReset: handler(async ({ model }) => {
-                model.config.reset({ silent: true });
+                model.config.reset({ silent: true, pure: true });
             }),
             silentUpdate: handler<Partial<Config>>(async ({ model, payload }) => {
                 model.config.patch(payload, { silent: ModelSilent.POST });

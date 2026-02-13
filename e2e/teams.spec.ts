@@ -39,6 +39,11 @@ test.describe("teams page", () => {
         await expect(page.getByTestId("team-design")).not.toBeVisible();
     });
 
+    test("pure reset clears all teams", async ({ page }) => {
+        await page.getByTestId("pure-reset-teams").click();
+        await expect(page.getByTestId("team-count")).toContainText("0 teams");
+    });
+
     test("resets all teams", async ({ page }) => {
         await page.getByTestId("reset-all").click();
         await expect(page.getByTestId("team-count")).toContainText("0 teams");

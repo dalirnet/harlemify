@@ -107,6 +107,9 @@ function resetListAction() {
                 Patch by Email
             </button>
             <button class="btn btn-sm" data-testid="silent-add-user" @click="silentAddUser">Silent Add</button>
+            <button class="btn btn-sm" data-testid="pure-reset-users" @click="userStore.action.pureReset()">
+                Pure Reset
+            </button>
             <button class="btn btn-sm" data-testid="reset-list-action" @click="resetListAction">Reset Action</button>
         </div>
 

@@ -51,6 +51,9 @@ export const teamStore = createStore({
                 });
                 model.groups.add(payload.name, payload.members);
             }),
+            pureReset: handler(async ({ model }) => {
+                model.groups.reset({ pure: true });
+            }),
             removeTeam: handler<string>(async ({ model, payload }) => {
                 await $fetch(`/api/teams/${payload}`, { method: "DELETE" });
                 model.groups.remove(payload, { silent: ModelSilent.POST });

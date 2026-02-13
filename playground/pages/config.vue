@@ -98,10 +98,20 @@ async function silentUpdate() {
                 <button class="btn btn-sm" data-testid="reset-config" @click="resetConfig">Reset</button>
             </div>
 
+            <div class="config-item" data-testid="config-pure-reset">
+                <div>
+                    <strong>Pure Reset</strong>
+                    <span class="value">reset to null (skip custom default)</span>
+                </div>
+                <button class="btn btn-sm" data-testid="pure-reset" @click="configStore.action.pureReset()">
+                    Pure Reset
+                </button>
+            </div>
+
             <div class="config-item" data-testid="config-silent-reset">
                 <div>
                     <strong>Silent Reset</strong>
-                    <span class="value">reset without hooks</span>
+                    <span class="value">pure reset without hooks</span>
                 </div>
                 <button class="btn btn-sm" data-testid="silent-reset" @click="silentReset">Silent Reset</button>
             </div>
@@ -182,6 +192,7 @@ async function silentUpdate() {
                     <li><code>pre / post</code> - Model hooks fired on every mutation</li>
                     <li><code>silent: true</code> - Skip both pre and post hooks</li>
                     <li><code>silent: ModelSilent.POST</code> - Skip only post hook</li>
+                    <li><code>pure: true</code> - Reset to fallback value instead of custom default</li>
                 </ul>
             </div>
         </div>

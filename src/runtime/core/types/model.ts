@@ -118,11 +118,13 @@ export interface ModelFactory {
 // Commit Options
 
 export interface ModelOneCommitOptions {
+    pure?: boolean;
     deep?: boolean;
     silent?: true | ModelSilent;
 }
 
 export interface ModelManyCommitOptions {
+    pure?: boolean;
     by?: string;
     prepend?: boolean;
     unique?: boolean;
@@ -133,28 +135,28 @@ export interface ModelManyCommitOptions {
 // Commit
 
 export interface ModelOneCommit<S extends Shape> {
-    set: (value: S, options?: ModelOneCommitOptions) => void;
-    reset: (options?: ModelOneCommitOptions) => void;
-    patch: (value: Partial<S>, options?: ModelOneCommitOptions) => void;
+    set: (value: S, options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    reset: (options?: Pick<ModelOneCommitOptions, "pure" | "silent">) => void;
+    patch: (value: Partial<S>, options?: Pick<ModelOneCommitOptions, "deep" | "silent">) => void;
 }
 
 export interface ModelManyListCommit<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>> {
-    set: (value: S[], options?: ModelManyCommitOptions) => void;
-    reset: (options?: ModelManyCommitOptions) => void;
-    patch: (value: Partial<S> | Partial<S>[], options?: ModelManyCommitOptions) => void;
+    set: (value: S[], options?: Pick<ModelManyCommitOptions, "silent">) => void;
+    reset: (options?: Pick<ModelManyCommitOptions, "pure" | "silent">) => void;
+    patch: (value: Partial<S> | Partial<S>[], options?: Pick<ModelManyCommitOptions, "by" | "deep" | "silent">) => void;
     remove: (
         value: Pick<S, I> | Pick<S, I>[] | AtLeastOne<S> | AtLeastOne<S>[],
-        options?: ModelManyCommitOptions,
+        options?: Pick<ModelManyCommitOptions, "silent">,
     ) => void;
-    add: (value: S | S[], options?: ModelManyCommitOptions) => void;
+    add: (value: S | S[], options?: Pick<ModelManyCommitOptions, "by" | "prepend" | "unique" | "silent">) => void;
 }
 
 export interface ModelManyRecordCommit<S extends Shape> {
-    set: (value: Record<string, S[]>, options?: ModelOneCommitOptions) => void;
-    reset: (options?: ModelOneCommitOptions) => void;
-    patch: (value: Record<string, S[]>, options?: ModelOneCommitOptions) => void;
-    remove: (key: string, options?: ModelOneCommitOptions) => void;
-    add: (key: string, value: S[], options?: ModelOneCommitOptions) => void;
+    set: (value: Record<string, S[]>, options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    reset: (options?: Pick<ModelOneCommitOptions, "pure" | "silent">) => void;
+    patch: (value: Record<string, S[]>, options?: Pick<ModelOneCommitOptions, "deep" | "silent">) => void;
+    remove: (key: string, options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    add: (key: string, value: S[], options?: Pick<ModelOneCommitOptions, "silent">) => void;
 }
 
 export type ModelManyCommit<
