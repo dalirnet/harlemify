@@ -16,8 +16,9 @@
     - [useStoreView](composables/use-store-view.md)
     - [useStoreCompose](composables/use-store-compose.md)
 - Advanced
+    - [Overview](advanced/README.md)
     - [Concurrency](advanced/concurrency.md)
     - [Cancellation](advanced/cancellation.md)
     - [Isolated Status](advanced/isolated-status.md)
     - [Lazy Store](advanced/lazy-store.md)
-    - [Debug Logging](advanced/logging.md)
+    - [Logging](advanced/logging.md)

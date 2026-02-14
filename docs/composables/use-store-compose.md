@@ -5,9 +5,6 @@ Wraps a store compose function with reactive `execute` and `active` tracking.
 ## Basic Usage
 
 ```typescript
-import { useStoreCompose } from "@diphyx/harlemify";
-import { dashboardStore } from "~/stores/dashboard";
-
 const { execute, active } = useStoreCompose(dashboardStore, "loadAll");
 ```
 
@@ -28,17 +25,14 @@ Arguments are inferred from the compose function definition:
 const quickAdd = useStoreCompose(store, "quickAdd");
 
 await quickAdd.execute("John", "john@example.com"); // OK — typed args
-await quickAdd.execute();                            // Type error: expected 2 arguments
-await quickAdd.execute("John", 123);                 // Type error: string expected
+await quickAdd.execute(); // Type error: expected 2 arguments
+await quickAdd.execute("John", 123); // Type error: string expected
 ```
 
 ## Component Example
 
 ```vue
 <script setup lang="ts">
-import { useStoreCompose } from "@diphyx/harlemify";
-import { dashboardStore } from "~/stores/dashboard";
-
 const loadAll = useStoreCompose(dashboardStore, "loadAll");
 const resetAll = useStoreCompose(dashboardStore, "resetAll");
 const quickAdd = useStoreCompose(dashboardStore, "quickAdd");
@@ -82,7 +76,7 @@ store.compose.resetAll();
 store.compose.selectUser(user);
 ```
 
-The composable is useful when you want a consistent `{ execute, active }` interface, similar to `useStoreAction`.
+The composable provides a consistent `{ execute, active }` interface, similar to `useStoreAction`.
 
 ## Return Type
 
@@ -95,5 +89,5 @@ type UseStoreCompose<A extends any[] = any[]> = {
 
 ## Next Steps
 
-- [Compose](../core-concepts/compose.md) - Core compose concept
-- [useStoreAction](use-store-action.md) - Action composable with status tracking
+- [Compose](../core-concepts/compose.md) — Core compose concept
+- [useStoreAction](use-store-action.md) — Action composable with status tracking

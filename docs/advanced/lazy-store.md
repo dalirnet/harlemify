@@ -59,3 +59,8 @@ Without `lazy: true`, calling `useRoute()` in the model factory would fail becau
 | _(not set)_   | Eager — store created immediately    |
 | `lazy: false` | Eager — store created immediately    |
 | `lazy: true`  | Lazy — store created on first access |
+
+## Next Steps
+
+- [Logging](logging.md) — Debug store operations
+- [Model](../core-concepts/model.md) — Function defaults and model options

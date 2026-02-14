@@ -8,26 +8,22 @@ Create a Zod-powered shape with the `shape` helper:
 
 ```typescript
 // stores/user.ts
-import { createStore, shape, ModelOneMode, ModelManyMode, type ShapeInfer } from "@diphyx/harlemify";
+import { shape, ModelOneMode, ModelManyMode, type ShapeInfer } from "@diphyx/harlemify";
 
-const userShape = shape((factory) => {
-    return {
-        id: factory.number().meta({
-            identifier: true,
-        }),
-        name: factory.string(),
-        email: factory.email(),
-    };
-});
+const userShape = shape((factory) => ({
+    id: factory.number().meta({ identifier: true }),
+    name: factory.string(),
+    email: factory.email(),
+}));
 
-export type User = ShapeInfer<typeof userShape>;
+type User = ShapeInfer<typeof userShape>;
 ```
 
 The `identifier: true` meta marks the primary key field used for matching items in array mutations (`patch`, `remove`). See [Shape](../core-concepts/shape.md) for details.
 
 ## Step 2: Define Models
 
-Models define the state containers. Use `one` for single items and `many` for collections. Optionally provide a static or [function default](../core-concepts/model.md#function-default) for initial and reset values:
+Models are the state containers. Use `one` for single items and `many` for collections:
 
 ```typescript
 model({ one, many }) {
@@ -38,6 +34,8 @@ model({ one, many }) {
 },
 ```
 
+Optionally provide a [function default](../core-concepts/model.md#function-default) for custom initial and reset values.
+
 ## Step 3: Define Views
 
 Views are computed properties derived from model state:
@@ -47,15 +45,11 @@ view({ from, merge }) {
     return {
         user: from("current"),
         users: from("list"),
-        count: from("list", (model) => {
-            return model.length;
-        }),
-        summary: merge(["current", "list"], (current, list) => {
-            return {
-                selected: current.name,
-                total: list.length,
-            };
-        }),
+        count: from("list", (model) => model.length),
+        summary: merge(["current", "list"], (current, list) => ({
+            selected: current.name,
+            total: list.length,
+        })),
     };
 },
 ```
@@ -75,8 +69,14 @@ action({ api }) {
             },
             { model: "current", mode: ModelOneMode.SET },
         ),
-        list: api.get({ url: "/users" }, { model: "list", mode: ModelManyMode.SET }),
-        create: api.post({ url: "/users" }, { model: "list", mode: ModelManyMode.ADD }),
+        list: api.get(
+            { url: "/users" },
+            { model: "list", mode: ModelManyMode.SET },
+        ),
+        create: api.post(
+            { url: "/users" },
+            { model: "list", mode: ModelManyMode.ADD },
+        ),
         update: api.patch(
             {
                 url(view) {
@@ -99,7 +99,7 @@ action({ api }) {
 
 ## Step 5: Define Compose (Optional)
 
-Compose orchestrates existing actions and model mutations. Use it when you need to call multiple actions together or build workflows:
+Compose orchestrates existing actions and model mutations. Use it when you need to combine multiple operations:
 
 ```typescript
 compose({ model, action }) {
@@ -120,6 +120,7 @@ compose({ model, action }) {
 Combine all layers into `createStore`:
 
 ```typescript
+// stores/user.ts
 export const userStore = createStore({
     name: "users",
     model({ one, many }) { ... },
@@ -130,7 +131,7 @@ export const userStore = createStore({
 });
 ```
 
-## Step 7: Use in Component
+## Step 7: Use in a Component
 
 ```vue
 <script setup lang="ts">
@@ -148,6 +149,11 @@ await listUsers();
 async function handleCreate() {
     await createUser({ body: { name: "John Doe", email: "john@example.com" } });
 }
+
+async function handleDelete(user: User) {
+    selectUser(user);
+    await deleteUser();
+}
 </script>
 
 <template>
@@ -160,7 +166,7 @@ async function handleCreate() {
             <li v-for="u in users.value" :key="u.id">
                 {{ u.name }} - {{ u.email }}
                 <button @click="selectUser(u)">Select</button>
-                <button @click="deleteUser()">Delete</button>
+                <button @click="handleDelete(u)">Delete</button>
             </li>
         </ul>
 
@@ -171,5 +177,5 @@ async function handleCreate() {
 
 ## Next Steps
 
-- [Core Concepts](../core-concepts/README.md) - Understand how harlemify works
-- [Composables](../composables/README.md) - useStoreAction, useStoreModel, useStoreView
+- [Core Concepts](../core-concepts/README.md) — Understand how each layer works
+- [Composables](../composables/README.md) — useStoreAction, useStoreModel, useStoreView, useStoreCompose

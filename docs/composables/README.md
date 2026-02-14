@@ -1,6 +1,6 @@
 # Composables
 
-Vue composables for working with store actions, models, and views in components.
+Vue composables for working with store layers in components. Each composable wraps a specific store layer with reactive state and convenience methods.
 
 ## [useStoreAction](use-store-action.md)
 
@@ -12,7 +12,7 @@ const { execute, status, loading, error, reset } = useStoreAction(store, "list")
 
 ## [useStoreModel](use-store-model.md)
 
-Typed mutation methods for one and many models, with optional debounce and throttle.
+Typed mutation methods for `one` and `many` models, with optional debounce and throttle.
 
 ```typescript
 const { set, patch, reset } = useStoreModel(store, "current");
@@ -58,7 +58,7 @@ Use standard JS destructuring to rename and avoid conflicts:
 const { set: setCurrent } = useStoreModel(store, "current");
 const { set: setList } = useStoreModel(store, "list");
 
-// Non-destructured — use generic via dot access
+// Non-destructured — use via dot access
 const currentModel = useStoreModel(store, "current");
 const listModel = useStoreModel(store, "list");
 currentModel.set(value);

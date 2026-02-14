@@ -2,7 +2,7 @@
 
 Views are reactive computed properties derived from model state. They are Vue `ComputedRef` values that automatically update when the underlying model changes.
 
-## from (Single Source)
+## from
 
 `from(model)` creates a direct view mirroring a model:
 
@@ -29,19 +29,17 @@ view({ from }) {
 },
 ```
 
-## merge (Multiple Sources)
+## merge
 
 `merge(models, resolver)` combines multiple models into a single computed value:
 
 ```typescript
 view({ merge }) {
     return {
-        summary: merge(["current", "list"], (current, list) => {
-            return {
-                selected: current.name,
-                total: list.length,
-            };
-        }),
+        summary: merge(["current", "list"], (current, list) => ({
+            selected: current.name,
+            total: list.length,
+        })),
     };
 },
 ```
@@ -49,24 +47,31 @@ view({ merge }) {
 Supports up to 5 models:
 
 ```typescript
-merge(["current", "draft", "list"], (current, draft, list) => {
-    return {
-        hasSelection: !!current.id,
-        hasDraft: !!draft.id,
-        totalPosts: list.length,
-    };
-});
+merge(["current", "draft", "list"], (current, draft, list) => ({
+    hasSelection: !!current.id,
+    hasDraft: !!draft.id,
+    totalPosts: list.length,
+}));
 ```
 
 > TypeScript overloads provide full type inference for up to 5 models. This is a type-level limit only — the runtime supports any number of models, but passing more than 5 will not compile.
 
-## View Options
+## Accessing Views
+
+```typescript
+const { view } = userStore;
+
+view.user.value; // User
+view.users.value; // User[]
+view.count.value; // number
+view.summary.value; // { selected: string; total: number }
+```
+
+## Clone Option
 
 Both `from()` and `merge()` accept an optional options object as the last argument.
 
-### clone
-
-View resolver callbacks receive state as a Vue `readonly()` proxy. Mutating methods like `Array.prototype.sort()` are silently blocked in production. The `clone` option provides a mutable copy of the state values to the resolver using the `ViewClone` enum.
+View resolver callbacks receive state as a Vue `readonly()` proxy. Mutating methods like `Array.prototype.sort()` are silently blocked in production. The `clone` option provides a mutable copy of the state values to the resolver:
 
 | Value               | Behavior                               |
 | ------------------- | -------------------------------------- |
@@ -91,28 +96,15 @@ view({ from, merge }) {
         }, { clone: ViewClone.DEEP }),
 
         // Clone also works with merge
-        combined: merge(["current", "list"], (current, list) => {
-            return {
-                current: current.name,
-                sorted: list.sort((a, b) => a.id - b.id),
-            };
-        }, { clone: ViewClone.SHALLOW }),
+        combined: merge(["current", "list"], (current, list) => ({
+            current: current.name,
+            sorted: list.sort((a, b) => a.id - b.id),
+        }), { clone: ViewClone.SHALLOW }),
     };
 },
 ```
 
 > Vue's `computed()` caches the result, so the copy+sort cost only occurs when state changes.
-
-## Accessing Views
-
-```typescript
-const { view } = userStore;
-
-view.user.value; // User
-view.users.value; // User[]
-view.count.value; // number
-view.summary.value; // { selected: string; total: number }
-```
 
 ## Dynamic URLs from Views
 
@@ -124,5 +116,5 @@ api.get({ url: (view) => `/users/${view.user.value.id}` }, { model: "current", m
 
 ## Next Steps
 
-- [Action](action.md) - Define async operations
-- [Composables](../composables/README.md) - useStoreAction, useStoreModel, useStoreView
+- [Action](action.md) — Define async operations
+- [Composables](../composables/README.md) — useStoreAction, useStoreModel, useStoreView, useStoreCompose

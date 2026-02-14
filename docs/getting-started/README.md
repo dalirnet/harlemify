@@ -44,16 +44,17 @@ export default defineNuxtConfig({
 
 ## Auto-Imports
 
-Harlemify automatically imports `createStore` and the composables in your Nuxt project:
+Harlemify automatically imports the following in your Nuxt project:
 
 - `createStore`
 - `useStoreAction`
 - `useStoreModel`
 - `useStoreView`
+- `useStoreCompose`
 - `useIsolatedActionStatus`
 - `useIsolatedActionError`
 
-You still need to manually import types and enums:
+Types and enums must be imported manually:
 
 ```typescript
 import { shape, ModelOneMode, ModelManyMode, type ShapeInfer } from "@diphyx/harlemify";

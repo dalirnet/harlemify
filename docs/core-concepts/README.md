@@ -17,15 +17,17 @@ Shape (Zod)
     └── Compose → Orchestration (optional)
 ```
 
-## Concepts
+## Overview
 
 Every store splits into layers with a clear responsibility:
 
-- **Shape** — Data schema defined with Zod. Types everything in the store.
-- **Model** — Mutable state. Changed only through typed commits.
-- **View** — Read-only computed data derived from models.
-- **Action** — Async operations. Fetches data and commits it to models.
-- **Compose** — Orchestration functions that combine actions, models, and views.
+| Layer       | Role                                                        |
+| ----------- | ----------------------------------------------------------- |
+| **Shape**   | Data schema defined with Zod. Types everything in the store |
+| **Model**   | Mutable state. Changed only through typed commits           |
+| **View**    | Read-only computed data derived from models                 |
+| **Action**  | Async operations. Fetches data and commits it to models     |
+| **Compose** | Orchestration functions that combine actions, models, views |
 
 Data flows one way: **Action → Model → View**. Compose sits on top, orchestrating all three.
 
@@ -88,7 +90,7 @@ action({ api, handler }) {
 },
 ```
 
-Every action tracks `loading`, `status`, `error`, and `data` automatically.
+Every action tracks `loading`, `status`, and `error` automatically.
 
 ## [Compose](compose.md)
 

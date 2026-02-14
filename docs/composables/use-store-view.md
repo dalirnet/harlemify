@@ -5,9 +5,6 @@ Returns reactive view data with proxy access and a `track` method for watching c
 ## Basic Usage
 
 ```typescript
-import { useStoreView } from "@diphyx/harlemify";
-import { userStore } from "~/stores/user";
-
 const { data, track } = useStoreView(userStore, "user");
 
 data.value; // User — standard ref access
@@ -41,7 +38,7 @@ This is useful in templates where you want to avoid repeated `.value` checks:
 
 ## Without Proxy
 
-Pass `proxy: false` to get a standard Vue `ComputedRef` instead of the proxy:
+Pass `proxy: false` to get a standard Vue `ComputedRef` instead:
 
 ```typescript
 const { data } = useStoreView(userStore, "user", { proxy: false });
@@ -95,9 +92,6 @@ const stop = track(handler, {
 
 ```vue
 <script setup lang="ts">
-import { useStoreView } from "@diphyx/harlemify";
-import { userStore } from "~/stores/user";
-
 const { data: userData, track: trackUser } = useStoreView(userStore, "user");
 const { data: usersData } = useStoreView(userStore, "users");
 
@@ -121,20 +115,24 @@ onMounted(() => {
 
 ## Options
 
-| Option    | Type      | Default | Description                                                             |
-| --------- | --------- | ------- | ----------------------------------------------------------------------- |
-| `proxy`   | `boolean` | `true`  | When `true`, returns a proxy. When `false`, returns a raw `ComputedRef` |
+| Option  | Type      | Default | Description                                                             |
+| ------- | --------- | ------- | ----------------------------------------------------------------------- |
+| `proxy` | `boolean` | `true`  | When `true`, returns a proxy. When `false`, returns a raw `ComputedRef` |
 
 ## Return Type
 
+### With Proxy (default)
+
 ```typescript
-// proxy: true (default)
 type UseStoreViewProxy<T> = {
     data: { value: T } & { [K in keyof T]: T[K] };
     track: (handler: (value: T) => void, options?: UseStoreViewTrackOptions) => WatchStopHandle;
 };
+```
 
-// proxy: false
+### Without Proxy
+
+```typescript
 type UseStoreViewComputed<T> = {
     data: ComputedRef<T>;
     track: (handler: (value: T) => void, options?: UseStoreViewTrackOptions) => WatchStopHandle;
@@ -143,5 +141,5 @@ type UseStoreViewComputed<T> = {
 
 ## Next Steps
 
-- [useStoreAction](use-store-action.md) - Reactive action execution
-- [useStoreModel](use-store-model.md) - Reactive model mutations
+- [useStoreAction](use-store-action.md) — Reactive action execution
+- [useStoreModel](use-store-model.md) — Reactive model mutations
