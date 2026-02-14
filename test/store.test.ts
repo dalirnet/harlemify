@@ -131,7 +131,7 @@ describe("createStore", () => {
                 }
                 return {
                     user: m.one(UserShape, {
-                        default: { id: 1, name: "FromContext", email: "ctx@test.com" },
+                        default: () => ({ id: 1, name: "FromContext", email: "ctx@test.com" }),
                     }),
                 };
             },

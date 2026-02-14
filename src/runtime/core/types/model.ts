@@ -48,7 +48,7 @@ export type AtLeastOne<S extends Shape> = { [K in keyof S]: Pick<S, K> }[keyof S
 
 export interface ModelOneDefinitionOptions<S extends Shape> {
     identifier?: keyof S;
-    default?: S | (() => S);
+    default?: () => S;
     pre?: () => void;
     post?: () => void;
 }
@@ -59,9 +59,7 @@ export type ModelManyDefinitionOptions<
     T extends ModelManyKind = ModelManyKind.LIST,
 > = {
     kind?: T;
-    default?:
-        | ([T] extends [ModelManyKind.LIST] ? S[] : Record<string, S[]>)
-        | (() => [T] extends [ModelManyKind.LIST] ? S[] : Record<string, S[]>);
+    default?: () => [T] extends [ModelManyKind.LIST] ? S[] : Record<string, S[]>;
     pre?: () => void;
     post?: () => void;
 } & ([T] extends [ModelManyKind.LIST] ? { identifier?: I } : {});

@@ -39,11 +39,11 @@ describe("createModelFactory", () => {
             email: "test@test.com",
         };
         const definition = factory.one(UserShape, {
-            default: defaultUser,
+            default: () => defaultUser,
             identifier: "email",
         });
 
-        expect(definition.options?.default).toEqual(defaultUser);
+        expect(definition.options?.default?.()).toEqual(defaultUser);
         expect(definition.options?.identifier).toBe("email");
     });
 
@@ -124,7 +124,7 @@ describe("createStoreState", () => {
             email: "default@test.com",
         };
         const model = {
-            user: factory.one(UserShape, { default: defaultUser }),
+            user: factory.one(UserShape, { default: () => defaultUser }),
         };
 
         const state = createStoreState(model);
@@ -141,7 +141,7 @@ describe("createStoreState", () => {
             },
         ];
         const model = {
-            users: factory.many(UserShape, { default: defaultUsers }),
+            users: factory.many(UserShape, { default: () => defaultUsers }),
         };
 
         const state = createStoreState(model);
@@ -1119,9 +1119,9 @@ describe("createStoreModel", () => {
             const modelDefs = {
                 grouped: factory.many(UserShape, {
                     kind: ModelManyKind.RECORD,
-                    default: {
+                    default: () => ({
                         "team-a": [{ id: 1, name: "Default", email: "default@test.com" }],
-                    },
+                    }),
                 }),
             };
 
@@ -1147,9 +1147,9 @@ describe("createStoreModel", () => {
             const modelDefs = {
                 grouped: factory.many(UserShape, {
                     kind: ModelManyKind.RECORD,
-                    default: {
+                    default: () => ({
                         "team-a": [{ id: 1, name: "Default", email: "default@test.com" }],
-                    },
+                    }),
                 }),
             };
 
@@ -1358,7 +1358,7 @@ describe("createStoreModel", () => {
         function setup() {
             const defaultUser: User = { id: 99, name: "Default", email: "default@test.com" };
             const modelDefs = {
-                user: factory.one(UserShape, { default: defaultUser }),
+                user: factory.one(UserShape, { default: () => defaultUser }),
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
@@ -1395,7 +1395,7 @@ describe("createStoreModel", () => {
             const post = vi.fn();
             const modelDefs = {
                 user: factory.one(UserShape, {
-                    default: { id: 99, name: "Default", email: "default@test.com" },
+                    default: () => ({ id: 99, name: "Default", email: "default@test.com" }),
                     pre,
                     post,
                 }),
@@ -1707,7 +1707,7 @@ describe("createStoreModel", () => {
         function setup() {
             const defaultUsers: User[] = [{ id: 99, name: "Default", email: "default@test.com" }];
             const modelDefs = {
-                users: factory.many(UserShape, { default: defaultUsers }),
+                users: factory.many(UserShape, { default: () => defaultUsers }),
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {
@@ -1947,7 +1947,7 @@ describe("createStoreModel", () => {
                 "team-a": [{ id: 99, name: "Default", email: "default@test.com" }],
             };
             const modelDefs = {
-                grouped: factory.many(UserShape, { kind: ModelManyKind.RECORD, default: defaultGroups }),
+                grouped: factory.many(UserShape, { kind: ModelManyKind.RECORD, default: () => defaultGroups }),
             };
 
             for (const [k, def] of Object.entries(modelDefs)) {

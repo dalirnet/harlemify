@@ -12,15 +12,26 @@ type HarlemState = Record<string, Record<string, unknown>>;
 // Server
 
 function handleServer(nuxtApp: ServerSideRenderingContext, stores: InternalStores): void {
-    stores.forEach((store) => {
-        store.reset();
-    });
+    for (const store of stores.values()) {
+        const mutations = store.registrations["mutations"];
+        if (!mutations) {
+            continue;
+        }
+
+        for (const [name, registration] of mutations) {
+            if (!name.endsWith(":reset")) {
+                continue;
+            }
+
+            (registration.producer() as (payload: unknown) => void)({});
+        }
+    }
 
     nuxtApp.hooks.hook("app:rendered", () => {
         const snapshot: HarlemState = {};
-        stores.forEach((store) => {
+        for (const store of stores.values()) {
             snapshot[store.name] = store.state;
-        });
+        }
 
         nuxtApp.payload.harlemifyState = snapshot;
     });
@@ -34,7 +45,7 @@ function handleClient(nuxtApp: ServerSideRenderingContext, eventEmitter: EventBu
         return;
     }
 
-    eventEmitter.on(EVENTS.ssr.initClient, (payload) => {
+    eventEmitter.on("ssr:init:client", (payload) => {
         if (!payload) {
             return;
         }
@@ -44,11 +55,14 @@ function handleClient(nuxtApp: ServerSideRenderingContext, eventEmitter: EventBu
             return;
         }
 
-        if (store.name in harlemifyState) {
-            store.write("harlemify:ssr:init", "harlemify", (state) => {
-                Object.assign(state, harlemifyState[store.name]);
-            });
+        const snapshot = harlemifyState[store.name];
+        if (!snapshot) {
+            return;
         }
+
+        store.write("harlemify:ssr:init", "harlemify", (state) => {
+            Object.assign(state, snapshot);
+        });
     });
 }
 

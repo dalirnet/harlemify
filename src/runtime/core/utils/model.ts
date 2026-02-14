@@ -24,15 +24,9 @@ import {
 
 // Resolve Default
 
-export function resolveDefault<T>(definition: { default?: unknown } | undefined, fallback: T, pure?: boolean): T {
-    if (!pure) {
-        if (typeof definition?.default === "function") {
-            return definition.default() ?? fallback;
-        }
-
-        if (definition?.default !== undefined) {
-            return definition.default as T;
-        }
+export function resolveDefault<T>(definition: { default?: () => T } | undefined, fallback: T, pure?: boolean): T {
+    if (!pure && definition?.default) {
+        return definition.default() ?? fallback;
     }
 
     return fallback;
@@ -263,7 +257,7 @@ function createManyListCommit<S extends Shape>(
 // Create Many Record Commit
 
 function createManyRecordCommit<S extends Shape>(
-    definition: ModelManyDefinition<S, any>,
+    definition: ModelManyDefinition<S, any, ModelManyKind.RECORD>,
     source: SourceStore<BaseState>,
 ): ModelManyRecordCommit<S> {
     const setOperation: Mutation<Record<string, S[]>> = source.mutation(
@@ -276,7 +270,7 @@ function createManyRecordCommit<S extends Shape>(
     const resetOperation: Mutation<{
         options?: ModelOneCommitOptions;
     }> = source.mutation(`${definition.key}:reset`, (state, payload: { options?: ModelOneCommitOptions }) => {
-        state[definition.key] = resolveDefault(definition.options, {}, payload.options?.pure);
+        state[definition.key] = resolveDefault(definition.options, {} as Record<string, S[]>, payload.options?.pure);
     });
 
     const patchOperation: Mutation<{
