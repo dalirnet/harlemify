@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useStoreAction, useStoreModel, useStoreView } from "../../src/runtime";
-import { todoStore, todoShape, type Todo } from "../stores/todo";
+import { todoStore, type Todo } from "../stores/todo";
 
 // useStoreAction — destructured
 const { execute, status, loading, error, reset } = useStoreAction(todoStore, "list");
@@ -29,9 +29,6 @@ const todosView = useStoreView(todoStore, "todos");
 
 // useStoreView — without proxy (ComputedRef)
 const computedView = useStoreView(todoStore, "todo", { proxy: false });
-const defaultView = useStoreView(todoStore, "todo", {
-    default: todoShape.defaults({ title: "No todo selected" }),
-});
 const trackLog = ref<string[]>([]);
 
 // Load data
@@ -44,7 +41,7 @@ const isTracking = computed(() => !!trackStop.value);
 function startTrack() {
     if (trackStop.value) return;
     trackStop.value = todoView.track((value) => {
-        trackLog.value.push(`[track] ${value?.title ?? "null"} (done: ${value?.done ?? "-"})`);
+        trackLog.value.push(`[track] ${value.title} (done: ${value.done})`);
     });
 }
 
@@ -136,7 +133,7 @@ function clearTrackLog() {
 
         <!-- Todo List -->
         <div class="toolbar">
-            <h2 data-testid="todo-count">{{ todosView.data.value?.length ?? 0 }} todos</h2>
+            <h2 data-testid="todo-count">{{ todosView.data.value.length }} todos</h2>
             <button class="btn btn-primary" data-testid="reload" @click="execute()">Reload</button>
             <button v-if="todoView.data.id" class="btn btn-sm" data-testid="clear-selection" @click="resetCurrent()">
                 Clear
@@ -312,37 +309,11 @@ function clearTrackLog() {
 
                     <div class="demo-item">
                         <span class="demo-label">todoView.data.title (proxy)</span>
-                        <span class="demo-value" data-testid="view-data-title">{{
-                            todoView.data.title ?? "undefined"
-                        }}</span>
+                        <span class="demo-value" data-testid="view-data-title">{{ todoView.data.title }}</span>
                     </div>
                     <div class="demo-item">
                         <span class="demo-label">todoView.data.done (proxy)</span>
-                        <span class="demo-value" data-testid="view-data-done">{{
-                            todoView.data.done ?? "undefined"
-                        }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="demo-block">
-                <h3>Non-destructured — Default Option</h3>
-                <p class="subtitle">
-                    <code
-                        >const defaultView = useStoreView(store, "todo", { default: shape.defaults({ title: "No todo
-                        selected" }) })</code
-                    >
-                </p>
-                <div class="demo-grid">
-                    <div class="demo-item">
-                        <span class="demo-label">defaultView.data.value</span>
-                        <span class="demo-value" data-testid="view-default-value">{{
-                            JSON.stringify(defaultView.data.value)
-                        }}</span>
-                    </div>
-                    <div class="demo-item">
-                        <span class="demo-label">defaultView.data.title</span>
-                        <span class="demo-value" data-testid="view-default-title">{{ defaultView.data.title }}</span>
+                        <span class="demo-value" data-testid="view-data-done">{{ todoView.data.done }}</span>
                     </div>
                 </div>
             </div>
@@ -360,9 +331,9 @@ function clearTrackLog() {
                         }}</span>
                     </div>
                     <div class="demo-item">
-                        <span class="demo-label">computedView.data.value?.title</span>
+                        <span class="demo-label">computedView.data.value.title</span>
                         <span class="demo-value" data-testid="view-computed-title">{{
-                            computedView.data.value?.title ?? "undefined"
+                            computedView.data.value.title
                         }}</span>
                     </div>
                 </div>
@@ -375,7 +346,7 @@ function clearTrackLog() {
                 </p>
                 <pre data-testid="view-pending">{{
                     JSON.stringify(
-                        pendingData.value?.map((t: Todo) => t.title),
+                        pendingData.value.map((t: Todo) => t.title),
                         null,
                         2,
                     )
@@ -437,7 +408,7 @@ function clearTrackLog() {
                     <code>todoView.track()</code>
                 </li>
                 <li><code>useStoreView(store, key, { proxy: false })</code> - Raw ComputedRef, no proxy</li>
-                <li><code>useStoreView(store, key, { default })</code> - Fallback value when view is null</li>
+
                 <li><code>useStoreView(store, key)</code> - Destructured: <code>{ data: pendingData }</code></li>
                 <li>
                     Data proxy: access <code>data.title</code>, <code>data.done</code> directly without

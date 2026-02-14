@@ -57,34 +57,28 @@ async function handleDelete(p: Project) {
 }
 
 async function handleCheck() {
-    if (!projectStore.view.project.value) return;
     await projectStore.action.check({
         params: { id: String(projectStore.view.project.value.id) },
     });
 }
 
 async function handleToggle() {
-    if (!projectStore.view.project.value) return;
     await projectStore.action.toggle();
 }
 
 async function loadMilestones() {
-    if (!projectStore.view.project.value) return;
     await projectStore.action.milestones();
 }
 
 async function loadMeta() {
-    if (!projectStore.view.project.value) return;
     await projectStore.action.meta();
 }
 
 async function loadOptions() {
-    if (!projectStore.view.project.value) return;
     await projectStore.action.options();
 }
 
 async function handleExport(format: "json" | "csv" = "json") {
-    if (!projectStore.view.project.value) return;
     exportResult.value = await projectStore.action.export({
         query: { format, includeStats: true },
         headers: { "X-Export-Request": "playground-demo" },
@@ -98,7 +92,6 @@ function clearSelection() {
 
 // Concurrent demo
 async function handleSlowExport() {
-    if (!projectStore.view.project.value) return;
     concurrentError.value = null;
 
     try {
@@ -114,8 +107,6 @@ async function handleSlowExport() {
 
 // Transformer demo
 async function handleTransformedExport() {
-    if (!projectStore.view.project.value) return;
-
     transformedResult.value = await projectStore.action.export({
         query: { format: "json", includeStats: true },
         transformer: {
@@ -136,7 +127,6 @@ async function handleTransformedExport() {
 
 // Signal demo
 async function handleCancellableExport() {
-    if (!projectStore.view.project.value) return;
     signalAborted.value = false;
 
     activeAbortController.value = new AbortController();
@@ -160,8 +150,6 @@ function cancelExport() {
 
 // Bind demo
 async function handleBoundExport() {
-    if (!projectStore.view.project.value) return;
-
     try {
         await projectStore.action.export({
             query: { format: "json" },
@@ -214,7 +202,7 @@ async function handleTriggerError() {
                 v-for="p in projectStore.view.projects.value"
                 :key="p.id"
                 class="card"
-                :class="{ 'card-selected': projectStore.view.project.value?.id === p.id }"
+                :class="{ 'card-selected': projectStore.view.project.value.id === p.id }"
                 :data-testid="`project-${p.id}`"
             >
                 <div class="card-body">
@@ -240,7 +228,7 @@ async function handleTriggerError() {
         </div>
 
         <!-- Selected Project Detail -->
-        <div v-if="projectStore.view.project.value" class="detail" data-testid="project-detail">
+        <div v-if="projectStore.view.project.value.id" class="detail" data-testid="project-detail">
             <div class="detail-header">
                 <h3>Selected: {{ projectStore.view.project.value.name }}</h3>
                 <button class="btn btn-sm" data-testid="clear-selection" @click="clearSelection">Clear</button>

@@ -58,26 +58,39 @@ async function deleteUser(user: User) {
         <!-- Summary -->
         <div class="summary-grid" data-testid="summary">
             <div class="summary-card">
-                <span class="summary-value" data-testid="summary-users">{{ dashboardStore.view.summary.value?.users ?? 0 }}</span>
+                <span class="summary-value" data-testid="summary-users">{{
+                    dashboardStore.view.summary.value.users
+                }}</span>
                 <span class="summary-label">Users</span>
             </div>
             <div class="summary-card">
-                <span class="summary-value" data-testid="summary-todos">{{ dashboardStore.view.summary.value?.todos ?? 0 }}</span>
+                <span class="summary-value" data-testid="summary-todos">{{
+                    dashboardStore.view.summary.value.todos
+                }}</span>
                 <span class="summary-label">Todos</span>
             </div>
             <div class="summary-card">
-                <span class="summary-value" data-testid="summary-pending">{{ dashboardStore.view.summary.value?.pending ?? 0 }}</span>
+                <span class="summary-value" data-testid="summary-pending">{{
+                    dashboardStore.view.summary.value.pending
+                }}</span>
                 <span class="summary-label">Pending</span>
             </div>
             <div class="summary-card">
-                <span class="summary-value" data-testid="summary-done">{{ dashboardStore.view.summary.value?.done ?? 0 }}</span>
+                <span class="summary-value" data-testid="summary-done">{{
+                    dashboardStore.view.summary.value.done
+                }}</span>
                 <span class="summary-label">Done</span>
             </div>
         </div>
 
         <!-- Toolbar -->
         <div class="toolbar">
-            <button class="btn btn-primary" data-testid="load-all" :disabled="loadAll.active.value" @click="loadAll.execute()">
+            <button
+                class="btn btn-primary"
+                data-testid="load-all"
+                :disabled="loadAll.active.value"
+                @click="loadAll.execute()"
+            >
                 {{ loadAll.active.value ? "Loading..." : "Load All" }}
             </button>
             <button class="btn" data-testid="complete-all" @click="completeAll">Complete All Todos</button>
@@ -105,7 +118,7 @@ async function deleteUser(user: User) {
                     v-for="u in dashboardStore.view.users.value"
                     :key="u.id"
                     class="list-item"
-                    :class="{ 'list-item-selected': dashboardStore.view.user.value?.id === u.id }"
+                    :class="{ 'list-item-selected': dashboardStore.view.user.value.id === u.id }"
                     :data-testid="`user-${u.id}`"
                 >
                     <div>
@@ -114,14 +127,23 @@ async function deleteUser(user: User) {
                     </div>
                     <div class="list-actions">
                         <button class="btn btn-sm" data-testid="select-user" @click="selectUser(u)">Select</button>
-                        <button class="btn btn-sm btn-danger" data-testid="delete-user" @click="deleteUser(u)">Delete</button>
+                        <button class="btn btn-sm btn-danger" data-testid="delete-user" @click="deleteUser(u)">
+                            Delete
+                        </button>
                     </div>
                 </div>
             </div>
-            <div v-if="dashboardStore.view.user.value" class="detail" data-testid="selected-user">
+            <div v-if="dashboardStore.view.user.value.id" class="detail" data-testid="selected-user">
                 <h3>Selected User</h3>
                 <pre>{{ JSON.stringify(dashboardStore.view.user.value, null, 2) }}</pre>
-                <button class="btn btn-sm" style="margin-top: 8px" data-testid="clear-selection" @click="clearSelection">Clear</button>
+                <button
+                    class="btn btn-sm"
+                    style="margin-top: 8px"
+                    data-testid="clear-selection"
+                    @click="clearSelection"
+                >
+                    Clear
+                </button>
             </div>
         </div>
 
@@ -136,7 +158,9 @@ async function deleteUser(user: User) {
                     :data-testid="`todo-${t.id}`"
                 >
                     <div>
-                        <h3 :style="{ textDecoration: t.done ? 'line-through' : 'none' }" data-testid="todo-title">{{ t.title }}</h3>
+                        <h3 :style="{ textDecoration: t.done ? 'line-through' : 'none' }" data-testid="todo-title">
+                            {{ t.title }}
+                        </h3>
                         <p class="subtitle">{{ t.done ? "Done" : "Pending" }}</p>
                     </div>
                     <div class="list-actions">
@@ -167,11 +191,15 @@ async function deleteUser(user: User) {
                     </div>
                     <div class="demo-item">
                         <span class="demo-label">completeAll.active</span>
-                        <span class="demo-value" data-testid="active-complete-all">{{ dashboardStore.compose.completeAll.active.value }}</span>
+                        <span class="demo-value" data-testid="active-complete-all">{{
+                            dashboardStore.compose.completeAll.active.value
+                        }}</span>
                     </div>
                     <div class="demo-item">
                         <span class="demo-label">selectUser.active</span>
-                        <span class="demo-value" data-testid="active-select-user">{{ dashboardStore.compose.selectUser.active.value }}</span>
+                        <span class="demo-value" data-testid="active-select-user">{{
+                            dashboardStore.compose.selectUser.active.value
+                        }}</span>
                     </div>
                 </div>
             </div>
@@ -185,7 +213,10 @@ async function deleteUser(user: User) {
                 <li><code>store.compose.loadAll()</code> — no-arg compose: orchestrate multiple actions</li>
                 <li><code>store.compose.resetAll()</code> — no-arg compose: reset multiple models</li>
                 <li><code>store.compose.selectUser(user)</code> — typed arg: <code>(user: User) => void</code></li>
-                <li><code>store.compose.quickAdd(name, title)</code> — typed args: <code>(string, string) => Promise&lt;void&gt;</code></li>
+                <li>
+                    <code>store.compose.quickAdd(name, title)</code> — typed args:
+                    <code>(string, string) => Promise&lt;void&gt;</code>
+                </li>
                 <li><code>store.compose.completeAll()</code> — batch model mutations</li>
                 <li><code>compose.active</code> — reactive boolean, true while executing</li>
                 <li><code>useStoreCompose(store, key)</code> — composable: <code>{ execute, active }</code></li>

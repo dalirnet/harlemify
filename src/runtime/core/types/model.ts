@@ -46,30 +46,18 @@ export type AtLeastOne<S extends Shape> = { [K in keyof S]: Pick<S, K> }[keyof S
 
 // Definition Options
 
-export interface ModelOneDefinitionOptions<S extends Shape> {
-    identifier?: keyof S;
-    default?: () => S;
+export interface ModelDefinitionOptions {
     pre?: () => void;
     post?: () => void;
 }
-
-export type ModelManyDefinitionOptions<
-    S extends Shape,
-    I extends keyof S = ModelDefaultIdentifier<S>,
-    T extends ModelManyKind = ModelManyKind.LIST,
-> = {
-    kind?: T;
-    default?: () => [T] extends [ModelManyKind.LIST] ? S[] : Record<string, S[]>;
-    pre?: () => void;
-    post?: () => void;
-} & ([T] extends [ModelManyKind.LIST] ? { identifier?: I } : {});
 
 // Definitions
 
 export interface ModelOneDefinition<S extends Shape> extends BaseDefinition {
     shape: ShapeType<S>;
     type: ModelType.ONE;
-    options?: ModelOneDefinitionOptions<S>;
+    default: () => S;
+    options?: ModelDefinitionOptions;
 }
 
 export interface ModelManyDefinition<
@@ -79,7 +67,10 @@ export interface ModelManyDefinition<
 > extends BaseDefinition {
     shape: ShapeType<S>;
     type: ModelType.MANY;
-    options?: ModelManyDefinitionOptions<S, I, T>;
+    kind: T;
+    identifier: [T] extends [ModelManyKind.LIST] ? I : never;
+    default: () => [T] extends [ModelManyKind.LIST] ? S[] : Record<string, S[]>;
+    options?: ModelDefinitionOptions;
 }
 
 export type ModelDefinition<S extends Shape> = ModelOneDefinition<S> | ModelManyDefinition<S, any, any>;
@@ -90,7 +81,7 @@ export type ModelDefinitions = Record<string, ModelDefinition<any>>;
 
 export type ModelDefinitionInfer<MD extends ModelDefinitions, K extends keyof MD> =
     MD[K] extends ModelOneDefinition<infer S>
-        ? S | null
+        ? S
         : MD[K] extends ModelManyDefinition<infer S, any, infer T>
           ? [T] extends [ModelManyKind.LIST]
               ? S[]
@@ -108,23 +99,30 @@ export type ModelDefinitionsInfer<MD extends ModelDefinitions> = {
 // Factory
 
 export interface ModelFactory {
-    one<S extends Shape>(shape: ShapeType<S>, options?: ModelOneDefinitionOptions<S>): ModelOneDefinition<S>;
+    one<S extends Shape>(
+        shape: ShapeType<S>,
+        options?: ModelDefinitionOptions & {
+            default?: () => S;
+        },
+    ): ModelOneDefinition<S>;
     many<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>, T extends ModelManyKind = ModelManyKind.LIST>(
         shape: ShapeType<S>,
-        options?: ModelManyDefinitionOptions<S, I, T>,
+        options?: ModelDefinitionOptions & {
+            kind?: T;
+            identifier?: [T] extends [ModelManyKind.LIST] ? I : never;
+            default?: () => [T] extends [ModelManyKind.LIST] ? S[] : Record<string, S[]>;
+        },
     ): ModelManyDefinition<S, I, T>;
 }
 
 // Commit Options
 
 export interface ModelOneCommitOptions {
-    pure?: boolean;
     deep?: boolean;
     silent?: true | ModelSilent;
 }
 
 export interface ModelManyCommitOptions {
-    pure?: boolean;
     by?: string;
     prepend?: boolean;
     unique?: boolean;
@@ -135,28 +133,31 @@ export interface ModelManyCommitOptions {
 // Commit
 
 export interface ModelOneCommit<S extends Shape> {
-    set: (value: S, options?: Pick<ModelOneCommitOptions, "silent">) => void;
-    reset: (options?: Pick<ModelOneCommitOptions, "pure" | "silent">) => void;
-    patch: (value: Partial<S>, options?: Pick<ModelOneCommitOptions, "deep" | "silent">) => void;
+    set: (payload: S, options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    reset: (options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    patch: (payload: Partial<S>, options?: Pick<ModelOneCommitOptions, "deep" | "silent">) => void;
 }
 
 export interface ModelManyListCommit<S extends Shape, I extends keyof S = ModelDefaultIdentifier<S>> {
-    set: (value: S[], options?: Pick<ModelManyCommitOptions, "silent">) => void;
-    reset: (options?: Pick<ModelManyCommitOptions, "pure" | "silent">) => void;
-    patch: (value: Partial<S> | Partial<S>[], options?: Pick<ModelManyCommitOptions, "by" | "deep" | "silent">) => void;
+    set: (payload: S[], options?: Pick<ModelManyCommitOptions, "silent">) => void;
+    reset: (options?: Pick<ModelManyCommitOptions, "silent">) => void;
+    patch: (
+        payload: Partial<S> | Partial<S>[],
+        options?: Pick<ModelManyCommitOptions, "by" | "deep" | "silent">,
+    ) => void;
     remove: (
-        value: Pick<S, I> | Pick<S, I>[] | AtLeastOne<S> | AtLeastOne<S>[],
+        payload: Pick<S, I> | Pick<S, I>[] | AtLeastOne<S> | AtLeastOne<S>[],
         options?: Pick<ModelManyCommitOptions, "silent">,
     ) => void;
-    add: (value: S | S[], options?: Pick<ModelManyCommitOptions, "by" | "prepend" | "unique" | "silent">) => void;
+    add: (payload: S | S[], options?: Pick<ModelManyCommitOptions, "by" | "prepend" | "unique" | "silent">) => void;
 }
 
 export interface ModelManyRecordCommit<S extends Shape> {
-    set: (value: Record<string, S[]>, options?: Pick<ModelOneCommitOptions, "silent">) => void;
-    reset: (options?: Pick<ModelOneCommitOptions, "pure" | "silent">) => void;
-    patch: (value: Record<string, S[]>, options?: Pick<ModelOneCommitOptions, "deep" | "silent">) => void;
-    remove: (key: string, options?: Pick<ModelOneCommitOptions, "silent">) => void;
-    add: (key: string, value: S[], options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    set: (payload: Record<string, S[]>, options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    reset: (options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    patch: (payload: Record<string, S[]>, options?: Pick<ModelOneCommitOptions, "deep" | "silent">) => void;
+    remove: (payload: string, options?: Pick<ModelOneCommitOptions, "silent">) => void;
+    add: (payload: { key: string; value: S[] }, options?: Pick<ModelOneCommitOptions, "silent">) => void;
 }
 
 export type ModelManyCommit<

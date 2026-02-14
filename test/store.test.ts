@@ -44,15 +44,15 @@ describe("createStore", () => {
                 return {
                     user: v.from("user"),
                     posts: v.from("posts"),
-                    userName: v.from("user", (user: User | null) => {
-                        return user?.name ?? "unknown";
+                    userName: v.from("user", (user: User) => {
+                        return user.name;
                     }),
                     postCount: v.from("posts", (posts: Post[]) => {
                         return posts.length;
                     }),
-                    summary: v.merge(["user", "posts"], (user: User | null, posts: Post[]) => {
+                    summary: v.merge(["user", "posts"], (user: User, posts: Post[]) => {
                         return {
-                            name: user?.name ?? "none",
+                            name: user.name,
                             total: posts.length,
                         };
                     }),
@@ -93,7 +93,7 @@ describe("createStore", () => {
                 return { user: m.one(UserShape) };
             },
             view: (v) => ({ user: v.from("user") }),
-            action: (a) => ({}),
+            action: (_a) => ({}),
         });
 
         expect(modelCalled).toBe(true);
@@ -108,14 +108,14 @@ describe("createStore", () => {
                 return { user: m.one(UserShape) };
             },
             view: (v) => ({ user: v.from("user") }),
-            action: (a) => ({}),
+            action: (_a) => ({}),
             lazy: true,
         });
 
         expect(modelCalled).toBe(false);
 
         // First access triggers initialization
-        store.model;
+        void store.model;
 
         expect(modelCalled).toBe(true);
     });
@@ -136,7 +136,7 @@ describe("createStore", () => {
                 };
             },
             view: (v) => ({ user: v.from("user") }),
-            action: (a) => ({}),
+            action: (_a) => ({}),
             lazy: true,
         });
 
@@ -156,13 +156,13 @@ describe("createStore", () => {
                 return { user: m.one(UserShape) };
             },
             view: (v) => ({ user: v.from("user") }),
-            action: (a) => ({}),
+            action: (_a) => ({}),
             lazy: true,
         });
 
-        store.model;
-        store.view;
-        store.action;
+        void store.model;
+        void store.view;
+        void store.action;
 
         expect(initCount).toBe(1);
     });
@@ -193,7 +193,7 @@ describe("createStore", () => {
 
             store.model.user.reset();
 
-            expect(store.view.user.value).toBeNull();
+            expect(store.view.user.value).toEqual({ id: 0, name: "", email: "" });
         });
 
         it("patch on one-model", () => {
@@ -295,14 +295,14 @@ describe("createStore", () => {
         it("reflects current state", () => {
             const store = setup();
 
-            expect(store.view.user.value).toBeNull();
+            expect(store.view.user.value).toEqual({ id: 0, name: "", email: "" });
             expect(store.view.posts.value).toEqual([]);
         });
 
         it("resolver transforms data", () => {
             const store = setup();
 
-            expect(store.view.userName.value).toBe("unknown");
+            expect(store.view.userName.value).toBe("");
 
             store.model.user.set({
                 id: 1,
@@ -338,7 +338,7 @@ describe("createStore", () => {
             const store = setup();
 
             expect(store.view.summary.value).toEqual({
-                name: "none",
+                name: "",
                 total: 0,
             });
 

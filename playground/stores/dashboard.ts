@@ -57,7 +57,7 @@ export const dashboardStore = createStore({
             deleteUser: api.delete(
                 {
                     url(view) {
-                        return `/users/${view.user.value?.id}`;
+                        return `/users/${view.user.value.id}`;
                     },
                 },
                 { model: "users", mode: ModelManyMode.REMOVE },

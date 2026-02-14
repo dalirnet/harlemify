@@ -29,10 +29,10 @@ describe("createModelFactory", () => {
 
         expect(definition.type).toBe(ModelType.ONE);
         expect(definition.shape).toBe(UserShape);
-        expect(definition.options).toEqual({ identifier: undefined });
+        expect(definition.default).toBeTypeOf("function");
     });
 
-    it("one() accepts options", () => {
+    it("one() accepts default option", () => {
         const defaultUser: User = {
             id: 1,
             name: "test",
@@ -40,11 +40,9 @@ describe("createModelFactory", () => {
         };
         const definition = factory.one(UserShape, {
             default: () => defaultUser,
-            identifier: "email",
         });
 
-        expect(definition.options?.default?.()).toEqual(defaultUser);
-        expect(definition.options?.identifier).toBe("email");
+        expect(definition.default()).toEqual(defaultUser);
     });
 
     it("one() accepts pre/post hooks", () => {
@@ -61,13 +59,15 @@ describe("createModelFactory", () => {
 
         expect(definition.type).toBe(ModelType.MANY);
         expect(definition.shape).toBe(UserShape);
-        expect(definition.options).toEqual({ identifier: undefined });
+        expect(definition.identifier).toBe("id");
+        expect(definition.kind).toBe(ModelManyKind.LIST);
+        expect(definition.default).toBeTypeOf("function");
     });
 
-    it("many() accepts options", () => {
+    it("many() accepts identifier option", () => {
         const definition = factory.many(UserShape, { identifier: "email" });
 
-        expect(definition.options?.identifier).toBe("email");
+        expect(definition.identifier).toBe("email");
     });
 
     it("many() accepts pre/post hooks", () => {
@@ -82,13 +82,13 @@ describe("createModelFactory", () => {
     it("many() accepts kind option", () => {
         const definition = factory.many(UserShape, { kind: ModelManyKind.RECORD });
 
-        expect(definition.options?.kind).toBe("record");
+        expect(definition.kind).toBe(ModelManyKind.RECORD);
     });
 
-    it("many() defaults kind to undefined (list)", () => {
+    it("many() defaults kind to list", () => {
         const definition = factory.many(UserShape);
 
-        expect(definition.options?.kind).toBeUndefined();
+        expect(definition.kind).toBe(ModelManyKind.LIST);
     });
 });
 
@@ -97,14 +97,14 @@ describe("createModelFactory", () => {
 describe("createStoreState", () => {
     const factory = createModelFactory();
 
-    it("returns null for one-models", () => {
+    it("returns shape defaults for one-models", () => {
         const model = {
             user: factory.one(UserShape),
         };
 
         const state = createStoreState(model);
 
-        expect(state.user).toBeNull();
+        expect(state.user).toEqual({ id: 0, name: "", email: "" });
     });
 
     it("returns empty array for many-models", () => {
@@ -200,6 +200,27 @@ describe("createStoreState", () => {
         expect(state.grouped).toEqual({});
     });
 
+    it("uses shape defaults for one-model without custom default", () => {
+        const model = {
+            user: factory.one(UserShape),
+        };
+
+        const state = createStoreState(model);
+
+        expect(state.user).toEqual({ id: 0, name: "", email: "" });
+    });
+
+    it("custom default takes priority over shape defaults", () => {
+        const customUser: User = { id: 42, name: "custom", email: "custom@test.com" };
+        const model = {
+            user: factory.one(UserShape, { default: () => customUser }),
+        };
+
+        const state = createStoreState(model);
+
+        expect(state.user).toEqual(customUser);
+    });
+
     it("handles mixed model types", () => {
         const model = {
             current: factory.one(UserShape),
@@ -208,7 +229,7 @@ describe("createStoreState", () => {
 
         const state = createStoreState(model);
 
-        expect(state.current).toBeNull();
+        expect(state.current).toEqual({ id: 0, name: "", email: "" });
         expect(state.list).toEqual([]);
     });
 });
@@ -251,7 +272,7 @@ describe("createStoreModel", () => {
             expect(source.state.user).toEqual(user);
         });
 
-        it("reset restores to null", () => {
+        it("reset restores to shape defaults", () => {
             const { source, model } = setup();
             model.user.set({
                 id: 1,
@@ -261,7 +282,7 @@ describe("createStoreModel", () => {
 
             model.user.reset();
 
-            expect(source.state.user).toBeNull();
+            expect(source.state.user).toEqual({ id: 0, name: "", email: "" });
         });
 
         it("patch merges shallow by default", () => {
@@ -317,12 +338,12 @@ describe("createStoreModel", () => {
             expect((source.state.settings as any).config.notifications).toBe(true);
         });
 
-        it("patch does nothing when value is null", () => {
+        it("patch merges into shape defaults when no set called", () => {
             const { source, model } = setup();
 
             model.user.patch({ name: "Bob" });
 
-            expect(source.state.user).toBeNull();
+            expect(source.state.user).toEqual({ id: 0, name: "Bob", email: "" });
         });
     });
 
@@ -919,7 +940,7 @@ describe("createStoreModel", () => {
             });
             model.user.commit(ModelOneMode.RESET);
 
-            expect(source.state.user).toBeNull();
+            expect(source.state.user).toEqual({ id: 0, name: "", email: "" });
         });
     });
 
@@ -1057,7 +1078,7 @@ describe("createStoreModel", () => {
         it("add adds key to record", () => {
             const { source, model } = setup();
 
-            model.grouped.add("team-a", [{ id: 1, name: "Alice", email: "alice@test.com" }]);
+            model.grouped.add({ key: "team-a", value: [{ id: 1, name: "Alice", email: "alice@test.com" }] });
 
             expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
         });
@@ -1068,7 +1089,7 @@ describe("createStoreModel", () => {
                 "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
             });
 
-            model.grouped.add("team-b", [{ id: 2, name: "Bob", email: "bob@test.com" }]);
+            model.grouped.add({ key: "team-b", value: [{ id: 2, name: "Bob", email: "bob@test.com" }] });
 
             expect(Object.keys(source.state.grouped as Record<string, User[]>)).toHaveLength(2);
         });
@@ -1098,7 +1119,7 @@ describe("createStoreModel", () => {
                 "team-a": [{ id: 1, name: "Alice", email: "alice@test.com" }],
             });
 
-            model.grouped.add("team-a", [{ id: 2, name: "Bob", email: "bob@test.com" }]);
+            model.grouped.add({ key: "team-a", value: [{ id: 2, name: "Bob", email: "bob@test.com" }] });
 
             expect((source.state.grouped as Record<string, User[]>)["team-a"]).toHaveLength(1);
             expect((source.state.grouped as Record<string, User[]>)["team-a"][0].name).toBe("Bob");
@@ -1351,72 +1372,6 @@ describe("createStoreModel", () => {
             model.user.set(user, { silent: true });
 
             expect(source.state.user).toEqual(user);
-        });
-    });
-
-    describe("one pure reset", () => {
-        function setup() {
-            const defaultUser: User = { id: 99, name: "Default", email: "default@test.com" };
-            const modelDefs = {
-                user: factory.one(UserShape, { default: () => defaultUser }),
-            };
-
-            for (const [k, def] of Object.entries(modelDefs)) {
-                def.key = k;
-            }
-
-            const state = createStoreState(modelDefs);
-            const source = createStore("test-one-pure-" + Math.random(), state);
-            const model = createStoreModel(modelDefs, source);
-
-            return { source, model, defaultUser };
-        }
-
-        it("reset without pure restores custom default", () => {
-            const { source, model, defaultUser } = setup();
-            model.user.set({ id: 1, name: "Alice", email: "alice@test.com" });
-
-            model.user.reset();
-
-            expect(source.state.user).toEqual(defaultUser);
-        });
-
-        it("reset with pure gives null", () => {
-            const { source, model } = setup();
-            model.user.set({ id: 1, name: "Alice", email: "alice@test.com" });
-
-            model.user.reset({ pure: true });
-
-            expect(source.state.user).toBeNull();
-        });
-
-        it("pure works together with silent", () => {
-            const pre = vi.fn();
-            const post = vi.fn();
-            const modelDefs = {
-                user: factory.one(UserShape, {
-                    default: () => ({ id: 99, name: "Default", email: "default@test.com" }),
-                    pre,
-                    post,
-                }),
-            };
-
-            for (const [k, def] of Object.entries(modelDefs)) {
-                def.key = k;
-            }
-
-            const state = createStoreState(modelDefs);
-            const source = createStore("test-one-pure-silent-" + Math.random(), state);
-            const model = createStoreModel(modelDefs, source);
-            model.user.set({ id: 1, name: "Alice", email: "alice@test.com" });
-            pre.mockClear();
-            post.mockClear();
-
-            model.user.reset({ pure: true, silent: true });
-
-            expect(source.state.user).toBeNull();
-            expect(pre).not.toHaveBeenCalled();
-            expect(post).not.toHaveBeenCalled();
         });
     });
 
@@ -1703,42 +1658,6 @@ describe("createStoreModel", () => {
         });
     });
 
-    describe("many list pure reset", () => {
-        function setup() {
-            const defaultUsers: User[] = [{ id: 99, name: "Default", email: "default@test.com" }];
-            const modelDefs = {
-                users: factory.many(UserShape, { default: () => defaultUsers }),
-            };
-
-            for (const [k, def] of Object.entries(modelDefs)) {
-                def.key = k;
-            }
-
-            const state = createStoreState(modelDefs);
-            const source = createStore("test-many-pure-" + Math.random(), state);
-            const model = createStoreModel(modelDefs, source);
-
-            return { source, model, defaultUsers };
-        }
-
-        it("reset without pure restores custom default", () => {
-            const { source, model, defaultUsers } = setup();
-            model.users.set([{ id: 1, name: "Alice", email: "alice@test.com" }]);
-
-            model.users.reset();
-
-            expect(source.state.users).toEqual(defaultUsers);
-        });
-
-        it("reset with pure gives empty array", () => {
-            const { source, model } = setup();
-
-            model.users.reset({ pure: true });
-
-            expect(source.state.users).toEqual([]);
-        });
-    });
-
     describe("many record pre/post hooks", () => {
         function setup(hooks: { pre?: () => void; post?: () => void }) {
             const modelDefs = {
@@ -1788,7 +1707,7 @@ describe("createStoreModel", () => {
             pre.mockClear();
             post.mockClear();
 
-            model.grouped.add("team-a", [{ id: 1, name: "Alice", email: "alice@test.com" }]);
+            model.grouped.add({ key: "team-a", value: [{ id: 1, name: "Alice", email: "alice@test.com" }] });
 
             expect(pre).toHaveBeenCalledOnce();
             expect(post).toHaveBeenCalledOnce();
@@ -1886,7 +1805,10 @@ describe("createStoreModel", () => {
             pre.mockClear();
             post.mockClear();
 
-            model.grouped.add("team-a", [{ id: 1, name: "Alice", email: "alice@test.com" }], { silent: true });
+            model.grouped.add(
+                { key: "team-a", value: [{ id: 1, name: "Alice", email: "alice@test.com" }] },
+                { silent: true },
+            );
 
             expect(pre).not.toHaveBeenCalled();
             expect(post).not.toHaveBeenCalled();
@@ -1938,44 +1860,6 @@ describe("createStoreModel", () => {
 
             expect(pre).toHaveBeenCalledOnce();
             expect(post).not.toHaveBeenCalled();
-        });
-    });
-
-    describe("many record pure reset", () => {
-        function setup() {
-            const defaultGroups: Record<string, User[]> = {
-                "team-a": [{ id: 99, name: "Default", email: "default@test.com" }],
-            };
-            const modelDefs = {
-                grouped: factory.many(UserShape, { kind: ModelManyKind.RECORD, default: () => defaultGroups }),
-            };
-
-            for (const [k, def] of Object.entries(modelDefs)) {
-                def.key = k;
-            }
-
-            const state = createStoreState(modelDefs);
-            const source = createStore("test-record-pure-" + Math.random(), state);
-            const model = createStoreModel(modelDefs, source);
-
-            return { source, model, defaultGroups };
-        }
-
-        it("reset without pure restores custom default", () => {
-            const { source, model, defaultGroups } = setup();
-            model.grouped.set({ "team-b": [{ id: 1, name: "Alice", email: "alice@test.com" }] });
-
-            model.grouped.reset();
-
-            expect(source.state.grouped).toEqual(defaultGroups);
-        });
-
-        it("reset with pure gives empty object", () => {
-            const { source, model } = setup();
-
-            model.grouped.reset({ pure: true });
-
-            expect(source.state.grouped).toEqual({});
         });
     });
 });

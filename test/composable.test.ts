@@ -35,7 +35,7 @@ function setup() {
             return {
                 user: v.from("user"),
                 users: v.from("users"),
-                userName: v.from("user", (user) => user?.name ?? null),
+                userName: v.from("user", (user) => user.name),
             };
         },
         action: (a) => {
@@ -295,7 +295,7 @@ describe("useStoreModel", () => {
             set({ id: 1, name: "Alice" });
             reset();
 
-            expect(store.view.user.value).toBeNull();
+            expect(store.view.user.value).toEqual({ id: 0, name: "" });
         });
     });
 
@@ -369,7 +369,7 @@ describe("useStoreModel", () => {
             set({ id: 2, name: "Bob" });
 
             // Not yet applied
-            expect(store.view.user.value).toBeNull();
+            expect(store.view.user.value).toEqual({ id: 0, name: "" });
 
             vi.advanceTimersByTime(100);
 
@@ -420,7 +420,7 @@ describe("useStoreView", () => {
             const store = setup();
             const { data } = useStoreView(store, "user");
 
-            expect(data.value).toBeNull();
+            expect(data.value).toEqual({ id: 0, name: "" });
         });
 
         it("data.value reflects model changes", () => {
@@ -442,11 +442,11 @@ describe("useStoreView", () => {
             expect((data as any).id).toBe(1);
         });
 
-        it("data returns undefined for properties when view is null", () => {
+        it("data returns shape default for properties on initial state", () => {
             const store = setup();
             const { data } = useStoreView(store, "user");
 
-            expect((data as any).name).toBeUndefined();
+            expect((data as any).name).toBe("");
         });
 
         it("has operator works", () => {
@@ -461,44 +461,12 @@ describe("useStoreView", () => {
         });
     });
 
-    describe("default option", () => {
-        it("data.value returns default when view is null", () => {
-            const store = setup();
-            const { data } = useStoreView(store, "user", {
-                default: { id: 0, name: "Guest" },
-            });
-
-            expect(data.value).toEqual({ id: 0, name: "Guest" });
-        });
-
-        it("data proxies default properties when view is null", () => {
-            const store = setup();
-            const { data } = useStoreView(store, "user", {
-                default: { id: 0, name: "Guest" },
-            });
-
-            expect((data as any).name).toBe("Guest");
-        });
-
-        it("data.value returns actual value when view is not null", () => {
-            const store = setup();
-            const { data } = useStoreView(store, "user", {
-                default: { id: 0, name: "Guest" },
-            });
-
-            store.model.user.set({ id: 1, name: "Alice" });
-
-            expect(data.value).toEqual({ id: 1, name: "Alice" });
-            expect((data as any).name).toBe("Alice");
-        });
-    });
-
     describe("proxy: false", () => {
         it("data is a ComputedRef", () => {
             const store = setup();
             const { data } = useStoreView(store, "user", { proxy: false });
 
-            expect(data.value).toBeNull();
+            expect(data.value).toEqual({ id: 0, name: "" });
         });
 
         it("data.value reflects model changes", () => {
@@ -518,22 +486,6 @@ describe("useStoreView", () => {
 
             expect((data as any).name).toBeUndefined();
         });
-
-        it("data.value returns default when view is null", () => {
-            const store = setup();
-            const { data } = useStoreView(store, "user", { proxy: false, default: { id: 0, name: "Guest" } });
-
-            expect(data.value).toEqual({ id: 0, name: "Guest" });
-        });
-
-        it("data.value returns actual value over default", () => {
-            const store = setup();
-            const { data } = useStoreView(store, "user", { proxy: false, default: { id: 0, name: "Guest" } });
-
-            store.model.user.set({ id: 1, name: "Alice" });
-
-            expect(data.value).toEqual({ id: 1, name: "Alice" });
-        });
     });
 
     describe("track", () => {
@@ -546,7 +498,7 @@ describe("useStoreView", () => {
 
             await nextTick();
 
-            expect(cb).toHaveBeenCalledWith(null);
+            expect(cb).toHaveBeenCalledWith({ id: 0, name: "" });
         });
 
         it("fires callback on value change", async () => {
@@ -594,20 +546,6 @@ describe("useStoreView", () => {
             await nextTick();
 
             expect(cb).not.toHaveBeenCalled();
-        });
-
-        it("track resolves default when value is null", async () => {
-            const store = setup();
-            const cb = vi.fn();
-            const { track } = useStoreView(store, "user", {
-                default: { id: 0, name: "Guest" },
-            });
-
-            track(cb, { immediate: true });
-
-            await nextTick();
-
-            expect(cb).toHaveBeenCalledWith({ id: 0, name: "Guest" });
         });
 
         it("debounces track callback", async () => {

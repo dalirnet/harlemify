@@ -8,30 +8,26 @@ onMounted(() => configStore.action.get());
 watch(
     configStore.view.config,
     (val) => {
-        if (val) {
-            languageInput.value = val.language;
-            if (import.meta.client) {
-                document.documentElement.setAttribute("data-theme", val.theme);
-            }
+        languageInput.value = val.language;
+        if (import.meta.client) {
+            document.documentElement.setAttribute("data-theme", val.theme);
         }
     },
     { immediate: true },
 );
 
 async function toggleTheme() {
-    if (!configStore.view.config.value) return;
     const newTheme = configStore.view.config.value.theme === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", newTheme);
     await configStore.action.update({ body: { theme: newTheme } });
 }
 
 async function updateLanguage() {
-    if (!configStore.view.config.value || !languageInput.value.trim()) return;
+    if (!languageInput.value.trim()) return;
     await configStore.action.update({ body: { language: languageInput.value.trim() } });
 }
 
 async function toggleNotifications() {
-    if (!configStore.view.config.value) return;
     await configStore.action.update({ body: { notifications: !configStore.view.config.value.notifications } });
 }
 
@@ -75,7 +71,7 @@ async function silentUpdate() {
                     <strong>Language</strong>
                 </div>
                 <form class="config-input" @submit.prevent="updateLanguage">
-                    <input v-model="languageInput" type="text" data-testid="language-input" />
+                    <input v-model="languageInput" type="text" data-testid="language-input" >
                     <button type="submit" class="btn btn-sm" data-testid="update-language">Update</button>
                 </form>
             </div>
@@ -110,20 +106,10 @@ async function silentUpdate() {
                 </button>
             </div>
 
-            <div class="config-item" data-testid="config-pure-reset">
-                <div>
-                    <strong>Pure Reset</strong>
-                    <span class="value">reset to null (skip custom default)</span>
-                </div>
-                <button class="btn btn-sm" data-testid="pure-reset" @click="configStore.action.pureReset()">
-                    Pure Reset
-                </button>
-            </div>
-
             <div class="config-item" data-testid="config-silent-reset">
                 <div>
                     <strong>Silent Reset</strong>
-                    <span class="value">pure reset without hooks</span>
+                    <span class="value">reset without hooks</span>
                 </div>
                 <button class="btn btn-sm" data-testid="silent-reset" @click="silentReset">Silent Reset</button>
             </div>
@@ -209,7 +195,6 @@ async function silentUpdate() {
                     <li><code>pre / post</code> - Model hooks fired on every mutation</li>
                     <li><code>silent: true</code> - Skip both pre and post hooks</li>
                     <li><code>silent: ModelSilent.POST</code> - Skip only post hook</li>
-                    <li><code>pure: true</code> - Reset to fallback value instead of custom default</li>
                     <li><code>lazy: true</code> - Defer store initialization until first access</li>
                     <li><code>default: () => (...)</code> - Function default for fresh values on reset</li>
                 </ul>
@@ -221,8 +206,8 @@ async function silentUpdate() {
             <button
                 class="btn btn-sm"
                 data-testid="restore-default"
-                @click="configStore.action.defaultReset()"
                 style="margin-top: 12px"
+                @click="configStore.action.defaultReset()"
             >
                 Restore Default
             </button>

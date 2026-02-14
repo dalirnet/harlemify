@@ -51,7 +51,7 @@ export const userStore = createStore({
             ),
             summary: merge(["current", "list"], (current, list) => {
                 return {
-                    selected: current?.name ?? null,
+                    selected: current.name,
                     total: list.length,
                     emails: list.map((u) => u.email),
                 };
@@ -63,7 +63,7 @@ export const userStore = createStore({
             get: api.get(
                 {
                     url(view) {
-                        return `/users/${view.user.value?.id}`;
+                        return `/users/${view.user.value.id}`;
                     },
                 },
                 { model: "current", mode: ModelOneMode.SET },
@@ -73,7 +73,7 @@ export const userStore = createStore({
             update: api.patch(
                 {
                     url(view) {
-                        return `/users/${view.user.value?.id}`;
+                        return `/users/${view.user.value.id}`;
                     },
                 },
                 { model: "list", mode: ModelManyMode.PATCH },
@@ -81,16 +81,13 @@ export const userStore = createStore({
             delete: api.delete(
                 {
                     url(view) {
-                        return `/users/${view.user.value?.id}`;
+                        return `/users/${view.user.value.id}`;
                     },
                 },
                 { model: "list", mode: ModelManyMode.REMOVE },
             ),
             clear: handler(async ({ model }) => {
                 model.list.reset({ silent: true });
-            }),
-            pureReset: handler(async ({ model }) => {
-                model.list.reset({ pure: true });
             }),
             silentAdd: handler<User>(async ({ model, payload }) => {
                 model.list.add(payload, { silent: ModelSilent.PRE });
@@ -102,7 +99,7 @@ export const userStore = createStore({
             patchByEmail: api.patch(
                 {
                     url(view) {
-                        return `/users/${view.user.value?.id}`;
+                        return `/users/${view.user.value.id}`;
                     },
                 },
                 { model: "list", mode: ModelManyMode.PATCH, options: { by: "email" } },

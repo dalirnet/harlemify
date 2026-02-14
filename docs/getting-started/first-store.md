@@ -32,7 +32,7 @@ Models define the state containers. Use `one` for single items and `many` for co
 ```typescript
 model({ one, many }) {
     return {
-        current: one(userShape),   // User | null
+        current: one(userShape),   // User
         list: many(userShape),     // User[]
     };
 },
@@ -52,7 +52,7 @@ view({ from, merge }) {
         }),
         summary: merge(["current", "list"], (current, list) => {
             return {
-                selected: current?.name ?? null,
+                selected: current.name,
                 total: list.length,
             };
         }),
@@ -70,7 +70,7 @@ action({ api }) {
         get: api.get(
             {
                 url(view) {
-                    return `/users/${view.user.value?.id}`;
+                    return `/users/${view.user.value.id}`;
                 },
             },
             { model: "current", mode: ModelOneMode.SET },
@@ -80,7 +80,7 @@ action({ api }) {
         update: api.patch(
             {
                 url(view) {
-                    return `/users/${view.user.value?.id}`;
+                    return `/users/${view.user.value.id}`;
                 },
             },
             { model: "list", mode: ModelManyMode.PATCH },
@@ -88,7 +88,7 @@ action({ api }) {
         delete: api.delete(
             {
                 url(view) {
-                    return `/users/${view.user.value?.id}`;
+                    return `/users/${view.user.value.id}`;
                 },
             },
             { model: "list", mode: ModelManyMode.REMOVE },

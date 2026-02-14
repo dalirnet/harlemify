@@ -1,6 +1,6 @@
 # useStoreView
 
-Returns reactive view data with proxy access and a `track` method for watching changes. Supports default values for null views.
+Returns reactive view data with proxy access and a `track` method for watching changes.
 
 ## Basic Usage
 
@@ -10,9 +10,9 @@ import { userStore } from "~/stores/user";
 
 const { data, track } = useStoreView(userStore, "user");
 
-data.value; // User | null — standard ref access
-data.name; // string | undefined — proxy access without .value
-data.email; // string | undefined — proxy access without .value
+data.value; // User — standard ref access
+data.name; // string — proxy access without .value
+data.email; // string — proxy access without .value
 ```
 
 ## Data Proxy
@@ -23,11 +23,11 @@ The `data` object is a proxy that supports both `.value` for the full ref value 
 const { data } = useStoreView(userStore, "user");
 
 // Standard access
-data.value; // User | null
+data.value; // User
 
 // Proxy access — reads from the current .value
-data.name; // equivalent to data.value?.name
-data.email; // equivalent to data.value?.email
+data.name; // equivalent to data.value.name
+data.email; // equivalent to data.value.email
 ```
 
 This is useful in templates where you want to avoid repeated `.value` checks:
@@ -46,8 +46,8 @@ Pass `proxy: false` to get a standard Vue `ComputedRef` instead of the proxy:
 ```typescript
 const { data } = useStoreView(userStore, "user", { proxy: false });
 
-data.value; // User | null — standard ComputedRef
-data.value?.name; // access via .value in script
+data.value; // User — standard ComputedRef
+data.value.name; // access via .value in script
 ```
 
 In templates, Vue auto-unwraps the `ComputedRef`, so `.value` is not needed:
@@ -57,25 +57,6 @@ In templates, Vue auto-unwraps the `ComputedRef`, so `.value` is not needed:
     <p>{{ data.name }}</p>
 </template>
 ```
-
-## Default Value
-
-Provide a fallback value used when the view is `null`:
-
-```typescript
-import { useStoreView } from "@diphyx/harlemify";
-import { userStore, userShape } from "~/stores/user";
-
-const { data } = useStoreView(userStore, "user", {
-    default: userShape.defaults({ name: "No user selected" }),
-});
-
-// When store view is null:
-data.value; // { id: 0, name: "No user selected", email: "" }
-data.name; // "No user selected"
-```
-
-The default is used for both `data.value` and proxy property access. Once the view has a real value, it takes precedence over the default.
 
 ## Track
 
@@ -110,47 +91,28 @@ const stop = track(handler, {
 | `debounce`  | `number`  | —       | Debounce handler in milliseconds            |
 | `throttle`  | `number`  | —       | Throttle handler in milliseconds            |
 
-### Track with Default
-
-When a default is configured, the track handler receives the default value instead of `null`:
-
-```typescript
-const view = useStoreView(userStore, "user", {
-    default: userShape.defaults({ name: "Guest" }),
-});
-
-view.track((value) => {
-    // value is never null — defaults are applied
-    console.log(value.name); // "Guest" when no user is selected
-});
-```
-
 ## Component Example
 
 ```vue
 <script setup lang="ts">
 import { useStoreView } from "@diphyx/harlemify";
-import { userStore, userShape } from "~/stores/user";
+import { userStore } from "~/stores/user";
 
 const { data: userData, track: trackUser } = useStoreView(userStore, "user");
 const { data: usersData } = useStoreView(userStore, "users");
-
-const defaultView = useStoreView(userStore, "user", {
-    default: userShape.defaults({ name: "Select a user" }),
-});
 
 const log = ref<string[]>([]);
 
 onMounted(() => {
     trackUser((value) => {
-        log.value.push(`Changed to: ${value?.name ?? "null"}`);
+        log.value.push(`Changed to: ${value.name}`);
     });
 });
 </script>
 
 <template>
-    <h2>{{ defaultView.data.name }}</h2>
-    <p v-if="userData.value">{{ userData.value.email }}</p>
+    <h2>{{ userData.name }}</h2>
+    <p>{{ userData.email }}</p>
     <ul>
         <li v-for="user in usersData.value" :key="user.id">{{ user.name }}</li>
     </ul>
@@ -162,7 +124,6 @@ onMounted(() => {
 | Option    | Type      | Default | Description                                                             |
 | --------- | --------- | ------- | ----------------------------------------------------------------------- |
 | `proxy`   | `boolean` | `true`  | When `true`, returns a proxy. When `false`, returns a raw `ComputedRef` |
-| `default` | `T`       | —       | Fallback value when view is null                                        |
 
 ## Return Type
 

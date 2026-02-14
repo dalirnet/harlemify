@@ -103,7 +103,7 @@ describe("compose", () => {
 
         await store.compose.clearAll();
 
-        expect(store.view.user.value).toBeNull();
+        expect(store.view.user.value).toEqual({ id: 0, name: "", email: "" });
         expect(store.view.posts.value).toEqual([]);
     });
 

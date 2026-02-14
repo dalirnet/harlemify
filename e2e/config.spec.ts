@@ -58,23 +58,11 @@ test.describe("config page", () => {
         await expect(page.getByTestId("notifications-value")).toHaveText("on");
     });
 
-    test("pure reset clears config to null", async ({ page }) => {
-        await page.getByTestId("pure-reset").click();
-        await page.getByTestId("no-data").waitFor();
-    });
-
-    test("default reset restores after pure reset", async ({ page }) => {
-        await page.getByTestId("pure-reset").click();
-        await page.getByTestId("no-data").waitFor();
-        await page.getByTestId("restore-default").click();
-        await page.getByTestId("config-content").waitFor();
-        await expect(page.getByTestId("theme-value")).toHaveText("dark");
-        await expect(page.getByTestId("notifications-value")).toHaveText("on");
-    });
-
-    test("silent reset clears config without hooks", async ({ page }) => {
+    test("silent reset restores defaults without hooks", async ({ page }) => {
+        await page.getByTestId("toggle-theme").click();
+        await expect(page.getByTestId("theme-value")).toHaveText("light");
         await page.getByTestId("silent-reset").click();
-        await page.getByTestId("no-data").waitFor();
+        await expect(page.getByTestId("theme-value")).toHaveText("dark");
     });
 
     test("silent update patches language without post hook", async ({ page }) => {

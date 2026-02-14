@@ -14,7 +14,7 @@ model({ one, many }) {
 
 ## One (Single Item)
 
-`one(shape)` creates a state container initialized to `null`:
+`one(shape)` creates a state container initialized to shape defaults:
 
 ```typescript
 one(userShape);
@@ -34,9 +34,9 @@ store.model.user.reset();
 | ------- | ---------------------------------------------------------------------------- |
 | `set`   | Replace the entire value                                                     |
 | `patch` | Shallow merge (or deep with `{ deep: true }`)                                |
-| `reset` | Reset to default (`null` or custom default), or `null` with `{ pure: true }` |
+| `reset` | Reset to default value                                                       |
 
-> **Note:** `patch` on a `null` state does nothing silently. Set a value first before patching.
+> **Note:** State is always initialized to shape defaults (e.g. `{ id: 0, name: "" }`). Provide a custom `default` function to override the initial and reset values.
 
 ## Many List
 
@@ -48,7 +48,7 @@ many(userShape, { identifier: "uuid" }); // Override identifier field
 many(userShape, { default: () => [defaultUser] }); // Function default
 ```
 
-The `identifier` determines which field is used to match items in `patch` and `add` (with `unique`). If not set, it resolves from shape metadata or falls back to `id` / `_id`. The `remove` method matches by any provided field automatically.
+The `identifier` determines which field is used to match items in `patch` and `add` (with `unique`). If not set, it resolves from shape metadata or falls back to `id`. The `remove` method matches by any provided field automatically.
 
 ### List Mutations
 
@@ -70,7 +70,7 @@ store.model.users.reset();
 | `add`    | Append (or prepend) items                                                |
 | `patch`  | Update matching items by identifier                                      |
 | `remove` | Remove items matching by identifier or any field                         |
-| `reset`  | Reset to default (`[]` or custom default), or `[]` with `{ pure: true }` |
+| `reset`  | Reset to default value                                                   |
 
 ## Many Record
 
@@ -88,14 +88,14 @@ store.model.grouped.set({ "team-a": usersArray, "team-b": otherUsers });
 store.model.grouped.reset();
 store.model.grouped.patch({ "team-a": updatedUsers });
 store.model.grouped.patch({ "team-c": newUsers }, { deep: true });
-store.model.grouped.add("team-c", newUsers);
+store.model.grouped.add({ key: "team-c", value: newUsers });
 store.model.grouped.remove("team-a");
 ```
 
 | Method   | Description                                                                 |
 | -------- | --------------------------------------------------------------------------- |
 | `set`    | Replace the entire record                                                   |
-| `reset`  | Clear the entire record to `{}` (or default), or `{}` with `{ pure: true }` |
+| `reset`  | Reset to default value                                                      |
 | `patch`  | Merge keys into the record (or deep merge with `{ deep: true }`)            |
 | `add`    | Add a key with its array value                                              |
 | `remove` | Remove a key from the record                                                |
@@ -139,11 +139,10 @@ export const configStore = createStore({
 });
 ```
 
-| Form                    | Behavior                                 |
-| ----------------------- | ---------------------------------------- |
-| `default: () => value`  | Called fresh on creation and each reset  |
-| `reset()`               | Restores to default                      |
-| `reset({ pure: true })` | Ignores default, resets to type fallback |
+| Form                   | Behavior                                |
+| ---------------------- | --------------------------------------- |
+| `default: () => value` | Called fresh on creation and each reset  |
+| `reset()`              | Restores to default                     |
 
 ## Pre/Post Hooks
 
@@ -175,38 +174,6 @@ model({ one, many }) {
 Hooks are optional.
 
 > **Note:** Hooks are safe and cannot control the flow of the mutation. A `pre` hook is simply called before the mutation, not a guard that can prevent it. Even if a hook throws, the error is caught and logged, and the mutation proceeds normally.
-
-## Pure Reset
-
-By default, `reset()` restores to the custom `default` value (or the type fallback: `null`, `[]`, `{}`). Use `{ pure: true }` to reset to the type fallback instead — ignoring any custom default:
-
-```typescript
-const store = createStore({
-    model({ one, many }) {
-        return {
-            token: one(tokenShape, {
-                default: () => ({ payload: "initial-value" }),
-            }),
-            users: many(userShape, {
-                default: () => [defaultUser],
-            }),
-            grouped: many(userShape, {
-                kind: "record",
-                default: () => ({ "team-a": [defaultUser] }),
-            }),
-        };
-    },
-});
-
-store.model.token.reset(); // { payload: "initial-value" } — function called
-store.model.token.reset({ pure: true }); // null
-
-store.model.users.reset(); // [defaultUser]
-store.model.users.reset({ pure: true }); // []
-
-store.model.grouped.reset(); // { "team-a": [defaultUser] }
-store.model.grouped.reset({ pure: true }); // {}
-```
 
 ## Silent Option
 
@@ -245,7 +212,7 @@ store.model.users.patch({ id: 1, name: "Updated" }, { silent: true });
 ```typescript
 store.model.grouped.set(data, { silent: true });
 store.model.grouped.reset({ silent: true });
-store.model.grouped.add("team-a", users, { silent: ModelSilent.POST });
+store.model.grouped.add({ key: "team-a", value: users }, { silent: ModelSilent.POST });
 store.model.grouped.remove("team-a", { silent: ModelSilent.PRE });
 store.model.grouped.patch({ "team-a": updated }, { silent: true });
 ```

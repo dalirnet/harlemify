@@ -28,7 +28,7 @@ test.describe("composables page", () => {
     });
 
     test("toggle passes todo as payload without selecting first", async ({ page }) => {
-        await expect(page.getByTestId("view-data-value")).toHaveText("null");
+        await expect(page.getByTestId("view-data-value")).toContainText('"id":0');
         await page.getByTestId("todo-1").getByTestId("toggle-todo").click();
         await expect(page.getByTestId("todo-1")).toContainText("Done");
         await expect(page.getByTestId("view-data-title")).toHaveText("Buy groceries");
@@ -70,7 +70,7 @@ test.describe("composables page", () => {
         await page.getByTestId("todo-1").getByTestId("select-todo").click();
         await expect(page.getByTestId("view-data-title")).toHaveText("Buy groceries");
         await page.getByTestId("clear-selection").click();
-        await expect(page.getByTestId("view-data-value")).toHaveText("null");
+        await expect(page.getByTestId("view-data-value")).toContainText('"id":0');
     });
 
     // useStoreAction
@@ -128,7 +128,7 @@ test.describe("composables page", () => {
     test("model destructured: resetCurrent clears value", async ({ page }) => {
         await page.getByTestId("model-set").click();
         await page.getByTestId("model-reset").click();
-        await expect(page.getByTestId("model-current-value")).toHaveText("null");
+        await expect(page.getByTestId("model-current-value")).toContainText('"id": 0');
         await expect(page.getByTestId("model-log")).toContainText("[reset] resetCurrent");
     });
 
@@ -147,7 +147,7 @@ test.describe("composables page", () => {
     test("model non-destructured: debounced set delays update", async ({ page }) => {
         await page.getByTestId("model-debounce").click();
         await expect(page.getByTestId("model-log")).toContainText("[debounce] debouncedModel.set()");
-        await expect(page.getByTestId("model-current-value")).toHaveText("null");
+        await expect(page.getByTestId("model-current-value")).toContainText('"id": 0');
         await page.waitForTimeout(600);
         await expect(page.getByTestId("model-current-value")).toContainText("Debounced");
     });
@@ -160,10 +160,10 @@ test.describe("composables page", () => {
 
     // useStoreView
 
-    test("view non-destructured: data proxy shows null when no selection", async ({ page }) => {
-        await expect(page.getByTestId("view-data-value")).toHaveText("null");
-        await expect(page.getByTestId("view-data-title")).toHaveText("undefined");
-        await expect(page.getByTestId("view-data-done")).toHaveText("undefined");
+    test("view non-destructured: data proxy shows shape defaults when no selection", async ({ page }) => {
+        await expect(page.getByTestId("view-data-value")).toContainText('"id":0');
+        await expect(page.getByTestId("view-data-title")).toHaveText("");
+        await expect(page.getByTestId("view-data-done")).toHaveText("false");
     });
 
     test("view non-destructured: data proxy reflects selection", async ({ page }) => {
@@ -184,7 +184,7 @@ test.describe("composables page", () => {
         await page.getByTestId("todo-1").getByTestId("select-todo").click();
         await expect(page.getByTestId("clear-selection")).toBeVisible();
         await page.getByTestId("clear-selection").click();
-        await expect(page.getByTestId("view-data-title")).toHaveText("undefined");
+        await expect(page.getByTestId("view-data-title")).toHaveText("");
         await expect(page.getByTestId("clear-selection")).not.toBeVisible();
     });
 
@@ -197,19 +197,9 @@ test.describe("composables page", () => {
         await expect(page.getByTestId("todo-2")).not.toHaveClass(/list-item-selected/);
     });
 
-    test("view non-destructured: default value shown when no selection", async ({ page }) => {
-        await expect(page.getByTestId("view-default-title")).toHaveText("No todo selected");
-        await expect(page.getByTestId("view-default-value")).toContainText("No todo selected");
-    });
-
-    test("view non-destructured: default replaced by actual value on selection", async ({ page }) => {
-        await page.getByTestId("todo-1").getByTestId("select-todo").click();
-        await expect(page.getByTestId("view-default-title")).toHaveText("Buy groceries");
-    });
-
-    test("view without proxy: shows null when no selection", async ({ page }) => {
-        await expect(page.getByTestId("view-computed-value")).toHaveText("null");
-        await expect(page.getByTestId("view-computed-title")).toHaveText("undefined");
+    test("view without proxy: shows shape defaults when no selection", async ({ page }) => {
+        await expect(page.getByTestId("view-computed-value")).toContainText('"title":""');
+        await expect(page.getByTestId("view-computed-title")).toHaveText("");
     });
 
     test("view without proxy: reflects selection via .value", async ({ page }) => {

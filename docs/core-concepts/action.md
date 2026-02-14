@@ -53,7 +53,7 @@ Use a function to resolve URLs from view state:
 api.get(
     {
         url(view) {
-            return `/users/${view.user.value?.id}`;
+            return `/users/${view.user.value.id}`;
         },
     },
     { model: "current", mode: ModelOneMode.SET },
@@ -113,7 +113,7 @@ Handlers can commit to multiple models in a single call:
 
 ```typescript
 handler(async ({ model, view }) => {
-    const result = await $fetch(`/projects/${view.project.value?.id}/toggle`, { method: "PUT" });
+    const result = await $fetch(`/projects/${view.project.value.id}/toggle`, { method: "PUT" });
     model.current.patch(result);
     model.list.patch(result);
     return result;
@@ -152,7 +152,7 @@ action({ handler }) {
         rename: handler<string>(
             async ({ model, view, payload }) => {
                 const current = view.item.value;
-                if (!current) return;
+
                 model.current.set({ ...current, title: payload });
             },
             { payload: "Untitled" },

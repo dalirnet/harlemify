@@ -9,7 +9,7 @@ Views are reactive computed properties derived from model state. They are Vue `C
 ```typescript
 view({ from }) {
     return {
-        user: from("current"),     // ComputedRef<User | null>
+        user: from("current"),     // ComputedRef<User>
         users: from("list"),       // ComputedRef<User[]>
     };
 },
@@ -22,7 +22,7 @@ Transform the data with a resolver function:
 ```typescript
 view({ from }) {
     return {
-        userName: from("current", (model) => model?.name ?? "unknown"),
+        userName: from("current", (model) => model.name),
         count: from("list", (model) => model.length),
         emails: from("list", (model) => model.map((u) => u.email)),
     };
@@ -38,7 +38,7 @@ view({ merge }) {
     return {
         summary: merge(["current", "list"], (current, list) => {
             return {
-                selected: current?.name ?? null,
+                selected: current.name,
                 total: list.length,
             };
         }),
@@ -51,8 +51,8 @@ Supports up to 5 models:
 ```typescript
 merge(["current", "draft", "list"], (current, draft, list) => {
     return {
-        hasSelection: current !== null,
-        hasDraft: draft !== null,
+        hasSelection: !!current.id,
+        hasDraft: !!draft.id,
         totalPosts: list.length,
     };
 });
@@ -86,16 +86,14 @@ view({ from, merge }) {
 
         // Deep clone — safe to mutate nested properties
         modified: from("current", (model) => {
-            if (model) {
-                model.milestones.sort((a, b) => a.name.localeCompare(b.name));
-            }
+            model.milestones.sort((a, b) => a.name.localeCompare(b.name));
             return model;
         }, { clone: ViewClone.DEEP }),
 
         // Clone also works with merge
         combined: merge(["current", "list"], (current, list) => {
             return {
-                current: current?.name ?? "none",
+                current: current.name,
                 sorted: list.sort((a, b) => a.id - b.id),
             };
         }, { clone: ViewClone.SHALLOW }),
@@ -110,10 +108,10 @@ view({ from, merge }) {
 ```typescript
 const { view } = userStore;
 
-view.user.value; // User | null
+view.user.value; // User
 view.users.value; // User[]
 view.count.value; // number
-view.summary.value; // { selected: string | null; total: number }
+view.summary.value; // { selected: string; total: number }
 ```
 
 ## Dynamic URLs from Views
@@ -121,7 +119,7 @@ view.summary.value; // { selected: string | null; total: number }
 Action API definitions can reference views to build dynamic URLs:
 
 ```typescript
-api.get({ url: (view) => `/users/${view.user.value?.id}` }, { model: "current", mode: ModelOneMode.SET });
+api.get({ url: (view) => `/users/${view.user.value.id}` }, { model: "current", mode: ModelOneMode.SET });
 ```
 
 ## Next Steps

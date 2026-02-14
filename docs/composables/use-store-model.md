@@ -105,8 +105,6 @@ const { set, reset, patch } = useStoreModel(userStore, "current");
 
 set(value, { silent: true });           // Skip both hooks
 reset({ silent: ModelSilent.PRE });     // Skip only pre hook
-reset({ pure: true });                  // Reset to type fallback (null/[]/{})
-reset({ pure: true, silent: true });    // Pure reset without hooks
 patch({ name: "Updated" }, { silent: ModelSilent.POST }); // Skip only post hook
 ```
 

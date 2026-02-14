@@ -52,7 +52,7 @@ const configShape = shape((factory) => {
 });
 ```
 
-If no identifier is explicitly marked, harlemify falls back to fields named `id` or `_id` when needed by collection operations.
+If no identifier is explicitly marked, harlemify falls back to a field named `id` when needed by collection operations.
 
 ## Alias Meta
 

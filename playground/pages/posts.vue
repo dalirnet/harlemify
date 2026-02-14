@@ -114,7 +114,7 @@ function resetSortAction() {
             <h3>Cloned View (view.sorted, clone: true)</h3>
             <pre>{{
                 JSON.stringify(
-                    postStore.view.sorted.value?.map((p: Post) => p.title),
+                    postStore.view.sorted.value.map((p: Post) => p.title),
                     null,
                     2,
                 )

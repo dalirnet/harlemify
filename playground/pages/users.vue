@@ -63,7 +63,6 @@ async function addUniqueUser() {
 }
 
 async function patchByEmailDemo() {
-    if (!userStore.view.user.value) return;
     userStore.model.current.set(userStore.view.user.value);
     await userStore.action.patchByEmail({
         body: { email: userStore.view.user.value.email, name: userStore.view.user.value.name + " (by email)" },
@@ -101,15 +100,12 @@ function resetListAction() {
             <button
                 class="btn btn-sm"
                 data-testid="patch-by-email"
-                :disabled="!userStore.view.user.value"
+                :disabled="!userStore.view.user.value.id"
                 @click="patchByEmailDemo"
             >
                 Patch by Email
             </button>
             <button class="btn btn-sm" data-testid="silent-add-user" @click="silentAddUser">Silent Add</button>
-            <button class="btn btn-sm" data-testid="pure-reset-users" @click="userStore.action.pureReset()">
-                Pure Reset
-            </button>
             <button class="btn btn-sm" data-testid="reset-list-action" @click="resetListAction">Reset Action</button>
         </div>
 
@@ -129,7 +125,7 @@ function resetListAction() {
             </div>
         </div>
 
-        <div v-if="userStore.view.user.value" class="detail" data-testid="selected-user">
+        <div v-if="userStore.view.user.value.id" class="detail" data-testid="selected-user">
             <h3>Selected User (view.user)</h3>
             <pre>{{ JSON.stringify(userStore.view.user.value, null, 2) }}</pre>
             <button class="btn btn-sm" style="margin-top: 12px" data-testid="clear-user" @click="clearSelection">
@@ -141,7 +137,7 @@ function resetListAction() {
             <h3>Cloned View (view.sorted, clone: true)</h3>
             <pre>{{
                 JSON.stringify(
-                    userStore.view.sorted.value?.map((u: User) => u.name),
+                    userStore.view.sorted.value.map((u: User) => u.name),
                     null,
                     2,
                 )
@@ -237,11 +233,11 @@ function resetListAction() {
                 <form @submit.prevent="save">
                     <div class="form-group">
                         <label>Name</label>
-                        <input v-model="form.name" required data-testid="input-name" />
+                        <input v-model="form.name" required data-testid="input-name" >
                     </div>
                     <div class="form-group">
                         <label>Email</label>
-                        <input v-model="form.email" type="email" required data-testid="input-email" />
+                        <input v-model="form.email" type="email" required data-testid="input-email" >
                     </div>
                     <div class="modal-actions">
                         <button type="button" class="btn" data-testid="cancel-modal" @click="showModal = false">

@@ -15,7 +15,11 @@ function openCreate() {
 
 function openEdit(contact: Contact) {
     editing.value = contact;
-    form.value = contactShape.defaults({ first_name: contact.first_name, last_name: contact.last_name, email: contact.email });
+    form.value = contactShape.defaults({
+        first_name: contact.first_name,
+        last_name: contact.last_name,
+        email: contact.email,
+    });
     showModal.value = true;
 }
 
@@ -68,7 +72,12 @@ function clearSelection() {
         <div v-if="contactStore.action.list.loading.value" class="loading" data-testid="loading">Loading...</div>
 
         <div v-else class="grid" data-testid="contact-grid">
-            <div v-for="c in contactStore.view.contacts.value" :key="c.id" class="card" :data-testid="`contact-${c.id}`">
+            <div
+                v-for="c in contactStore.view.contacts.value"
+                :key="c.id"
+                class="card"
+                :data-testid="`contact-${c.id}`"
+            >
                 <div class="card-body">
                     <h3 data-testid="contact-name">{{ c.first_name }} {{ c.last_name }}</h3>
                     <p class="subtitle" data-testid="contact-email">{{ c.email }}</p>
@@ -76,12 +85,14 @@ function clearSelection() {
                 <div class="card-footer">
                     <button class="btn btn-sm" data-testid="view-contact" @click="select(c)">View</button>
                     <button class="btn btn-sm" data-testid="edit-contact" @click="openEdit(c)">Edit</button>
-                    <button class="btn btn-sm btn-danger" data-testid="delete-contact" @click="remove(c)">Delete</button>
+                    <button class="btn btn-sm btn-danger" data-testid="delete-contact" @click="remove(c)">
+                        Delete
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div v-if="contactStore.view.contact.value" class="detail" data-testid="selected-contact">
+        <div v-if="contactStore.view.contact.value.id" class="detail" data-testid="selected-contact">
             <h3>Selected Contact (view.contact)</h3>
             <pre>{{ JSON.stringify(contactStore.view.contact.value, null, 2) }}</pre>
             <button class="btn btn-sm" style="margin-top: 12px" data-testid="clear-contact" @click="clearSelection">

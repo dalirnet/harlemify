@@ -50,13 +50,13 @@ export const configStore = createStore({
             config: from("config"),
             meta: from("meta"),
             theme: from("config", (model) => {
-                return model?.theme ?? "dark";
+                return model.theme;
             }),
             language: from("config", (model) => {
-                return model?.language ?? "en";
+                return model.language;
             }),
             notifications: from("config", (model) => {
-                return model?.notifications ?? true;
+                return model.notifications;
             }),
         };
     },
@@ -69,11 +69,8 @@ export const configStore = createStore({
                 model.config.reset();
                 model.meta.reset();
             }),
-            pureReset: handler(async ({ model }) => {
-                model.config.reset({ pure: true });
-            }),
             silentReset: handler(async ({ model }) => {
-                model.config.reset({ silent: true, pure: true });
+                model.config.reset({ silent: true });
             }),
             silentUpdate: handler<Partial<Config>>(async ({ model, payload }) => {
                 model.config.patch(payload, { silent: ModelSilent.POST });

@@ -1,4 +1,4 @@
-import { EVENTS, type HarlemPlugin, type InternalStores, type EventBus } from "@harlem/core";
+import type { HarlemPlugin, InternalStores, EventBus } from "@harlem/core";
 
 // Types
 

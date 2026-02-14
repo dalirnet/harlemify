@@ -48,7 +48,7 @@ State containers using `one(shape)` for single items and `many(shape)` for colle
 ```typescript
 model({ one, many }) {
     return {
-        current: one(userShape),                                  // User | null
+        current: one(userShape),                                  // User
         list: many(userShape),                                    // User[]
         config: one(configShape, { default: () => ({ ... }) }),   // Function default
     };
@@ -65,7 +65,7 @@ view({ from, merge }) {
         user: from("current"),
         count: from("list", (model) => model.length),
         summary: merge(["current", "list"], (current, list) => ({
-            selected: current?.name ?? null,
+            selected: current.name,
             total: list.length,
         })),
     };

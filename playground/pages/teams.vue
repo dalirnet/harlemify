@@ -83,9 +83,6 @@ function resetAll() {
 
         <div class="toolbar" style="margin-top: 12px">
             <button class="btn btn-sm" data-testid="reset-all" @click="resetAll">Reset All</button>
-            <button class="btn btn-sm" data-testid="pure-reset-teams" @click="teamStore.action.pureReset()">
-                Pure Reset
-            </button>
             <button class="btn btn-sm" data-testid="reload" @click="teamStore.action.load()">Reload</button>
         </div>
 
@@ -101,8 +98,8 @@ function resetAll() {
                         </li>
                     </ul>
                     <div class="add-member-form">
-                        <input v-model="newMemberName" placeholder="Name" class="input-sm" />
-                        <input v-model="newMemberRole" placeholder="Role" class="input-sm" />
+                        <input v-model="newMemberName" placeholder="Name" class="input-sm" >
+                        <input v-model="newMemberRole" placeholder="Role" class="input-sm" >
                         <button class="btn btn-sm" @click="addMemberToTeam(name)">Add</button>
                     </div>
                 </div>
@@ -155,7 +152,7 @@ function resetAll() {
                 </li>
                 <li><code>model.groups.set(value)</code> — Replace entire record</li>
                 <li><code>model.groups.reset()</code> — Clear to <code>{}</code></li>
-                <li><code>model.groups.add(key, value)</code> — Add a key entry</li>
+                <li><code>model.groups.add({ key, value })</code> — Add a key entry</li>
                 <li><code>model.groups.patch(value)</code> — Merge keys into record</li>
                 <li><code>model.groups.remove(key)</code> — Remove a key entry</li>
                 <li><code>pre / post</code> — Model hooks fired on every mutation</li>
@@ -169,11 +166,11 @@ function resetAll() {
                 <form @submit.prevent="saveTeam">
                     <div class="form-group">
                         <label>Team Name</label>
-                        <input v-model="newTeamName" required data-testid="input-team-name" />
+                        <input v-model="newTeamName" required data-testid="input-team-name" >
                     </div>
                     <div v-for="(member, index) in newMembers" :key="index" class="form-group member-row">
-                        <input v-model="member.name" placeholder="Name" required />
-                        <input v-model="member.role" placeholder="Role" required />
+                        <input v-model="member.name" placeholder="Name" required >
+                        <input v-model="member.role" placeholder="Role" required >
                         <button
                             v-if="newMembers.length > 1"
                             type="button"
