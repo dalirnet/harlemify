@@ -2,12 +2,10 @@
 import { useStoreCompose } from "../../src/runtime";
 import { dashboardStore, type User, type Todo } from "../stores/dashboard";
 
-// useStoreCompose
 const loadAll = useStoreCompose(dashboardStore, "loadAll");
 const resetAll = useStoreCompose(dashboardStore, "resetAll");
 const quickAdd = useStoreCompose(dashboardStore, "quickAdd");
 
-// Quick-add form
 const newUserName = ref("");
 const newTodoTitle = ref("");
 
@@ -47,39 +45,20 @@ async function deleteUser(user: User) {
 </script>
 
 <template>
-    <div class="container">
-        <NuxtLink to="/" class="back" data-testid="back-link">← Back</NuxtLink>
-
-        <div class="page-title">
-            <h1>Dashboard</h1>
-            <p>Compose layer — orchestrate actions, models, and views</p>
-        </div>
+    <PageLayout title="Dashboard">
+        <template #subtitle>Compose layer — orchestrate actions, models, and views</template>
 
         <!-- Summary -->
-        <div class="summary-grid" data-testid="summary">
-            <div class="summary-card">
-                <span class="summary-value" data-testid="summary-users">{{
-                    dashboardStore.view.summary.value.users
+        <div class="stat-row" data-testid="summary">
+            <div
+                class="stat"
+                v-for="(key, label) in { Users: 'users', Todos: 'todos', Pending: 'pending', Done: 'done' }"
+                :key="key"
+            >
+                <span class="stat-value" :data-testid="`summary-${key}`">{{
+                    dashboardStore.view.summary.value[key]
                 }}</span>
-                <span class="summary-label">Users</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value" data-testid="summary-todos">{{
-                    dashboardStore.view.summary.value.todos
-                }}</span>
-                <span class="summary-label">Todos</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value" data-testid="summary-pending">{{
-                    dashboardStore.view.summary.value.pending
-                }}</span>
-                <span class="summary-label">Pending</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value" data-testid="summary-done">{{
-                    dashboardStore.view.summary.value.done
-                }}</span>
-                <span class="summary-label">Done</span>
+                <span class="stat-label">{{ label }}</span>
             </div>
         </div>
 
@@ -93,19 +72,19 @@ async function deleteUser(user: User) {
             >
                 {{ loadAll.active.value ? "Loading..." : "Load All" }}
             </button>
-            <button class="btn" data-testid="complete-all" @click="completeAll">Complete All Todos</button>
-            <button class="btn btn-danger" data-testid="reset-all" @click="resetDashboard">Reset All</button>
+            <button class="btn" data-testid="complete-all" @click="completeAll">Complete All</button>
+            <button class="btn btn-danger" data-testid="reset-all" @click="resetDashboard">Reset</button>
         </div>
 
-        <!-- Quick Add (compose with typed args) -->
+        <!-- Quick Add -->
         <div class="section" data-testid="quick-add-section">
             <h2>Quick Add</h2>
-            <p class="subtitle"><code>compose.quickAdd(userName, todoTitle)</code> — typed arguments</p>
+            <p class="subtitle"><code>compose.quickAdd(userName, todoTitle)</code></p>
             <form class="quick-add-form" @submit.prevent="handleQuickAdd">
-                <input v-model="newUserName" placeholder="User name" data-testid="input-user-name" >
-                <input v-model="newTodoTitle" placeholder="Todo title" data-testid="input-todo-title" >
+                <input v-model="newUserName" placeholder="User name" data-testid="input-user-name" />
+                <input v-model="newTodoTitle" placeholder="Todo title" data-testid="input-todo-title" />
                 <button type="submit" class="btn btn-primary" data-testid="quick-add" :disabled="quickAdd.active.value">
-                    {{ quickAdd.active.value ? "Adding..." : "Quick Add" }}
+                    {{ quickAdd.active.value ? "Adding..." : "Add" }}
                 </button>
             </form>
         </div>
@@ -118,7 +97,7 @@ async function deleteUser(user: User) {
                     v-for="u in dashboardStore.view.users.value"
                     :key="u.id"
                     class="list-item"
-                    :class="{ 'list-item-selected': dashboardStore.view.user.value.id === u.id }"
+                    :class="{ selected: dashboardStore.view.user.value.id === u.id }"
                     :data-testid="`user-${u.id}`"
                 >
                     <div>
@@ -132,18 +111,6 @@ async function deleteUser(user: User) {
                         </button>
                     </div>
                 </div>
-            </div>
-            <div v-if="dashboardStore.view.user.value.id" class="detail" data-testid="selected-user">
-                <h3>Selected User</h3>
-                <pre>{{ JSON.stringify(dashboardStore.view.user.value, null, 2) }}</pre>
-                <button
-                    class="btn btn-sm"
-                    style="margin-top: 8px"
-                    data-testid="clear-selection"
-                    @click="clearSelection"
-                >
-                    Clear
-                </button>
             </div>
         </div>
 
@@ -172,95 +139,104 @@ async function deleteUser(user: User) {
             </div>
         </div>
 
-        <!-- Compose Active States -->
-        <div class="section" data-testid="compose-status">
-            <h2>Compose Active States</h2>
-            <div class="demo-block">
-                <div class="demo-grid">
-                    <div class="demo-item">
-                        <span class="demo-label">loadAll.active</span>
-                        <span class="demo-value" data-testid="active-load-all">{{ loadAll.active.value }}</span>
-                    </div>
-                    <div class="demo-item">
-                        <span class="demo-label">quickAdd.active</span>
-                        <span class="demo-value" data-testid="active-quick-add">{{ quickAdd.active.value }}</span>
-                    </div>
-                    <div class="demo-item">
-                        <span class="demo-label">resetAll.active</span>
-                        <span class="demo-value" data-testid="active-reset-all">{{ resetAll.active.value }}</span>
-                    </div>
-                    <div class="demo-item">
-                        <span class="demo-label">completeAll.active</span>
-                        <span class="demo-value" data-testid="active-complete-all">{{
-                            dashboardStore.compose.completeAll.active.value
+        <template #aside>
+            <div v-if="dashboardStore.view.user.value.id" class="aside-panel" data-testid="selected-user">
+                <div class="aside-panel-title">
+                    Selected User
+                    <button class="btn btn-sm" data-testid="clear-selection" @click="clearSelection">Clear</button>
+                </div>
+                <pre class="aside-pre">{{ JSON.stringify(dashboardStore.view.user.value, null, 2) }}</pre>
+            </div>
+
+            <!-- Compose active states -->
+            <div class="aside-panel" data-testid="compose-status">
+                <div class="aside-panel-title">Compose Active</div>
+                <div class="aside-states">
+                    <div class="aside-state">
+                        <span>loadAll</span>
+                        <span :class="loadAll.active.value ? 'on' : 'off'" data-testid="active-load-all">{{
+                            loadAll.active.value
                         }}</span>
                     </div>
-                    <div class="demo-item">
-                        <span class="demo-label">selectUser.active</span>
-                        <span class="demo-value" data-testid="active-select-user">{{
-                            dashboardStore.compose.selectUser.active.value
+                    <div class="aside-state">
+                        <span>quickAdd</span>
+                        <span :class="quickAdd.active.value ? 'on' : 'off'" data-testid="active-quick-add">{{
+                            quickAdd.active.value
                         }}</span>
+                    </div>
+                    <div class="aside-state">
+                        <span>resetAll</span>
+                        <span :class="resetAll.active.value ? 'on' : 'off'" data-testid="active-reset-all">{{
+                            resetAll.active.value
+                        }}</span>
+                    </div>
+                    <div class="aside-state">
+                        <span>completeAll</span>
+                        <span
+                            :class="dashboardStore.compose.completeAll.active.value ? 'on' : 'off'"
+                            data-testid="active-complete-all"
+                            >{{ dashboardStore.compose.completeAll.active.value }}</span
+                        >
+                    </div>
+                    <div class="aside-state">
+                        <span>selectUser</span>
+                        <span
+                            :class="dashboardStore.compose.selectUser.active.value ? 'on' : 'off'"
+                            data-testid="active-select-user"
+                            >{{ dashboardStore.compose.selectUser.active.value }}</span
+                        >
                     </div>
                 </div>
             </div>
-        </div>
+        </template>
 
-        <!-- Feature Info -->
-        <div class="feature-info" data-testid="feature-info">
-            <h3>Features Demonstrated</h3>
-            <ul>
+        <template #footer>
+            <FeatureInfo>
                 <li><code>compose(({ model, action }) => ({ ... }))</code> — define composed operations</li>
-                <li><code>store.compose.loadAll()</code> — no-arg compose: orchestrate multiple actions</li>
-                <li><code>store.compose.resetAll()</code> — no-arg compose: reset multiple models</li>
-                <li><code>store.compose.selectUser(user)</code> — typed arg: <code>(user: User) => void</code></li>
-                <li>
-                    <code>store.compose.quickAdd(name, title)</code> — typed args:
-                    <code>(string, string) => Promise&lt;void&gt;</code>
-                </li>
-                <li><code>store.compose.completeAll()</code> — batch model mutations</li>
-                <li><code>compose.active</code> — reactive boolean, true while executing</li>
-                <li><code>useStoreCompose(store, key)</code> — composable: <code>{ execute, active }</code></li>
-            </ul>
-        </div>
-    </div>
+                <li><code>store.compose.loadAll()</code> — orchestrate multiple actions</li>
+                <li><code>store.compose.resetAll()</code> — reset multiple models</li>
+                <li><code>store.compose.selectUser(user)</code> — typed arg</li>
+                <li><code>store.compose.quickAdd(name, title)</code> — typed args</li>
+                <li><code>store.compose.completeAll()</code> — batch mutations</li>
+                <li><code>compose.active</code> — reactive boolean</li>
+                <li><code>useStoreCompose(store, key)</code> — composable</li>
+            </FeatureInfo>
+        </template>
+    </PageLayout>
 </template>
 
 <style scoped>
-.summary-grid {
+.stat-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 8px;
+    margin-bottom: 20px;
 }
 
-.summary-card {
+.stat {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 20px;
-    background: var(--bg-secondary);
-    border-radius: 8px;
+    gap: 2px;
+    padding: 16px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
 }
 
-.summary-value {
-    font-size: 32px;
+.stat-value {
+    font-size: 1.5rem;
     font-weight: 700;
+    color: var(--blue);
+    font-variant-numeric: tabular-nums;
 }
 
-.summary-label {
-    font-size: 13px;
-    color: var(--text-muted);
+.stat-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-4);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.section {
-    margin-top: 32px;
-}
-
-.section > h2 {
-    margin-bottom: 12px;
+    letter-spacing: 0.04em;
 }
 
 .quick-add-form {
@@ -271,74 +247,46 @@ async function deleteUser(user: User) {
 
 .quick-add-form input {
     flex: 1;
+    min-width: 0;
     padding: 8px 12px;
+    background: var(--bg-inset);
     border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg-secondary);
+    border-radius: 7px;
     color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.85rem;
 }
 
-.list-item-selected {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent);
+.quick-add-form input:focus {
+    outline: none;
+    border-color: var(--blue);
 }
 
-.demo-block {
-    padding: 16px;
-    background: var(--bg-secondary);
-    border-radius: 8px;
+.selected {
+    border-color: var(--blue);
 }
 
-.demo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 10px;
+.aside-states {
+    padding: 8px 12px 12px;
 }
 
-.demo-item {
+.aside-state {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px;
-    background: var(--bg-tertiary);
-    border-radius: 6px;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.75rem;
+    color: var(--text-3);
 }
 
-.demo-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
+.aside-state .on {
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 0.72rem;
 }
 
-.demo-value {
-    font-family: monospace;
-    font-size: 13px;
-}
-
-.feature-info {
-    margin-top: 32px;
-    padding: 16px;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-}
-
-.feature-info h3 {
-    margin-bottom: 12px;
-}
-
-.feature-info ul {
-    margin: 0;
-    padding-left: 20px;
-}
-
-.feature-info li {
-    margin-bottom: 8px;
-}
-
-.feature-info code {
-    background: var(--bg-tertiary);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 13px;
+.aside-state .off {
+    color: var(--text-4);
+    font-family: var(--mono);
+    font-size: 0.72rem;
 }
 </style>
