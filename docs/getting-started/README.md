@@ -40,6 +40,7 @@ export default defineNuxtConfig({
 | `action.timeout`    | `number`                  | Request timeout in milliseconds                      |
 | `action.concurrent` | `ActionConcurrent`        | Default concurrency strategy for all actions         |
 | `model.identifier`  | `string`                  | Default identifier field for array mutations         |
+| `view.clone`        | `ViewClone`               | Default clone strategy for all views                 |
 | `logger`            | `number`                  | Consola log level (`-999` = silent, `999` = verbose) |
 
 ## Auto-Imports

@@ -349,6 +349,7 @@ function clearTrackLog() {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
 }
 
 .demo-box h4 {
@@ -363,11 +364,20 @@ function clearTrackLog() {
     margin-bottom: 10px;
 }
 
+.demo-box .desc code {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--blue);
+    background: var(--blue-dim);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
 .demo-box pre {
     margin-top: 8px;
     background: var(--bg);
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid var(--border);
     font-family: var(--mono);
     font-size: 0.72rem;
@@ -387,9 +397,10 @@ function clearTrackLog() {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 6px 8px;
+    padding: 8px 10px;
     background: var(--bg-inset);
-    border-radius: 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
 }
 
 .kv-k {
@@ -419,7 +430,7 @@ function clearTrackLog() {
     padding: 10px;
     background: var(--bg-inset);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 8px;
     max-height: 180px;
     overflow-y: auto;
 }

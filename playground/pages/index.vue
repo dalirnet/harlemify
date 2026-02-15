@@ -1,7 +1,7 @@
 <template>
     <div class="container">
         <header class="header">
-            <img src="/icon.svg" alt="Harlemify" class="header-logo" />
+            <img src="/icon.svg" alt="Harlemify" class="header-logo" >
             <h1>Harlemify</h1>
             <p>API State Management for Nuxt 3+</p>
         </header>
@@ -98,8 +98,8 @@
 }
 
 .badge.pink {
-    background: rgba(232, 100, 170, 0.12);
-    color: #e864aa;
+    background: var(--purple-dim);
+    color: var(--purple);
 }
 
 .badge.green {

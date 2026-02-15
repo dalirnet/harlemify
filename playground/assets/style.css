@@ -7,43 +7,52 @@
 }
 
 :root {
-    --bg: #0e0e11;
-    --bg-card: #17171c;
-    --bg-inset: #1c1c22;
-    --border: #2a2a32;
-    --border-hover: #3e3e48;
-    --text: #e8e8ee;
-    --text-2: #a8a8b4;
-    --text-3: #6e6e7e;
-    --text-4: #4e4e5e;
-    --blue: #5b9cf5;
-    --blue-dim: rgba(91, 156, 245, 0.1);
-    --green: #3ecf8e;
-    --green-dim: rgba(62, 207, 142, 0.1);
-    --red: #ef5f6c;
-    --red-dim: rgba(239, 95, 108, 0.08);
-    --yellow: #f5b731;
-    --yellow-dim: rgba(245, 183, 49, 0.1);
+    --bg: #0c0d12;
+    --bg-card: #151620;
+    --bg-inset: #1a1b27;
+    --border: #252736;
+    --border-hover: #363950;
+    --text: #e6e8f0;
+    --text-2: #a0a4b8;
+    --text-3: #6b7090;
+    --text-4: #464b68;
+    --blue: #6aa1f8;
+    --blue-dim: rgba(106, 161, 248, 0.1);
+    --green: #34d399;
+    --green-dim: rgba(52, 211, 153, 0.1);
+    --red: #f06572;
+    --red-dim: rgba(240, 101, 114, 0.08);
+    --yellow: #fbbf24;
+    --yellow-dim: rgba(251, 191, 36, 0.1);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167, 139, 250, 0.1);
     --mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", monospace;
     --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     --radius: 10px;
-    --radius-lg: 14px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 [data-theme="light"] {
-    --bg: #f4f4f7;
-    --bg-card: #fff;
-    --bg-inset: #eeeef2;
-    --border: #dcdce4;
-    --border-hover: #c4c4d0;
-    --text: #1c1c28;
-    --text-2: #4e4e62;
-    --text-3: #7e7e94;
-    --text-4: #a0a0b4;
-    --blue-dim: rgba(91, 156, 245, 0.07);
-    --green-dim: rgba(62, 207, 142, 0.07);
-    --red-dim: rgba(239, 95, 108, 0.06);
-    --yellow-dim: rgba(245, 183, 49, 0.07);
+    --bg: #f5f6fa;
+    --bg-card: #ffffff;
+    --bg-inset: #eef0f6;
+    --border: #dde0ec;
+    --border-hover: #c2c6d8;
+    --text: #1a1d2e;
+    --text-2: #4a4f6a;
+    --text-3: #7a7f9a;
+    --text-4: #9a9fb8;
+    --blue-dim: rgba(106, 161, 248, 0.08);
+    --green-dim: rgba(52, 211, 153, 0.08);
+    --red-dim: rgba(240, 101, 114, 0.06);
+    --yellow-dim: rgba(251, 191, 36, 0.08);
+    --purple-dim: rgba(167, 139, 250, 0.08);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 body {
@@ -71,7 +80,10 @@ body {
     font-size: 2.4rem;
     font-weight: 800;
     letter-spacing: -0.04em;
-    color: var(--text);
+    background: linear-gradient(135deg, var(--text) 0%, var(--blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .header p {
@@ -96,6 +108,17 @@ body {
     border-radius: var(--radius-lg);
     text-decoration: none;
     color: inherit;
+    box-shadow: var(--shadow-sm);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.home-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-hover);
 }
 
 .home-card h2 {
@@ -118,20 +141,20 @@ body {
 
 .badge {
     display: inline-flex;
-    padding: 3px 10px;
+    padding: 3px 12px;
     background: var(--blue-dim);
     color: var(--blue);
     font-family: var(--mono);
     font-size: 0.68rem;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 20px;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
 .footer {
     text-align: center;
-    color: var(--text-4);
+    color: var(--text-3);
     font-size: 0.85rem;
     padding-top: 24px;
 }
@@ -140,6 +163,11 @@ body {
     color: var(--blue);
     text-decoration: none;
     font-weight: 500;
+    transition: opacity 0.15s ease;
+}
+
+.footer a:hover {
+    opacity: 0.8;
 }
 
 /* ═══ Page Layout ═══ */
@@ -187,6 +215,14 @@ body {
     border: 1px solid var(--border);
     border-radius: 8px;
     white-space: nowrap;
+    transition:
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.nav-link:hover {
+    border-color: var(--border-hover);
+    color: var(--text-2);
 }
 
 .page-head p {
@@ -230,6 +266,7 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
 
 .aside-panel-title {
@@ -276,6 +313,7 @@ body {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
 }
 
 .toolbar + .toolbar {
@@ -306,18 +344,37 @@ body {
     padding: 8px 18px;
     background: var(--bg-inset);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 9px;
     color: var(--text);
     font-family: var(--sans);
     font-size: 0.82rem;
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease,
+        transform 0.1s ease;
+}
+
+.btn:hover {
+    border-color: var(--border-hover);
+    background: var(--border);
+}
+
+.btn:active {
+    transform: scale(0.97);
 }
 
 .btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
+    transform: none;
+}
+
+.btn:disabled:hover {
+    border-color: var(--border);
+    background: var(--bg-inset);
 }
 
 .btn-primary {
@@ -326,16 +383,28 @@ body {
     color: #fff;
 }
 
+.btn-primary:hover {
+    background: #5a94f0;
+    border-color: #5a94f0;
+    box-shadow: 0 0 12px rgba(106, 161, 248, 0.3);
+}
+
 .btn-danger {
     color: #fff;
     background: var(--red);
     border-color: var(--red);
 }
 
+.btn-danger:hover {
+    background: #e55a66;
+    border-color: #e55a66;
+    box-shadow: 0 0 12px rgba(240, 101, 114, 0.3);
+}
+
 .btn-sm {
     padding: 6px 14px;
     font-size: 0.78rem;
-    border-radius: 7px;
+    border-radius: 8px;
 }
 
 /* ═══ Loading ═══ */
@@ -360,6 +429,15 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
 }
 
 .card-body {
@@ -407,6 +485,11 @@ body {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    transition: border-color 0.15s ease;
+}
+
+.list-item:hover {
+    border-color: var(--border-hover);
 }
 
 .list-item h3 {
@@ -444,6 +527,11 @@ body {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    transition: border-color 0.15s ease;
+}
+
+.config-item:hover {
+    border-color: var(--border-hover);
 }
 
 .config-item strong {
@@ -471,17 +559,20 @@ body {
     padding: 7px 12px;
     background: var(--bg-inset);
     border: 1px solid var(--border);
-    border-radius: 7px;
+    border-radius: 8px;
     color: var(--text);
     font-family: var(--sans);
     font-size: 0.82rem;
     width: 110px;
-    transition: border-color 0.15s;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .config-input input:focus {
     outline: none;
     border-color: var(--blue);
+    box-shadow: 0 0 0 3px var(--blue-dim);
 }
 
 /* ═══ Inline Form ═══ */
@@ -493,6 +584,7 @@ body {
     border-left: 3px solid var(--blue);
     border-radius: var(--radius);
     margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
 }
 
 .inline-form h3 {
@@ -521,13 +613,17 @@ body {
     color: var(--text);
     font-family: var(--sans);
     font-size: 0.82rem;
-    transition: border-color 0.15s;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background 0.15s ease;
 }
 
 .form-row input:focus {
     outline: none;
     border-color: var(--blue);
     background: var(--bg);
+    box-shadow: 0 0 0 3px var(--blue-dim);
 }
 
 .form-textarea {
@@ -541,13 +637,17 @@ body {
     font-family: var(--sans);
     font-size: 0.82rem;
     resize: vertical;
-    transition: border-color 0.15s;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background 0.15s ease;
 }
 
 .form-textarea:focus {
     outline: none;
     border-color: var(--blue);
     background: var(--bg);
+    box-shadow: 0 0 0 3px var(--blue-dim);
 }
 
 /* ═══ Feature Info ═══ */
@@ -557,6 +657,7 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
+    border-top: 3px solid var(--blue);
 }
 
 .feature-info ul {

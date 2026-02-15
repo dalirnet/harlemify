@@ -27,6 +27,7 @@ defineProps<{
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
 }
 
 .action-bar-items {
@@ -39,10 +40,13 @@ defineProps<{
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 10px;
-    border-radius: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
     background: var(--bg-inset);
     border: 1px solid var(--border);
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease;
 }
 
 .action-chip-name {
@@ -63,7 +67,8 @@ defineProps<{
 }
 
 .action-chip[data-status="pending"] {
-    border-color: var(--yellow-dim);
+    border-color: rgba(251, 191, 36, 0.25);
+    background: var(--yellow-dim);
 }
 
 .action-chip[data-status="pending"] .action-chip-state {
@@ -71,7 +76,8 @@ defineProps<{
 }
 
 .action-chip[data-status="success"] {
-    border-color: var(--green-dim);
+    border-color: rgba(52, 211, 153, 0.25);
+    background: var(--green-dim);
 }
 
 .action-chip[data-status="success"] .action-chip-state {
@@ -79,7 +85,8 @@ defineProps<{
 }
 
 .action-chip[data-status="error"] {
-    border-color: var(--red-dim);
+    border-color: rgba(240, 101, 114, 0.25);
+    background: var(--red-dim);
 }
 
 .action-chip[data-status="error"] .action-chip-state {

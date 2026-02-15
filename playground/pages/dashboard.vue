@@ -51,9 +51,9 @@ async function deleteUser(user: User) {
         <!-- Summary -->
         <div class="stat-row" data-testid="summary">
             <div
-                class="stat"
-                v-for="(key, label) in { Users: 'users', Todos: 'todos', Pending: 'pending', Done: 'done' }"
+                v-for="(key, label) in { Users: 'users', Todos: 'todos', Pending: 'pending', Done: 'done' } as const"
                 :key="key"
+                class="stat"
             >
                 <span class="stat-value" :data-testid="`summary-${key}`">{{
                     dashboardStore.view.summary.value[key]
@@ -81,8 +81,8 @@ async function deleteUser(user: User) {
             <h2>Quick Add</h2>
             <p class="subtitle"><code>compose.quickAdd(userName, todoTitle)</code></p>
             <form class="quick-add-form" @submit.prevent="handleQuickAdd">
-                <input v-model="newUserName" placeholder="User name" data-testid="input-user-name" />
-                <input v-model="newTodoTitle" placeholder="Todo title" data-testid="input-todo-title" />
+                <input v-model="newUserName" placeholder="User name" data-testid="input-user-name" >
+                <input v-model="newTodoTitle" placeholder="Todo title" data-testid="input-todo-title" >
                 <button type="submit" class="btn btn-primary" data-testid="quick-add" :disabled="quickAdd.active.value">
                     {{ quickAdd.active.value ? "Adding..." : "Add" }}
                 </button>
@@ -222,6 +222,12 @@ async function deleteUser(user: User) {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.15s ease;
+}
+
+.stat:hover {
+    border-color: var(--border-hover);
 }
 
 .stat-value {
@@ -251,15 +257,19 @@ async function deleteUser(user: User) {
     padding: 8px 12px;
     background: var(--bg-inset);
     border: 1px solid var(--border);
-    border-radius: 7px;
+    border-radius: 8px;
     color: var(--text);
     font-family: var(--sans);
     font-size: 0.85rem;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .quick-add-form input:focus {
     outline: none;
     border-color: var(--blue);
+    box-shadow: 0 0 0 3px var(--blue-dim);
 }
 
 .selected {

@@ -166,8 +166,8 @@ async function handleTriggerError() {
             <h3>Create Project</h3>
             <form @submit.prevent="handleCreate">
                 <div class="form-row">
-                    <input v-model="form.name" placeholder="Project name" required data-testid="input-name" />
-                    <input v-model="form.description" placeholder="Description" data-testid="input-description" />
+                    <input v-model="form.name" placeholder="Project name" required data-testid="input-name" >
+                    <input v-model="form.description" placeholder="Description" data-testid="input-description" >
                     <button type="submit" class="btn btn-sm btn-primary" data-testid="save-project">Create</button>
                     <button type="button" class="btn btn-sm" data-testid="cancel-form" @click="showForm = false">
                         Cancel
@@ -215,8 +215,8 @@ async function handleTriggerError() {
                 <button
                     class="btn btn-sm"
                     data-testid="clear-selection"
-                    @click="clearSelection"
                     style="margin-left: 8px"
+                    @click="clearSelection"
                 >
                     Clear
                 </button>
@@ -383,6 +383,9 @@ async function handleTriggerError() {
 <style scoped>
 .card-selected {
     border-color: var(--blue);
+    box-shadow:
+        0 0 0 1px var(--blue-dim),
+        var(--shadow-md);
 }
 
 .meta-info {
@@ -396,8 +399,8 @@ async function handleTriggerError() {
     font-family: var(--mono);
     font-size: 0.65rem;
     font-weight: 600;
-    padding: 2px 7px;
-    border-radius: 3px;
+    padding: 3px 10px;
+    border-radius: 20px;
     text-transform: uppercase;
 }
 
@@ -407,6 +410,7 @@ async function handleTriggerError() {
 }
 
 .status-badge.inactive {
+    background: var(--bg-inset);
     color: var(--text-4);
 }
 
@@ -434,6 +438,7 @@ async function handleTriggerError() {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
 }
 
 .demo-box h4 {
@@ -446,7 +451,7 @@ async function handleTriggerError() {
     margin-top: 8px;
     background: var(--bg);
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid var(--border);
     font-family: var(--mono);
     font-size: 0.72rem;
@@ -465,17 +470,21 @@ async function handleTriggerError() {
 
 .demo-row select {
     padding: 5px 10px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--bg-inset);
     color: var(--text);
     font-family: var(--sans);
     font-size: 0.78rem;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .demo-row select:focus {
     outline: none;
     border-color: var(--blue);
+    box-shadow: 0 0 0 3px var(--blue-dim);
 }
 
 .status-text {
@@ -488,7 +497,8 @@ async function handleTriggerError() {
     margin-top: 8px;
     padding: 8px 12px;
     background: var(--red-dim);
-    border-radius: 6px;
+    border: 1px solid rgba(240, 101, 114, 0.15);
+    border-radius: 8px;
     color: var(--red);
     font-size: 0.78rem;
 }
