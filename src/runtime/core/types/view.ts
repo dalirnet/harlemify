@@ -55,8 +55,8 @@ export interface ViewMergeDefinition<
 }
 
 export type ViewDefinition<MD extends ModelDefinitions> =
-    | ViewFromDefinition<MD, keyof MD, unknown>
-    | ViewMergeDefinition<MD, readonly (keyof MD)[], unknown>;
+    | ViewFromDefinition<MD, any, any>
+    | ViewMergeDefinition<MD, any, any>;
 
 export type ViewDefinitions<MD extends ModelDefinitions> = Record<string, ViewDefinition<MD>>;
 
