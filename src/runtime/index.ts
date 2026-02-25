@@ -30,7 +30,7 @@ export type {
     ActionHandlerOptions,
     ActionResolvedApi,
 } from "./core/types/action";
-export { ActionApiError, ActionHandlerError, ActionCommitError, ActionConcurrentError } from "./core/utils/error";
+export { ActionApiError, ActionHandlerError, ActionCommitError, ActionConcurrentError, isError, toError } from "./core/utils/error";
 
 // Compose
 export type {
